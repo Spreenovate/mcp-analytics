@@ -1,0 +1,13 @@
+<% content_for(:title, "Sign in — mcp-analytics") %>
+
+<h1>Sign in</h1>
+<p>Enter your email and we'll send you a one-time sign-in link valid for 15 minutes.</p>
+
+<%= form_with url: magic_link_path, method: :post do |f| %>
+  <div class="card">
+    <%= f.email_field :email, required: true, placeholder: "you@example.com", autofocus: true %>
+    <p style="margin-top: 1rem;"><%= f.submit "Send sign-in link", class: "btn" %></p>
+  </div>
+<% end %>
+
+<footer><%= link_to "Back to home", root_path %></footer>

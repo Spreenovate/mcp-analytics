@@ -1,0 +1,36 @@
+# SQLite is used for all account/site metadata. Analytics events live in ClickHouse,
+# queried directly via HTTP (see lib/click_house.rb).
+
+default: &default
+  adapter: sqlite3
+  max_connections: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  timeout: 5000
+  pragmas:
+    journal_mode: wal
+    synchronous: normal
+    foreign_keys: true
+
+development:
+  <<: *default
+  database: storage/development.sqlite3
+
+test:
+  <<: *default
+  database: storage/test.sqlite3
+
+production:
+  primary:
+    <<: *default
+    database: <%= ENV.fetch("DATABASE_PATH", "/rails/storage/production.sqlite3") %>
+  cache:
+    <<: *default
+    database: <%= ENV.fetch("DATABASE_CACHE_PATH", "/rails/storage/production_cache.sqlite3") %>
+    migrations_paths: db/cache_migrate
+  queue:
+    <<: *default
+    database: <%= ENV.fetch("DATABASE_QUEUE_PATH", "/rails/storage/production_queue.sqlite3") %>
+    migrations_paths: db/queue_migrate
+  cable:
+    <<: *default
+    database: <%= ENV.fetch("DATABASE_CABLE_PATH", "/rails/storage/production_cable.sqlite3") %>
+    migrations_paths: db/cable_migrate

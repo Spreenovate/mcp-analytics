@@ -1,0 +1,322 @@
+require "click_house"
+
+module Analytics
+  # All ClickHouse queries used by the MCP tools live here, scoped by site_id.
+  # Callers pass the Site model; we never accept raw site_id strings directly
+  # so that the auth layer stays the single enforcement point.
+  class Queries
+    def initialize(site, client: ClickHouse.client)
+      @site   = site
+      @client = client
+    end
+
+    # --- Overview -----------------------------------------------------------
+
+    def overview(period)
+      sql = <<~SQL
+        SELECT
+          countIf(event_name = 'pageview') AS pageviews,
+          uniqIf(visitor_id, visitor_id != 0) AS unique_visitors,
+          uniq(session_id) AS sessions
+        FROM events
+        WHERE site_id = {site:String}
+          AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
+      SQL
+      row = @client.query(sql, params: scope_params(period)).first || {}
+
+      bounce_row = @client.query(<<~SQL, params: scope_params(period)).first || {}
+        SELECT
+          countIf(cnt = 1) AS bounced,
+          count() AS total
+        FROM (
+          SELECT session_id, count() AS cnt
+          FROM events
+          WHERE site_id = {site:String}
+            AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
+          GROUP BY session_id
+        )
+      SQL
+
+      duration_row = @client.query(<<~SQL, params: scope_params(period)).first || {}
+        SELECT avg(sec) AS avg_seconds
+        FROM (
+          SELECT session_id, dateDiff('second', min(timestamp), max(timestamp)) AS sec
+          FROM events
+          WHERE site_id = {site:String}
+            AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
+          GROUP BY session_id
+          HAVING count() > 1
+        )
+      SQL
+
+      total = (bounce_row["total"] || 0).to_i
+      bounced = (bounce_row["bounced"] || 0).to_i
+
+      {
+        pageviews: (row["pageviews"] || 0).to_i,
+        unique_visitors: (row["unique_visitors"] || 0).to_i,
+        sessions: (row["sessions"] || 0).to_i,
+        bounce_rate: total.zero? ? 0.0 : (bounced.to_f / total).round(4),
+        avg_session_duration_seconds: (duration_row["avg_seconds"] || 0).to_f.round(1)
+      }
+    end
+
+    # --- Time series --------------------------------------------------------
+
+    def timeseries(metric, period, granularity: "day")
+      bucket = bucket_fn(granularity)
+      metric_sql = metric_expression(metric)
+
+      sql = <<~SQL
+        SELECT #{bucket}(timestamp) AS bucket, #{metric_sql} AS value
+        FROM events
+        WHERE site_id = {site:String}
+          AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
+        GROUP BY bucket
+        ORDER BY bucket
+      SQL
+
+      @client.query(sql, params: scope_params(period)).map do |row|
+        { "timestamp" => row["bucket"], "value" => row["value"].to_i }
+      end
+    end
+
+    # --- Top lists ----------------------------------------------------------
+
+    def top_pages(period, limit: 10)
+      sql = <<~SQL
+        SELECT
+          url_path,
+          count() AS pageviews,
+          uniqIf(visitor_id, visitor_id != 0) AS unique_visitors
+        FROM events
+        WHERE site_id = {site:String}
+          AND event_name = 'pageview'
+          AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
+        GROUP BY url_path
+        ORDER BY pageviews DESC
+        LIMIT {limit:UInt32}
+      SQL
+
+      @client.query(sql, params: scope_params(period).merge(limit: limit)).map do |r|
+        { "url_path" => r["url_path"],
+          "pageviews" => r["pageviews"].to_i,
+          "unique_visitors" => r["unique_visitors"].to_i }
+      end
+    end
+
+    def top_referrers(period, limit: 10)
+      total = referrer_total(period)
+
+      sql = <<~SQL
+        SELECT referrer_host, count() AS visits
+        FROM events
+        WHERE site_id = {site:String}
+          AND event_name = 'pageview'
+          AND referrer_host != ''
+          AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
+        GROUP BY referrer_host
+        ORDER BY visits DESC
+        LIMIT {limit:UInt32}
+      SQL
+
+      rows = @client.query(sql, params: scope_params(period).merge(limit: limit))
+      rows.map do |r|
+        visits = r["visits"].to_i
+        {
+          "referrer_host" => r["referrer_host"],
+          "visits" => visits,
+          "percentage_of_total" => total.zero? ? 0.0 : (visits.to_f / total).round(4)
+        }
+      end
+    end
+
+    def top_sources(period, limit: 10)
+      sql = <<~SQL
+        SELECT utm_source, utm_medium, utm_campaign, count() AS visits
+        FROM events
+        WHERE site_id = {site:String}
+          AND event_name = 'pageview'
+          AND (utm_source != '' OR utm_medium != '' OR utm_campaign != '')
+          AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
+        GROUP BY utm_source, utm_medium, utm_campaign
+        ORDER BY visits DESC
+        LIMIT {limit:UInt32}
+      SQL
+
+      @client.query(sql, params: scope_params(period).merge(limit: limit)).map do |r|
+        {
+          "utm_source"   => r["utm_source"],
+          "utm_medium"   => r["utm_medium"],
+          "utm_campaign" => r["utm_campaign"],
+          "visits"       => r["visits"].to_i
+        }
+      end
+    end
+
+    def breakdown(dimension, period, limit: 10)
+      column = {
+        "browser"     => "browser",
+        "os"          => "os",
+        "device_type" => "device_type",
+        "country"     => "country"
+      }[dimension.to_s]
+      raise ArgumentError, "unknown dimension: #{dimension.inspect}" unless column
+
+      if column == "country"
+        return [{ "note" => "geo not enabled in MVP" }]
+      end
+
+      sql = <<~SQL
+        SELECT #{column} AS value, count() AS visits
+        FROM events
+        WHERE site_id = {site:String}
+          AND event_name = 'pageview'
+          AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
+        GROUP BY value
+        ORDER BY visits DESC
+        LIMIT {limit:UInt32}
+      SQL
+
+      rows = @client.query(sql, params: scope_params(period).merge(limit: limit))
+      total = rows.sum { |r| r["visits"].to_i }
+
+      rows.map do |r|
+        visits = r["visits"].to_i
+        {
+          "value" => r["value"],
+          "visits" => visits,
+          "percentage" => total.zero? ? 0.0 : (visits.to_f / total).round(4)
+        }
+      end
+    end
+
+    def list_events(period)
+      sql = <<~SQL
+        SELECT event_name,
+               count() AS count,
+               uniq(session_id) AS unique_sessions
+        FROM events
+        WHERE site_id = {site:String}
+          AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
+        GROUP BY event_name
+        ORDER BY count DESC
+      SQL
+
+      @client.query(sql, params: scope_params(period)).map do |r|
+        {
+          "event_name" => r["event_name"],
+          "count" => r["count"].to_i,
+          "unique_sessions" => r["unique_sessions"].to_i
+        }
+      end
+    end
+
+    def event_details(event_name, period, group_by_property: nil)
+      if group_by_property
+        sql = <<~SQL
+          SELECT prop_values[indexOf(prop_keys, {prop:String})] AS value,
+                 count() AS count
+          FROM events
+          WHERE site_id = {site:String}
+            AND event_name = {event:String}
+            AND has(prop_keys, {prop:String})
+            AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
+          GROUP BY value
+          ORDER BY count DESC
+          LIMIT 100
+        SQL
+
+        return @client.query(sql, params: scope_params(period).merge(event: event_name, prop: group_by_property)).map do |r|
+          { "property_value" => r["value"], "count" => r["count"].to_i }
+        end
+      end
+
+      totals_sql = <<~SQL
+        SELECT count() AS total_count,
+               uniq(session_id) AS sessions_with_event
+        FROM events
+        WHERE site_id = {site:String}
+          AND event_name = {event:String}
+          AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
+      SQL
+
+      totals = @client.query(totals_sql, params: scope_params(period).merge(event: event_name)).first || {}
+
+      pages_sql = <<~SQL
+        SELECT url_path, count() AS count
+        FROM events
+        WHERE site_id = {site:String}
+          AND event_name = {event:String}
+          AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
+        GROUP BY url_path
+        ORDER BY count DESC
+        LIMIT 10
+      SQL
+
+      top_pages = @client.query(pages_sql, params: scope_params(period).merge(event: event_name)).map do |r|
+        { "url_path" => r["url_path"], "count" => r["count"].to_i }
+      end
+
+      {
+        "total_count" => (totals["total_count"] || 0).to_i,
+        "sessions_with_event" => (totals["sessions_with_event"] || 0).to_i,
+        "top_pages_with_event" => top_pages
+      }
+    end
+
+    def compare(metric, period_a, period_b)
+      a = scalar_metric(metric, period_a)
+      b = scalar_metric(metric, period_b)
+      abs = a - b
+      pct = b.zero? ? nil : (abs.to_f / b).round(4)
+      { "a_value" => a, "b_value" => b, "absolute_change" => abs, "percent_change" => pct }
+    end
+
+    private
+
+    def scope_params(period)
+      { site: @site.site_id, from: period.from_sql, to: period.to_sql }
+    end
+
+    def referrer_total(period)
+      row = @client.query(<<~SQL, params: scope_params(period)).first || {}
+        SELECT count() AS total
+        FROM events
+        WHERE site_id = {site:String}
+          AND event_name = 'pageview'
+          AND referrer_host != ''
+          AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
+      SQL
+      (row["total"] || 0).to_i
+    end
+
+    def bucket_fn(granularity)
+      case granularity.to_s
+      when "hour" then "toStartOfHour"
+      when "week" then "toStartOfWeek"
+      else "toStartOfDay"
+      end
+    end
+
+    def metric_expression(metric)
+      case metric.to_s
+      when "pageviews" then "countIf(event_name = 'pageview')"
+      when "visitors"  then "uniqIf(visitor_id, visitor_id != 0)"
+      when "sessions"  then "uniq(session_id)"
+      else raise ArgumentError, "unknown metric: #{metric.inspect}"
+      end
+    end
+
+    def scalar_metric(metric, period)
+      sql = <<~SQL
+        SELECT #{metric_expression(metric)} AS value
+        FROM events
+        WHERE site_id = {site:String}
+          AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
+      SQL
+      row = @client.query(sql, params: scope_params(period)).first || {}
+      (row["value"] || 0).to_i
+    end
+  end
+end

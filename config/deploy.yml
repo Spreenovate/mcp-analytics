@@ -1,0 +1,136 @@
+# Kamal 2 deploy config for mcp-analytics.
+#
+# Single host (Hetzner CX32), three containers:
+#   - web        (this Rails app)           : mcp-analytics.com
+#   - ingest     (Go service)               : t.mcp-analytics.com
+#   - clickhouse (accessory)                : internal network only
+#
+# kamal-proxy (automatically deployed by Kamal) terminates TLS via Let's Encrypt.
+#
+# Expected env/secrets (in .kamal/secrets):
+#   KAMAL_REGISTRY_PASSWORD   Docker Hub / GHCR password
+#   RAILS_MASTER_KEY          Rails secret key base
+#   SMTP_USERNAME
+#   SMTP_PASSWORD
+#   CLICKHOUSE_PASSWORD
+#
+# Deploy:
+#   kamal setup          # first time
+#   kamal deploy         # subsequent
+
+service: mcp-analytics
+image: mcpanalytics/rails
+
+servers:
+  web:
+    hosts:
+      - 1.2.3.4
+    labels:
+      traefik.enable: "false"
+    options:
+      network: kamal
+    proxy:
+      ssl: true
+      host: mcp-analytics.com
+      app_port: 80
+      healthcheck:
+        path: /up
+        interval: 10
+        timeout: 2
+
+  # Second role, different image. Kamal 2 lets each role override `image`.
+  ingest:
+    hosts:
+      - 1.2.3.4
+    image: mcpanalytics/ingest
+    cmd: /app/ingest
+    options:
+      network: kamal
+    proxy:
+      ssl: true
+      host: t.mcp-analytics.com
+      app_port: 8081
+      healthcheck:
+        path: /healthz
+        interval: 10
+        timeout: 2
+    env:
+      clear:
+        INGEST_LISTEN: ":8081"
+        DATABASE_PATH: "/rails/storage/production.sqlite3"
+        CLICKHOUSE_URL: "http://mcp-analytics-clickhouse:8123"
+        CLICKHOUSE_DB: "mcpa"
+        STATIC_DIR: "/app/static"
+      secret:
+        - CLICKHOUSE_PASSWORD
+    volumes:
+      # Mount Rails storage dir so the ingest service can read sites.db and
+      # write usage_counters. WAL mode makes concurrent access safe.
+      - "mcp_storage:/rails/storage"
+
+# Shared env for the Rails (web) role.
+env:
+  clear:
+    RAILS_ENV: production
+    RAILS_LOG_TO_STDOUT: "1"
+    SOLID_QUEUE_IN_PUMA: "1"
+    JOB_CONCURRENCY: "1"
+    PUBLIC_BASE_URL: "https://mcp-analytics.com"
+    PUBLIC_HOST: "mcp-analytics.com"
+    TRACKER_BASE_URL: "https://t.mcp-analytics.com"
+    ADDITIONAL_HOSTS: "www.mcp-analytics.com"
+    CLICKHOUSE_URL: "http://mcp-analytics-clickhouse:8123"
+    CLICKHOUSE_DB: "mcpa"
+    SMTP_ADDRESS: "smtp.eu.mailgun.org"
+    SMTP_PORT: "587"
+    MAIL_FROM: "no-reply@mcp-analytics.com"
+    OPERATOR_EMAIL: "alex@mcp-analytics.com"
+  secret:
+    - RAILS_MASTER_KEY
+    - SMTP_USERNAME
+    - SMTP_PASSWORD
+    - CLICKHOUSE_PASSWORD
+
+# Shared storage volume — lives on the server filesystem, binds into containers.
+volumes:
+  - "mcp_storage:/rails/storage"
+
+registry:
+  server: ghcr.io
+  username: mcpanalytics
+  password:
+    - KAMAL_REGISTRY_PASSWORD
+
+builder:
+  arch: amd64
+  context: .
+  dockerfile: Dockerfile
+
+# ClickHouse accessory. Runs on the same host, not exposed publicly.
+accessories:
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.3
+    host: 1.2.3.4
+    port: "127.0.0.1:8123:8123"
+    options:
+      network: kamal
+      ulimit: "nofile=262144:262144"
+    env:
+      clear:
+        CLICKHOUSE_DB: "mcpa"
+        CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+      secret:
+        - CLICKHOUSE_PASSWORD
+    files:
+      - clickhouse/init/01_events.sql:/docker-entrypoint-initdb.d/01_events.sql
+      - clickhouse/init/02_events_hourly_mv.sql:/docker-entrypoint-initdb.d/02_events_hourly_mv.sql
+      - clickhouse/init/03_referrers_daily_mv.sql:/docker-entrypoint-initdb.d/03_referrers_daily_mv.sql
+    directories:
+      # Keep ClickHouse data on the host SSD at /var/lib/clickhouse. Briefing
+      # calls this out explicitly — later migration to a dedicated volume needs
+      # no code change.
+      - /var/lib/clickhouse:/var/lib/clickhouse
+
+# Backup (daily) is handled by a host-level cron that `docker exec`s into the
+# ClickHouse container and runs `clickhouse-client ... BACKUP TABLE mcpa.events`
+# + snapshots the Rails SQLite files. See ops/backup.sh.

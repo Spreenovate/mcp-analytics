@@ -1,0 +1,5 @@
+<% content_for(:title, "Link expired — mcp-analytics") %>
+
+<h1>Sign-in link expired or invalid.</h1>
+<p>Magic links are valid for 15 minutes and can only be used once.</p>
+<p><%= link_to "Request a new link", login_path, class: "btn" %></p>

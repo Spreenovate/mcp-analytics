@@ -1,0 +1,43 @@
+# Rails defaults
+/.bundle
+/log/*
+!/log/.keep
+/tmp/*
+!/tmp/.keep
+/tmp/pids/*
+!/tmp/pids/
+!/tmp/pids/.keep
+/storage/*
+!/storage/.keep
+/tmp/storage/*
+!/tmp/storage/
+!/tmp/storage/.keep
+/public/assets
+/node_modules
+/yarn-error.log
+yarn-debug.log*
+.yarn-integrity
+/.byebug_history
+.dockerignore
+.env.*
+.env
+
+# Secrets — never commit
+/config/master.key
+/config/credentials/*.key
+/.kamal/secrets-*
+
+# OS cruft
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Go build artifacts
+/ingestion/bin/
+/ingestion/*.out
+
+# Rails 8 solid_* dev db
+!/db/queue_schema.rb
+!/db/cache_schema.rb
+!/db/cable_schema.rb

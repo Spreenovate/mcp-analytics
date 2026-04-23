@@ -1,0 +1,55 @@
+<% content_for(:title, "Settings — mcp-analytics") %>
+
+<h1>Settings</h1>
+<p class="muted">Signed in as <strong><%= current_user.email %></strong>. <%= button_to "Sign out", logout_path, method: :delete, class: "btn" %></p>
+
+<div class="card">
+  <h2>MCP URL</h2>
+  <p class="kbd"><%= @base_url %>/mcp?token=<%= current_user.api_token %></p>
+  <%= button_to "Regenerate API token", regenerate_token_settings_path, method: :post, class: "btn",
+        data: { turbo_confirm: "The old token will stop working immediately. Continue?" } %>
+</div>
+
+<div class="card">
+  <h2>Usage this month</h2>
+  <p>
+    <strong><%= number_with_delimiter(current_user.hits_this_month) %></strong>
+    /
+    <%= number_with_delimiter(current_user.plan_limit) %> hits
+    <% if current_user.hits_this_month > current_user.plan_limit %>
+      <span class="warn">(over limit — MCP responses include a warning)</span>
+    <% end %>
+  </p>
+</div>
+
+<div class="card">
+  <h2>Sites</h2>
+  <% if @sites.empty? %>
+    <p class="muted">No sites yet. Ask your AI tool to call <code>add_site</code>.</p>
+  <% else %>
+    <table>
+      <thead>
+        <tr><th>Domain</th><th>site_id</th><th>Privacy</th><th>Hits (month)</th></tr>
+      </thead>
+      <tbody>
+        <% @sites.each do |s| %>
+          <tr>
+            <td><%= s.domain %></td>
+            <td><code><%= s.site_id %></code></td>
+            <td><%= s.privacy_mode %></td>
+            <td><%= number_with_delimiter(@hits_by_site.fetch(s.site_id, 0)) %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+</div>
+
+<div class="card">
+  <h2 style="color:#b91c1c;">Delete account</h2>
+  <p class="muted">Soft-deletes your sites and purges account data. Historical events stay in ClickHouse until TTL expires.</p>
+  <%= button_to "Delete my account", destroy_account_settings_path, method: :delete,
+        class: "btn",
+        style: "background:#b91c1c;",
+        data: { turbo_confirm: "Delete account and all sites? This cannot be undone." } %>
+</div>

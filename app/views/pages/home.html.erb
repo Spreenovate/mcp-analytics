@@ -1,0 +1,28 @@
+<% content_for(:title, "mcp-analytics — web analytics over MCP") %>
+
+<h1>Analytics for your AI workflow.</h1>
+<p class="muted">Ask your data, instead of clicking through dashboards.</p>
+
+<div class="card">
+  <p><strong>Add this MCP server to Claude (or any MCP client):</strong></p>
+  <p class="kbd"><%= @mcp_url %></p>
+  <p class="muted">Without a token, only signup tools are exposed. The signup flow issues your personal token and the updated MCP URL you paste back in.</p>
+</div>
+
+<h2>Install the tracking snippet</h2>
+<pre><code>&lt;script defer data-site="YOUR_SITE_ID"
+        src="https://t.mcp-analytics.com/script.js"&gt;&lt;/script&gt;</code></pre>
+
+<h2>What makes it different</h2>
+<ul>
+  <li><strong>No tabs.</strong> All queries happen inside your AI tool.</li>
+  <li><strong>Custom events first-class.</strong> <code>mcpa('track', 'signup', {plan: 'pro'})</code>.</li>
+  <li><strong>GDPR-easy.</strong> EU-hosted (Falkenstein), strict mode needs no cookie banner.</li>
+</ul>
+
+<h2>Free MVP</h2>
+<p>100,000 hits/month per account, unlimited sites. <a href="mailto:enterprise@mcp-analytics.com">Enterprise</a> for more.</p>
+
+<footer>
+  <%= link_to "Sign in to settings", login_path %> · <%= link_to "Terms", "#" %> · <%= link_to "Privacy", "#" %>
+</footer>

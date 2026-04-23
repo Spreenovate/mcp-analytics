@@ -1,0 +1,24 @@
+<% content_for(:title, "Account verified — mcp-analytics") %>
+
+<h1><span class="success">✓ Email verified.</span></h1>
+<p class="muted">Your account is ready. Keep this page open while you update your MCP connector.</p>
+
+<div class="card">
+  <p><strong>Your API token</strong></p>
+  <p class="kbd" id="token"><%= @user.api_token %></p>
+</div>
+
+<div class="card">
+  <p><strong>Updated MCP URL (paste this into your connector)</strong></p>
+  <p class="kbd" id="mcp-url"><%= @mcp_url_with_token %></p>
+</div>
+
+<h2>What to do next</h2>
+<ol>
+  <li>Copy the MCP URL above.</li>
+  <li>In Claude (or your MCP client), update the mcp-analytics connector with this URL.</li>
+  <li>Return to your chat and say “done”. Claude will call <code>list_sites</code> and <code>add_site</code> to finish the setup.</li>
+  <li>Once you have a real <code>site_id</code>, replace any occurrence of <code>DUMMY_SITE_ID_REPLACE_AFTER_VERIFY</code> in your code with it.</li>
+</ol>
+
+<footer><%= link_to "Go to settings", settings_path %></footer>
