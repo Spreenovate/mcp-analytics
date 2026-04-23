@@ -23,6 +23,8 @@ module Mcp
         raise ArgumentError, "disposable email domains are not supported"
       end
 
+      enforce_register_rate_limits!(email)
+
       verification = EmailVerification.create!(email: email)
 
       VerificationMailer.verify(verification).deliver_later
@@ -229,6 +231,28 @@ module Mcp
     def disposable_email_domain?(email)
       domain = email.split("@", 2)[1].to_s.downcase
       DISPOSABLE_DOMAINS.include?(domain)
+    end
+
+    # Anti-abuse: cap signups per IP and per email-domain.
+    # 3/IP/h, 10/IP/d, 5/email-domain/d.
+    def enforce_register_rate_limits!(email)
+      ip = @request&.remote_ip.to_s
+      domain = email.split("@", 2)[1].to_s.downcase
+
+      if ip.present?
+        unless RateLimit.allow?(key: "reg:ip-h:#{ip}", limit: 3, window: 3600)
+          raise RateLimitedError, "too many signups from this network (3/hour)"
+        end
+        unless RateLimit.allow?(key: "reg:ip-d:#{ip}", limit: 10, window: 86_400)
+          raise RateLimitedError, "too many signups from this network (10/day)"
+        end
+      end
+
+      if domain.present?
+        unless RateLimit.allow?(key: "reg:dom-d:#{domain}", limit: 5, window: 86_400)
+          raise RateLimitedError, "too many signups for this email domain (5/day)"
+        end
+      end
     end
   end
 end

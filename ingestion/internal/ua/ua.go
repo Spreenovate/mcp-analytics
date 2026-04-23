@@ -35,18 +35,17 @@ func Parse(ua string) Parsed {
 		return p
 	}
 
-	// OS
+	// OS — iOS must be checked before macOS because iPhone/iPad UAs contain
+	// "like Mac OS X". Android before Linux for the same reason.
 	switch {
-	case strings.Contains(ua, "Windows NT 10"):
-		p.OS = "Windows"
+	case strings.Contains(ua, "iPhone") || strings.Contains(ua, "iPad") || strings.Contains(ua, "iPod"):
+		p.OS = "iOS"
+	case strings.Contains(ua, "Android"):
+		p.OS = "Android"
 	case strings.Contains(ua, "Windows"):
 		p.OS = "Windows"
 	case strings.Contains(ua, "Mac OS X") || strings.Contains(ua, "Macintosh"):
 		p.OS = "macOS"
-	case strings.Contains(ua, "Android"):
-		p.OS = "Android"
-	case strings.Contains(ua, "iPhone") || strings.Contains(ua, "iPad") || strings.Contains(ua, "iPod"):
-		p.OS = "iOS"
 	case strings.Contains(ua, "CrOS"):
 		p.OS = "ChromeOS"
 	case strings.Contains(ua, "Linux"):

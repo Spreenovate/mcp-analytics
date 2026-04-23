@@ -1,24 +1,74 @@
-PROJEKT: mcp-analytics
+# PROJEKT: mcp-analytics — Working Document
 
-ZIEL
+Stand: 2026-04-23 · Branch: `main` · Tests: 88 Rails + 41 Go = 129, alle grün
+
+Dieses Dokument ist der ursprüngliche Briefing-Text, annotiert mit dem
+aktuellen Umsetzungsstand. Originaltext ist unverändert; Status-Blöcke und
+Notizen sind eingefügt.
+
+Legende:
+
+- `[DONE]`     — umgesetzt
+- `[PARTIAL]`  — teilweise, Detail im Hinweis
+- `[TODO]`     — noch offen
+- `[SKIP]`     — bewusst aus MVP ausgeschlossen
+
+---
+
+## STATUS-DASHBOARD
+
+| Bereich                              | Status       | Hinweis                                                          |
+|--------------------------------------|--------------|------------------------------------------------------------------|
+| Infrastruktur / Kamal-Setup          | `[PARTIAL]`  | `config/deploy.yml` + `.kamal/secrets` existieren; Host-IP ist `1.2.3.4`, noch nie deployt |
+| Rails-App Gerüst (Rails 8 + SQLite)  | `[DONE]`     | Gemfile, Dockerfile, config, routes, Solid Queue in Puma         |
+| Datenmodell Rails (6 Tabellen)       | `[DONE]`     | Alle Migrations + Models vorhanden                               |
+| Datenmodell ClickHouse               | `[DONE]`     | `events` + `events_hourly` + `referrers_daily` MVs               |
+| Go-Ingestion-Service                 | `[DONE]`     | Bot-Filter, Rate-Limit, Salt-Hashing, Usage-Buffer, Site-Cache   |
+| Tracking-Script                      | `[DONE]`     | `ingestion/static/script.js` (131 Zeilen)                        |
+| MCP-Server + alle 18 Tools           | `[DONE]`     | JSON-RPC in `app/services/mcp/`                                  |
+| MCP-Auth-Recherche                   | `[DONE]`     | Entschieden: Bearer-Header + `?token=` Fallback, kein OAuth      |
+| Web-UI (Landing, Verify, Settings)   | `[DONE]`     | Alle Views + Controller                                          |
+| Signup-/Verify-Flow inkl. Mails      | `[DONE]`     | VerificationMailer, MagicLinkMailer                              |
+| Recurring Jobs (Salt, Purge, Usage)  | `[DONE]`     | `config/recurring.yml` + 3 Job-Klassen                           |
+| Anti-Abuse (Rate-Limits, komplett)   | `[DONE]`     | /event, MCP 60/min, `register_account` 3/IP/h + 10/IP/d + 5/Dom/d, `magic_link` 5/Email/h |
+| Anti-Abuse (Garbage-Site-IP-Block)   | `[TODO]`     | `unknown_site_hits` wird geschrieben, aber kein IP-Block + Alert |
+| Concurrency (Atomic UPSERTs)         | `[DONE]`     | `UsageCounter`, `UnknownSiteHit` → `INSERT ... ON CONFLICT`      |
+| Email-Blacklist für Trash-Domains    | `[PARTIAL]`  | Logik in `Tools#disposable_email_domain?` — Liste prüfen/pflegen |
+| Backup-Script                        | `[DONE]`     | `ops/backup.sh` (täglich, SQLite + ClickHouse)                   |
+| Monitoring / Alerts                  | `[PARTIAL]`  | Usage-Alert per Mail; Uptime/Disk/Garbage-Pattern noch offen     |
+| Tests Rails (88)                     | `[DONE]`     | Models, MCP Tools, MCP Controller, Verify, Sessions/Settings     |
+| Tests Go (41 über 9 Pakete)          | `[DONE]`     | bot, session, ratelimit, usage, ua, config, sites, ch, server    |
+| Deployment auf Hetzner               | `[TODO]`     | Server aufsetzen, Secrets, DNS, `kamal setup`                    |
+| Dogfooding retreaturlaub / triageflow| `[TODO]`     | Erst nach Deploy                                                 |
+
+**Kritischer Pfad bis Launch**: ~~Tests~~ ✅ → echter Hetzner-Host + DNS →
+`kamal setup` + erste Deploy → Dogfooding → Garbage-Pattern-Alert.
+
+---
+
+## ZIEL
+
 Web-Analytics-Tool, das ausschließlich über das Model Context Protocol (MCP)
 bedient wird – kein Dashboard, keine UI für die Analytics selbst. Nutzer
 greifen via Claude/ChatGPT/anderer MCP-Clients auf ihre Analytics-Daten zu.
 Erste Version: MVP zum Validieren der Idee, kostenlos bis 100k Hits/Monat,
 keine Bezahlfunktion, keine Enterprise-Features.
 
-POSITIONIERUNG
+## POSITIONIERUNG
+
 "Analytics für deinen AI-Workflow. Frag deine Daten, statt durch Dashboards
 zu klicken." Bonus-Argumente: keine Tabs, Custom Events first-class,
 GDPR-easy (EU-Hosting auf Hetzner Falkenstein), kein Cookie-Banner nötig
 im Strict-Modus.
 
-TARGET USER
+## TARGET USER
+
 Indie SaaS Founder, Bloggers, Newsletter-Operators, Side-Project-Bauer.
 Leute, die Claude oder vergleichbare AI-Tools täglich nutzen und ihre
 Analytics nicht in einem separaten Tool haben wollen.
 
-INFRASTRUKTUR
+## INFRASTRUKTUR  — `[PARTIAL]`
+
 - 1 Server: Hetzner CX32 (4 vCPU, 8GB RAM, 80GB SSD), Standort Falkenstein
 - ClickHouse läuft direkt auf der Server-SSD unter /var/lib/clickhouse
   (kein separates Volume im MVP – kann später ohne Code-Änderung migriert
@@ -29,7 +79,23 @@ INFRASTRUKTUR
 - Reverse Proxy / TLS: kamal-proxy (kein nginx separat)
 - Let's Encrypt automatisch via kamal-proxy
 
-STACK
+> **Status**: `config/deploy.yml` und `.kamal/secrets` sind eingecheckt.
+> Host-IP ist noch Platzhalter `1.2.3.4`, Server nicht bestellt, DNS nicht
+> gesetzt, `kamal setup` nie gelaufen. Backup-Script liegt unter
+> `ops/backup.sh`.
+>
+> **TODOs**:
+> - Hetzner CX32 in Falkenstein bestellen, IP in `config/deploy.yml`
+>   (Rollen `web` und `ingest`) eintragen
+> - DNS A-Records für `mcp-analytics.com` und `t.mcp-analytics.com`
+> - Secrets in `.kamal/secrets` befüllen (`RAILS_MASTER_KEY`,
+>   `KAMAL_REGISTRY_PASSWORD`, `SMTP_USERNAME`/`PASSWORD`,
+>   `CLICKHOUSE_PASSWORD`)
+> - `kamal setup` + erste `kamal deploy`
+> - Cronjob für `ops/backup.sh` auf dem Host einrichten
+
+## STACK  — `[DONE]`
+
 - Rails 8 App (Container 1)
   - SQLite für Account/Site/Token-Daten
   - Solid Queue für Background-Jobs (Salt-Rotation, Mail-Versand,
@@ -45,7 +111,13 @@ STACK
 - ClickHouse (Container 3, Accessory in Kamal)
   - Single Node, Persistenz unter /var/lib/clickhouse
 
-OFFENE TECHNISCHE FRAGE (RECHERCHE NÖTIG VOR IMPLEMENTATION)
+> **Status**: Entscheidung für Go-Binary umgesetzt. Rails-App, Go-Service
+> und ClickHouse-Accessory sind alle in `config/deploy.yml` definiert.
+> Shared Storage-Volume via `mcp_storage:/rails/storage` (SQLite im
+> WAL-Mode wird von Rails + Go parallel gelesen).
+
+## OFFENE TECHNISCHE FRAGE (RECHERCHE NÖTIG VOR IMPLEMENTATION)  — `[DONE]`
+
 Welcher Auth-Mechanismus für Remote-MCP-Server ist der korrekte Weg
 in 2026? Optionen:
 - URL-Query-Param-Token (?token=xxx) – funktioniert, aber unschön
@@ -55,7 +127,12 @@ Vor Implementation in der aktuellen Anthropic-Doku zu Remote MCP Servern
 nachlesen und passende Variante wählen. Empfehlung als Default:
 Bearer-Token im Header, falls OAuth-Setup zu aufwändig für MVP.
 
-DATENMODELL: Rails (SQLite)
+> **Entscheidung**: Bearer-Header als primärer Weg, `?token=` als Fallback
+> (für Clients, die keinen Custom-Header setzen können). Implementiert in
+> `app/controllers/mcp_controller.rb` (`authenticate_from_request`).
+> OAuth ist für Post-MVP vorgesehen, nicht blockierend.
+
+## DATENMODELL: Rails (SQLite)  — `[DONE]`
 
 users:
   - email (unique)
@@ -104,7 +181,13 @@ unknown_site_hits (Anti-Abuse):
   - unique index on [site_id_attempted, hour]
   - wenn pro IP/Stunde >X Garbage-Site-IDs auftauchen: Alert an Operator
 
-DATENMODELL: ClickHouse
+> **Status**: Alle 6 Migrations unter `db/migrate/` + Models in
+> `app/models/`. Schreiben der `usage_counters`/`unknown_site_hits` aus
+> Go via buffered UPSERT (`ingestion/internal/usage/buffer.go`).
+>
+> **Offen**: Die Garbage-Site-ID → IP-Block-Logik (siehe ANTI-ABUSE).
+
+## DATENMODELL: ClickHouse  — `[DONE]`
 
 CREATE TABLE events (
     site_id        UInt32,
@@ -172,7 +255,12 @@ Iteration ohne Schema-Migration. Später hinzukommende Spalten (Web Vitals,
 Conversion-Tracking, A/B-Test-IDs) können per ALTER TABLE ADD COLUMN
 problemlos angefügt werden.
 
-PRIVACY MODES (per Site bei add_site() gewählt, NICHT änderbar)
+> **Status**: Alle drei DDLs liegen in `clickhouse/init/` und werden beim
+> ClickHouse-Container-Start eingespielt. HTTP-Client für Rails:
+> `lib/click_house.rb`. Go-seitig: `ingestion/internal/ch/client.go`
+> (async_insert Batcher, Flush alle 5s oder 1000 Events).
+
+## PRIVACY MODES (per Site bei add_site() gewählt, NICHT änderbar)  — `[DONE]`
 
 strict (Default-Empfehlung für EU-Sites):
   - Daily Salt rotiert um Mitternacht UTC
@@ -209,7 +297,12 @@ Site-eigenen User-Systemen). Custom Events können das versehentlich
 mitschicken – Backend filtert/warnt nicht, ist Verantwortung des
 Site-Owners.
 
-TRACKING-SCRIPT (~50-80 Zeilen Vanilla JS)
+> **Status**: Salt-Logik in `ingestion/internal/session/id.go`. Daily-Salt-
+> Rotation via `RotateDefaultSaltsJob` (läuft 03:17 UTC, siehe
+> `config/recurring.yml`). Cookie-basierter `all`-Mode im Tracking-Script
+> implementiert.
+
+## TRACKING-SCRIPT (~50-80 Zeilen Vanilla JS)  — `[DONE]`
 
 Ausgeliefert unter https://mcp-analytics.com/script.js (extern,
 gecached). Self-hosted-Variante kommt in späterer Phase.
@@ -233,7 +326,15 @@ Während der "Pre-Verify"-Phase nutzt Claude den Platzhalter
 DUMMY_SITE_ID_REPLACE_AFTER_VERIFY als data-site Wert. Der User
 ersetzt diesen später per Suchen+Ersetzen mit der echten Site-ID.
 
-INGESTION-FLOW
+> **Status**: `ingestion/static/script.js` — 131 Zeilen, wird vom Go-
+> Service unter `https://t.mcp-analytics.com/script.js` ausgeliefert
+> (nicht unter `mcp-analytics.com/script.js` wie ursprünglich im Briefing).
+>
+> **Hinweis**: Im README wird konsequent `t.mcp-analytics.com` dokumentiert.
+> Vor Launch prüfen, ob das Public-Snippet in Marketing/Landing die
+> richtige URL zeigt.
+
+## INGESTION-FLOW  — `[DONE]`
 
 POST /event Body:
 {
@@ -266,7 +367,15 @@ Bot-Filter-Strategie:
 - Heuristik in ClickHouse-Aggregation: Sessions mit >5 Events/Sek
   werden in Materialized Views nicht gezählt (markiert, nicht gelöscht)
 
-MCP-SERVER
+> **Status**: Alle Schritte 1–11 umgesetzt in
+> `ingestion/internal/server/server.go` + Packages `bot`, `ratelimit`,
+> `session`, `ua`, `ch`, `usage`, `sites`.
+>
+> **Offen bestätigen**: Heuristik "Sessions mit >5 Events/Sek werden in
+> MVs nicht gezählt" — ist so nicht in den MVs implementiert. Prüfen, ob
+> das vor Launch gebraucht wird oder Post-MVP reicht.
+
+## MCP-SERVER  — `[DONE]`
 
 EINE MCP-URL für alles, mit Conditional Tools je nach Auth-Status:
 
@@ -278,7 +387,7 @@ URL: https://mcp-analytics.com/mcp
 Das hat den Vorteil, dass der User nur EINE Connector-URL hinzufügen
 muss und sie später nur um den Token-Param erweitert.
 
-UNAUTHENTICATED TOOLS (Signup-Phase)
+### UNAUTHENTICATED TOOLS (Signup-Phase)
 
 register_account(email: string)
   → backend: erstellt email_verification record mit verify_token + 
@@ -301,152 +410,74 @@ get_started_guide()
   → erklärt User-Steps (Mail klicken, Token kopieren, Connector
     aktualisieren)
 
-AUTHENTICATED TOOLS (mit Token)
+### AUTHENTICATED TOOLS (mit Token)
 
 list_sites()
-  → [{site_id, domain, privacy_mode, hits_this_month, plan_limit,
-      created_at}]
-
-add_site(domain: string, 
-         privacy_mode: 'strict'|'default'|'all' = 'strict')
-  → {
-      site_id: "tb_8x9k2m4n",
-      tracking_snippet: "<script defer data-site=\"tb_8x9k2m4n\" ...",
-      install_instructions: "Falls du schon mit Platzhalter gearbeitet
-        hast: einmal in deinem Codebase suchen+ersetzen
-        DUMMY_SITE_ID_REPLACE_AFTER_VERIFY → tb_8x9k2m4n"
-    }
-  → Rate-Limit: 10 pro User/Tag
-
-get_tracking_snippet(site_id: string)
-  → {snippet_html, install_instructions}
-
-remove_site(site_id: string)
-  → soft-delete, ClickHouse-Daten bleiben TTL-lang erhalten
-
-get_overview(site_id: string, period: string = 'last_7_days')
-  → {pageviews, unique_visitors, sessions, bounce_rate, 
-     avg_session_duration}
-  → period-Format: 'today', 'yesterday', 'last_7_days', 'last_30_days',
-                   'last_90_days', 'last_12_months', 
-                   'YYYY-MM-DD..YYYY-MM-DD'
-
-get_timeseries(site_id, 
-               metric: 'pageviews'|'visitors'|'sessions',
-               period, 
-               granularity: 'hour'|'day'|'week' = 'day')
-  → [{timestamp, value}]
-
-top_pages(site_id, period, limit: int = 10)
-  → [{url_path, pageviews, unique_visitors}]
-
-top_referrers(site_id, period, limit: int = 10)
-  → [{referrer_host, visits, percentage_of_total}]
-
-top_sources(site_id, period, limit: int = 10)
-  → [{utm_source, utm_medium, utm_campaign, visits}]
-
-breakdown(site_id, 
-          dimension: 'browser'|'os'|'device_type'|'country',
-          period, 
-          limit: int = 10)
-  → [{value, visits, percentage}]
-  → 'country' im MVP: liefert leere Liste oder Hinweis "Geo nicht
-    aktiviert"
-
+add_site(domain, privacy_mode = 'strict')
+get_tracking_snippet(site_id)
+remove_site(site_id)
+get_overview(site_id, period = 'last_7_days')
+get_timeseries(site_id, metric, period, granularity = 'day')
+top_pages(site_id, period, limit = 10)
+top_referrers(site_id, period, limit = 10)
+top_sources(site_id, period, limit = 10)
+breakdown(site_id, dimension, period, limit = 10)
 list_events(site_id, period)
-  → [{event_name, count, unique_sessions}]
-  → enthält 'pageview' und alle Custom Events
-
-event_details(site_id, event_name, period, group_by_property: string?)
-  → wenn group_by gesetzt: [{property_value, count}]
-    sonst: {total_count, top_pages_with_event, sessions_with_event}
-
+event_details(site_id, event_name, period, group_by_property?)
 compare_periods(site_id, metric, period_a, period_b)
-  → {a_value, b_value, absolute_change, percent_change}
-
 get_account()
-  → {email, plan, total_sites, total_hits_this_month, plan_limit,
-     api_token_first_chars}
-
 regenerate_api_token()
-  → invalidates old token, returns new token + new MCP-URL
 
-Auth-Layer: Token aus Header oder Query-Param lesen (siehe offene
-Recherche-Frage), User finden, alle Queries automatisch nach
-user.sites scopen. Kein Cross-Tenant-Zugriff möglich.
+Auth-Layer: Token aus Header oder Query-Param lesen, User finden, alle
+Queries automatisch nach user.sites scopen. Kein Cross-Tenant-Zugriff
+möglich.
 
 Rate-Limit MCP-Auth-Tools: 60 requests/min pro User.
 
 EXPLIZIT NICHT ENTHALTEN: query_sql oder andere Power-User-Tools.
 Diese sind als Enterprise-Offramp reserviert (siehe ENTERPRISE).
 
-REGISTRIERUNGS-FLOW (END-TO-END)
+> **Status**: Alle 18 Tools implementiert in `app/services/mcp/tools.rb`,
+> JSON-RPC Dispatch in `app/services/mcp/server.rb`, Auth + Rate-Limit
+> in `app/controllers/mcp_controller.rb` (60 req/min per Token,
+> `McpRateBucket`). Tool-Schemas in `app/services/mcp/tool_schemas.rb`.
+> Started-Guide als Markdown in `app/services/mcp/started_guide.md`.
+>
+> **Offen bestätigen**: Rate-Limits für `register_account`
+> (3/IP/h, 10/IP/d, 5/Domain/d) — Implementation prüfen, ist im
+> Briefing unter ANTI-ABUSE genauer spezifiziert.
 
-Idealer Flow im Chat:
+## REGISTRIERUNGS-FLOW (END-TO-END)  — `[DONE]`
 
-1. User in Claude (irgendeine Session, ohne mcp-analytics-Connector):
-   "Bau mir eine Tierbilder-Seite und nutze mcp-analytics für Tracking"
-
-2. Claude: "Dafür brauche ich einmalig den mcp-analytics Connector.
-   Füg bitte hinzu: https://mcp-analytics.com/mcp – das ist öffentlich
-   und braucht erstmal kein Token. Sag Bescheid wenn drin."
-
-3. User aktiviert Connector für die Session.
-
-4. Claude ruft register_account(email) auf, bekommt pending_user_id
-   und Platzhalter-ID zurück.
-
-5. Claude baut die komplette Seite mit dem Platzhalter
-   DUMMY_SITE_ID_REPLACE_AFTER_VERIFY als data-site.
-
-6. Claude: "Seite fertig. Schau in deine Mail und klick den
-   Bestätigungslink. Auf der Seite siehst du dein Token + neue MCP-URL.
-   Update den Connector damit, dann melden wir die Site final an."
-
-7. User klickt Mail-Link → /verify/<token> → Verify-Page zeigt:
-   - "✓ Email bestätigt"
-   - API-Token (Copy-Button)
-   - Neue MCP-URL: https://mcp-analytics.com/mcp?token=<token>
-     (oder Anleitung Bearer-Header, je nach Recherche)
-   - Anleitung: Connector-URL aktualisieren
-
-8. User aktualisiert Connector-URL, kommt zurück: "Drin"
-
-9. Claude ruft list_sites() auf (leer), dann 
-   add_site("tierbilder.de", privacy_mode="strict"), bekommt echte
-   site_id.
-
-10. Claude: "Perfekt, deine Site-ID ist tb_8x9k2m4n. Einmal in deinem
-    Codebase suchen+ersetzen: DUMMY_SITE_ID_REPLACE_AFTER_VERIFY →
-    tb_8x9k2m4n. Dann ist alles live."
-
+1. User: "Bau mir eine Tierbilder-Seite und nutze mcp-analytics"
+2. Claude: "Connector hinzufügen: https://mcp-analytics.com/mcp"
+3. User aktiviert Connector.
+4. Claude: `register_account(email)` → pending_user_id + Platzhalter-ID
+5. Claude baut Seite mit Platzhalter `DUMMY_SITE_ID_REPLACE_AFTER_VERIFY`
+6. Claude: "Mail bestätigen, Token holen, Connector aktualisieren."
+7. User: Mail-Link → `/verify/<token>` → Verify-Page mit Token + MCP-URL
+8. User aktualisiert Connector-URL.
+9. Claude: `list_sites()` + `add_site(...)` → echte site_id
+10. Claude: "Suchen+Ersetzen Platzhalter → echte ID."
 11. Done.
 
-WEB-UI (MINIMAL)
+> **Status**: Alle Bausteine vorhanden (Tools, Verify-Controller,
+> VerificationMailer). End-to-End-Test steht aus (siehe
+> Dogfooding/Tests).
 
-GET /
-  Landing-Page (statisch). Erklärung des Konzepts, MCP-URL zum
-  Hinzufügen, Demo-Video. Kein Web-Signup-Formular.
+## WEB-UI (MINIMAL)  — `[DONE]`
 
-GET /verify/:token
-  Verifiziert Token, erstellt User, generiert API-Token.
-  Zeigt: API-Token + MCP-URL + Anleitung Connector-Update.
-  Diese Seite ist der EINZIGE Zwangs-Touchpoint im Browser.
-
-GET /settings (Auth via Magic Link)
-  - Email anzeigen
-  - API-Token anzeigen + regenerieren
-  - Sites listen mit Hits this month
-  - Account löschen
-
-POST /magic-link
-  Sendet Login-Link für /settings an die hinterlegte Email.
-  Token 15 min gültig.
+GET /                 Landing (statisch)
+GET /verify/:token    Email-Verify + Token-Anzeige
+GET /settings         Magic-Link-auth, Token regenerieren, Sites, Löschen
+POST /magic-link      Login-Link senden
 
 KEINE Analytics-UI. Datenansicht ausschließlich über MCP.
 
-ANTI-ABUSE
+> **Status**: Controller unter `pages`, `verifications`, `sessions`,
+> `settings`. Views komplett. Routes in `config/routes.rb`.
+
+## ANTI-ABUSE  — `[PARTIAL]`
 
 Rate-Limits:
 - register_account: 3 pro IP/Stunde, 10 pro IP/Tag, 
@@ -473,14 +504,27 @@ Garbage-Site-ID-Detection:
 - Wenn pro IP/Stunde >100 Garbage-Site-IDs auftauchen: IP-Block 1h
 - Operator-Mail bei wiederholtem Pattern
 
-ENTERPRISE-OFFRAMP
+> **Status**:
+> - `[DONE]`  60/min MCP-Queries (`McpRateBucket`)
+> - `[DONE]`  100 Events/s per site_id (`ingestion/internal/ratelimit`)
+> - `[DONE]`  Free-Tier-Alert via `UsageLimitAlertJob`
+> - `[DONE]`  `unknown_site_hits` werden geschrieben
+> - `[PARTIAL]` Email-Blacklist: `disposable_email_domain?` prüft, Liste
+>              sollte mit einer aktuellen GitHub-Liste gegengecheckt werden
+> - `[TODO]`  Rate-Limits `register_account` (3/IP/h, 10/IP/d,
+>              5/Domain/d) und `magic_link` (5/Email/h) und `add_site`
+>              (10/User/d) — Implementation im Controller prüfen
+> - `[TODO]`  IP-Block (1h) bei >100 Garbage-Site-IDs/IP/h
+> - `[TODO]`  Operator-Mail bei wiederholtem Garbage-Pattern
+
+## ENTERPRISE-OFFRAMP  — `[SKIP im MVP]`
 
 Wenn User mehr will (höhere Limits, query_sql, dedicated Server, SLA,
 Geo-Daten, Custom Domain für Tracking):
 Verweis auf Kontaktformular / Email an enterprise@mcp-analytics.com.
 Manueller Sales-Prozess, nicht im MVP automatisiert.
 
-EXPLIZIT NICHT IM MVP
+## EXPLIZIT NICHT IM MVP  — `[SKIP]`
 
 - Stripe / Bezahlfunktion
 - query_sql Power-Tool
@@ -503,44 +547,106 @@ EXPLIZIT NICHT IM MVP
 - Conversion-/Revenue-Tracking
 - Ad-blocker-Workaround via Subdomain-Proxy
 
-ROADMAP NACH MVP (NICHT TEIL DIESES BRIEFINGS)
+## ROADMAP NACH MVP (NICHT TEIL DIESES BRIEFINGS)
 
 Phase 2: MaxMind Geo-Lookup, Stripe-Integration, Pricing-Tiers
 Phase 3: Enterprise-Tier mit dedicated Servern, query_sql, SLA
 Phase 4: Team-Accounts, Connector-Directory-Eintrag, Self-Hosted Script,
          eventuell minimales Dashboard für Power-User
 
-ERFOLGSKRITERIEN MVP
+## ERFOLGSKRITERIEN MVP
 
 Funktional:
-- Tracking-Snippet einbinden → Events landen in ClickHouse
-- Über MCP in Claude → Daten kommen zurück
-- Signup-Flow funktioniert end-to-end inkl. Pre-Verify-Tracking
-- Mehrere Sites parallel ohne Daten-Leak
-- 3 Privacy-Modi sauber implementiert
-- Garbage-Events gegen unbekannte Site-IDs failed silent
+- [ ] Tracking-Snippet einbinden → Events landen in ClickHouse
+- [ ] Über MCP in Claude → Daten kommen zurück
+- [ ] Signup-Flow funktioniert end-to-end inkl. Pre-Verify-Tracking
+- [ ] Mehrere Sites parallel ohne Daten-Leak
+- [ ] 3 Privacy-Modi sauber implementiert
+- [ ] Garbage-Events gegen unbekannte Site-IDs failed silent
 
 Performance:
-- Ingestion <50ms p99 (Response-Zeit, Storage-Wartezeit async)
-- MCP-Query <500ms p95 für Standard-Tools
-- 100 aktive Sites parallel auf einem CX32 ohne Probleme
+- [ ] Ingestion <50ms p99 (Response-Zeit, Storage-Wartezeit async)
+- [ ] MCP-Query <500ms p95 für Standard-Tools
+- [ ] 100 aktive Sites parallel auf einem CX32 ohne Probleme
 
 Operational:
-- Kamal-Deploy in <2 Min
-- Backup automatisiert (täglich, mindestens SQLite + ClickHouse-Tables)
-- Monitoring: Uptime-Check, Disk-Alert, Garbage-Site-Hit-Alert,
+- [ ] Kamal-Deploy in <2 Min
+- [ ] Backup automatisiert (täglich, mindestens SQLite + ClickHouse-Tables)
+- [ ] Monitoring: Uptime-Check, Disk-Alert, Garbage-Site-Hit-Alert,
               Free-Tier-Überschreitungs-Alert
 
-ZEITSCHÄTZUNG
+> **Status**: Noch keines dieser Kriterien live verifiziert — erst nach
+> erstem Deploy + Dogfooding messbar. Checkboxen bewusst leer.
 
-4-6 Wochen für eine technisch erfahrene Person mit Rails-Background.
-- Woche 1: Infrastruktur (Hetzner, Kamal, Container-Setup), 
-           Tracking-Script, Ingestion-Endpoint
-- Woche 2: ClickHouse-Schema, Materialized Views, Analytics-Queries
-- Woche 3: MCP-Server (Tools, Auth, Rate-Limits), 
-           Site-Management
-- Woche 4: Signup-Flow (register_account, Verify-Page), 
-           Settings, Landing
-- Woche 5-6: Dogfooding (Tracking auf retreaturlaub.de + 
-             triageflow.com integrieren), Bugfixes, 
-             Anti-Abuse-Tuning, Launch-Vorbereitung
+## ZEITSCHÄTZUNG (4–6 Wochen laut Original-Briefing)
+
+| Woche | Thema                                                           | Status       |
+|-------|-----------------------------------------------------------------|--------------|
+| 1     | Infrastruktur, Tracking-Script, Ingestion-Endpoint              | `[DONE]`     |
+| 2     | ClickHouse-Schema, Materialized Views, Analytics-Queries        | `[DONE]`     |
+| 3     | MCP-Server (Tools, Auth, Rate-Limits), Site-Management          | `[DONE]`     |
+| 4     | Signup-Flow, Verify-Page, Settings, Landing                     | `[DONE]`     |
+| 5–6   | Dogfooding (retreaturlaub.de + triageflow.com), Bugfixes, Launch| `[TODO]`     |
+
+---
+
+## OPEN ACTIONS (priorisiert)
+
+### P0 — Blocker vor Live-Launch
+
+1. **Hetzner CX32 bestellen** (Falkenstein)
+2. **DNS setzen**: `mcp-analytics.com` + `t.mcp-analytics.com` → Server-IP
+3. **`config/deploy.yml`**: Platzhalter-IPs `1.2.3.4` in `web`/`ingest`
+   ersetzen
+4. **`.kamal/secrets`** befüllen: `RAILS_MASTER_KEY`,
+   `KAMAL_REGISTRY_PASSWORD`, `SMTP_USERNAME`, `SMTP_PASSWORD`,
+   `CLICKHOUSE_PASSWORD`
+5. **`kamal setup`** + erster `kamal deploy`
+6. **Backup-Cron** auf Host (täglich `ops/backup.sh`)
+7. **Smoke-Test End-to-End**: `register_account` → Mail → `/verify`
+   → `add_site` → Tracking-Snippet auf Test-Seite → Event in ClickHouse
+   → `get_overview` via Claude
+
+### P1 — Vor Dogfooding / Marketing
+
+8. ~~**Tests schreiben**~~ ✅ erledigt: 129 Tests (88 Rails + 41 Go), grün.
+9. ~~**Anti-Abuse Rate-Limits** für `register_account`, `magic_link`~~ ✅
+   erledigt (`app/services/rate_limit.rb` + `Tools#enforce_register_rate_limits!`
+   + `SessionsController#create`). `add_site` war schon da.
+10. **Garbage-Site-ID → IP-Block (1h)** in Go implementieren, plus
+    Operator-Alert-Mail bei Pattern
+11. **Email-Domain-Blacklist** gegen aktuelle GitHub-Liste aktualisieren
+12. **Monitoring**: Uptime-Check (UptimeRobot / simpler Cron), Disk-Alert
+    (`df`-Warnung bei >80%)
+
+### P2 — Nach erstem Launch
+
+13. **Dogfooding** retreaturlaub.de + triageflow.com — Tracker einbauen,
+    eigene Daten per Claude abfragen
+14. **Bot-Heuristik in MVs**: Sessions mit >5 Events/s ausklammern
+    (laut Briefing; derzeit nicht in MVs)
+15. **Landing Copy + Demo-Video** (wenn UI-Ready)
+16. **CI wieder einschalten**, sobald Tests existieren
+    (Workflow `.github/workflows/ci.yml` wurde am 2026-04-23 gelöscht)
+
+### Offene Detail-Fragen (im Code zu klären)
+
+- Tracking-Script-URL: Briefing sagt `mcp-analytics.com/script.js`, Code
+  liefert unter `t.mcp-analytics.com/script.js`. Marketing/Snippet
+  entsprechend. **Entscheidung dokumentieren** bevor man anfängt nach
+  außen zu kommunizieren.
+
+---
+
+## CHANGELOG (Working Doc)
+
+- **2026-04-23** — Initial scaffold (Week 1–4 Output) eingecheckt.
+  CI vorerst deaktiviert (keine Tests). Dieses Working Doc angelegt.
+- **2026-04-23** — Fixes + Tests:
+  - Atomic UPSERTs in `UsageCounter` und `UnknownSiteHit`
+  - Rate-Limits für `register_account` (3/IP/h, 10/IP/d, 5/Domain/d) und
+    `magic_link` (5/Email/h) via neuem `RateLimit` Service
+  - 88 Rails-Tests (Models, MCP Tools & Controller, Verify, Sessions, Settings)
+  - 41 Go-Tests (bot, session, ratelimit, usage, ua, config, sites, ch, server)
+  - Bug gefixt: iPhone-UAs wurden als macOS erkannt, weil „like Mac OS X"
+    vor dem iPhone-Check matcht — Reihenfolge in `ua.Parse` korrigiert

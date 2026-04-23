@@ -11,12 +11,13 @@ class SessionsController < ApplicationController
     email = params[:email].to_s.strip.downcase
     user  = User.find_by(email: email)
 
-    if user
+    if user && email.present? && RateLimit.allow?(key: "ml:email-h:#{email}", limit: 5, window: 3600)
       link = user.magic_links.create!
       MagicLinkMailer.sign_in(link).deliver_later
     end
 
-    # Always show the same success page (don't leak whether an email exists).
+    # Always show the same success page (don't leak whether an email exists
+    # or whether the limit was hit).
     render :check_email
   end
 
