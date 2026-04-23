@@ -10,7 +10,19 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_23_100006) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_23_100007) do
+  create_table "abuse_events", force: :cascade do |t|
+    t.datetime "blocked_until", null: false
+    t.datetime "created_at", null: false
+    t.string "ip", null: false
+    t.string "kind", default: "garbage_site_ids", null: false
+    t.datetime "notified_at"
+    t.integer "unique_sites", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_at"], name: "index_abuse_events_on_created_at"
+    t.index ["notified_at"], name: "index_abuse_events_on_notified_at"
+  end
+
   create_table "email_verifications", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "email", null: false

@@ -13,6 +13,7 @@ import (
 
 	"github.com/mcp-analytics/ingestion/internal/bot"
 	"github.com/mcp-analytics/ingestion/internal/ch"
+	"github.com/mcp-analytics/ingestion/internal/ipblock"
 	"github.com/mcp-analytics/ingestion/internal/ratelimit"
 	"github.com/mcp-analytics/ingestion/internal/session"
 	"github.com/mcp-analytics/ingestion/internal/sites"
@@ -29,6 +30,7 @@ type Server struct {
 	Usage     *usage.Buffer
 	DailySalt *session.DailySalt
 	Limiter   *ratelimit.Limiter
+	IPBlock   *ipblock.Tracker // optional; nil disables the feature
 	StaticDir string
 }
 
@@ -77,17 +79,24 @@ func (s *Server) handleEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ip := clientIP(r)
+
+	if s.IPBlock != nil && s.IPBlock.IsBlocked(ip) {
+		return
+	}
+
 	site, ok := s.Sites.Get(in.Site)
 	if !ok {
 		s.Usage.BumpUnknown(in.Site, time.Now())
+		if s.IPBlock != nil {
+			s.IPBlock.RecordUnknown(ip, in.Site)
+		}
 		return
 	}
 
 	if !s.Limiter.Allow(site.SiteID) {
 		return
 	}
-
-	ip := clientIP(r)
 
 	name := in.Name
 	if name == "" {

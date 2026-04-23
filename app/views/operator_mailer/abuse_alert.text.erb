@@ -1,0 +1,11 @@
+The following IP(s) sent >100 distinct unknown site_ids within an hour
+and have been blocked for 1h by the ingest service:
+
+<% @events.each do |e| %>
+  - IP <%= e.ip %> — <%= e.unique_sites %> distinct site_ids
+    blocked until <%= e.blocked_until.utc.iso8601 %> UTC
+    first seen at <%= e.created_at.utc.iso8601 %> UTC
+<% end %>
+
+If this is a sustained pattern, consider adding the IP to a permanent
+deny list or contacting the upstream network owner.

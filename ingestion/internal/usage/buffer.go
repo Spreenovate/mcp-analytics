@@ -21,6 +21,20 @@ type Buffer struct {
 	counters map[key]int64
 
 	unknownCounters map[unknownKey]int64
+
+	// abuseAlerts are one-shot rows appended on IP block. Drained on every
+	// flush. We write straight-through instead of aggregating because each
+	// block event is a discrete thing Rails needs to notice individually.
+	abuseAlerts []AbuseAlert
+}
+
+// AbuseAlert records a single "IP blocked for spraying unknown site_ids" event.
+// Rails picks these up from the `abuse_events` table and mails the operator.
+type AbuseAlert struct {
+	IP           string
+	UniqueSites  int
+	BlockedUntil time.Time
+	At           time.Time
 }
 
 type key struct {
@@ -58,6 +72,22 @@ func (b *Buffer) BumpUnknown(siteIDAttempted string, at time.Time) {
 	b.mu.Unlock()
 }
 
+// RecordAbuse queues an abuse_events row describing an IP that was just
+// blocked. Written on the next flush.
+func (b *Buffer) RecordAbuse(a AbuseAlert) {
+	b.mu.Lock()
+	b.abuseAlerts = append(b.abuseAlerts, a)
+	b.mu.Unlock()
+}
+
+// PendingAbuseAlerts returns the number of abuse alerts waiting to be flushed.
+// Primarily useful for tests and metrics.
+func (b *Buffer) PendingAbuseAlerts() int {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return len(b.abuseAlerts)
+}
+
 func (b *Buffer) Run(ctx context.Context) {
 	t := time.NewTicker(b.flushInterval)
 	defer t.Stop()
@@ -76,11 +106,13 @@ func (b *Buffer) flush(ctx context.Context) {
 	b.mu.Lock()
 	pending := b.counters
 	unknown := b.unknownCounters
+	alerts := b.abuseAlerts
 	b.counters = make(map[key]int64, len(pending))
 	b.unknownCounters = make(map[unknownKey]int64, len(unknown))
+	b.abuseAlerts = nil
 	b.mu.Unlock()
 
-	if len(pending) == 0 && len(unknown) == 0 {
+	if len(pending) == 0 && len(unknown) == 0 && len(alerts) == 0 {
 		return
 	}
 
@@ -120,9 +152,23 @@ func (b *Buffer) flush(ctx context.Context) {
 		}
 	}
 
+	for _, a := range alerts {
+		blockedUntil := a.BlockedUntil.UTC().Format("2006-01-02 15:04:05.000")
+		createdAt := a.At.UTC().Format("2006-01-02 15:04:05.000")
+		_, err := tx.ExecContext(ctx,
+			`INSERT INTO abuse_events (ip, kind, unique_sites, blocked_until, created_at, updated_at)
+			   VALUES (?, 'garbage_site_ids', ?, ?, ?, ?)`,
+			a.IP, a.UniqueSites, blockedUntil, createdAt, createdAt)
+		if err != nil {
+			b.log.Warn("abuse_events insert failed", "err", err, "ip", a.IP)
+		}
+	}
+
 	if err := tx.Commit(); err != nil {
 		b.log.Warn("usage flush commit failed", "err", err)
 		b.merge(pending, unknown)
+		// alerts lost on commit failure — acceptable for MVP since IP is
+		// still blocked in-memory until restart; next burst will re-trigger.
 	}
 }
 

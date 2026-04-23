@@ -31,7 +31,7 @@ Legende:
 | Signup-/Verify-Flow inkl. Mails      | `[DONE]`     | VerificationMailer, MagicLinkMailer                              |
 | Recurring Jobs (Salt, Purge, Usage)  | `[DONE]`     | `config/recurring.yml` + 3 Job-Klassen                           |
 | Anti-Abuse (Rate-Limits, komplett)   | `[DONE]`     | /event, MCP 60/min, `register_account` 3/IP/h + 10/IP/d + 5/Dom/d, `magic_link` 5/Email/h |
-| Anti-Abuse (Garbage-Site-IP-Block)   | `[TODO]`     | `unknown_site_hits` wird geschrieben, aber kein IP-Block + Alert |
+| Anti-Abuse (Garbage-Site-IP-Block)   | `[DONE]`     | Go `ipblock` (>100 unique sites/IP/h → 1h block), Rails `AbuseAlertJob` mailt Operator |
 | Concurrency (Atomic UPSERTs)         | `[DONE]`     | `UsageCounter`, `UnknownSiteHit` → `INSERT ... ON CONFLICT`      |
 | Email-Blacklist für Trash-Domains    | `[PARTIAL]`  | Logik in `Tools#disposable_email_domain?` — Liste prüfen/pflegen |
 | Backup-Script                        | `[DONE]`     | `ops/backup.sh` (täglich, SQLite + ClickHouse)                   |
@@ -41,8 +41,8 @@ Legende:
 | Deployment auf Hetzner               | `[TODO]`     | Server aufsetzen, Secrets, DNS, `kamal setup`                    |
 | Dogfooding retreaturlaub / triageflow| `[TODO]`     | Erst nach Deploy                                                 |
 
-**Kritischer Pfad bis Launch**: ~~Tests~~ ✅ → echter Hetzner-Host + DNS →
-`kamal setup` + erste Deploy → Dogfooding → Garbage-Pattern-Alert.
+**Kritischer Pfad bis Launch**: ~~Tests~~ ✅ → ~~Garbage-Pattern-Alert~~ ✅ →
+echter Hetzner-Host + DNS → `kamal setup` + erste Deploy → Dogfooding.
 
 ---
 
@@ -613,8 +613,8 @@ Operational:
 9. ~~**Anti-Abuse Rate-Limits** für `register_account`, `magic_link`~~ ✅
    erledigt (`app/services/rate_limit.rb` + `Tools#enforce_register_rate_limits!`
    + `SessionsController#create`). `add_site` war schon da.
-10. **Garbage-Site-ID → IP-Block (1h)** in Go implementieren, plus
-    Operator-Alert-Mail bei Pattern
+10. ~~**Garbage-Site-ID → IP-Block (1h)**~~ ✅ erledigt (`ingestion/internal/ipblock`
+    + `abuse_events` Tabelle + `AbuseAlertJob` läuft alle 5 min)
 11. **Email-Domain-Blacklist** gegen aktuelle GitHub-Liste aktualisieren
 12. **Monitoring**: Uptime-Check (UptimeRobot / simpler Cron), Disk-Alert
     (`df`-Warnung bei >80%)
@@ -642,6 +642,12 @@ Operational:
 
 - **2026-04-23** — Initial scaffold (Week 1–4 Output) eingecheckt.
   CI vorerst deaktiviert (keine Tests). Dieses Working Doc angelegt.
+- **2026-04-23** — Garbage-Site-IP-Block:
+  - Neues Go-Paket `ingestion/internal/ipblock` (sliding window, threshold 100
+    unique unknown site_ids per IP per hour → 1h block)
+  - `abuse_events` Tabelle, Go schreibt Alert-Row bei Block
+  - `OperatorMailer.abuse_alert` + `AbuseAlertJob` bündelt pending Events
+    alle 5 Min zu einer Digest-Mail
 - **2026-04-23** — Fixes + Tests:
   - Atomic UPSERTs in `UsageCounter` und `UnknownSiteHit`
   - Rate-Limits für `register_account` (3/IP/h, 10/IP/d, 5/Domain/d) und

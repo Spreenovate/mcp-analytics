@@ -15,6 +15,7 @@ import (
 
 	"github.com/mcp-analytics/ingestion/internal/ch"
 	"github.com/mcp-analytics/ingestion/internal/config"
+	"github.com/mcp-analytics/ingestion/internal/ipblock"
 	"github.com/mcp-analytics/ingestion/internal/ratelimit"
 	"github.com/mcp-analytics/ingestion/internal/server"
 	"github.com/mcp-analytics/ingestion/internal/session"
@@ -56,6 +57,20 @@ func main() {
 	})
 
 	limiter := ratelimit.New(cfg.EventsPerSecondPerSite)
+
+	ipBlocker := ipblock.New(ipblock.Options{
+		Window:    time.Hour,
+		Threshold: 100,
+		BlockFor:  time.Hour,
+		OnBlock: func(ip string, uniq int, at time.Time) {
+			log.Warn("blocking IP for garbage site_ids", "ip", ip, "unique_sites", uniq)
+			usageBuf.RecordAbuse(usage.AbuseAlert{
+				IP: ip, UniqueSites: uniq,
+				BlockedUntil: at.Add(time.Hour), At: at,
+			})
+		},
+	})
+
 	go func() {
 		t := time.NewTicker(5 * time.Minute)
 		defer t.Stop()
@@ -65,6 +80,7 @@ func main() {
 				return
 			case <-t.C:
 				limiter.Sweep(30 * time.Minute)
+				ipBlocker.Sweep()
 			}
 		}
 	}()
@@ -76,6 +92,7 @@ func main() {
 		Usage:     usageBuf,
 		DailySalt: dailySalt,
 		Limiter:   limiter,
+		IPBlock:   ipBlocker,
 		StaticDir: cfg.StaticDir,
 	}
 

@@ -20,3 +20,8 @@ production:
     class: UsageLimitAlertJob
     queue: default
     schedule: every day at 06:00 UTC
+
+  abuse_alert:
+    class: AbuseAlertJob
+    queue: default
+    schedule: every 5 minutes
