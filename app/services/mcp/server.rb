@@ -75,9 +75,15 @@ module Mcp
     end
 
     def tool_success(result)
+      # MCP spec says structuredContent must be a JSON object. Several of our
+      # tools (list_sites, top_pages, timeseries, ...) naturally return arrays —
+      # wrap them under an "items" key so strict clients (Anthropic Claude)
+      # don't reject the response as "malformed".
+      structured = result.is_a?(Array) ? { "items" => result } : result
+
       {
         content: [{ type: "text", text: JSON.pretty_generate(result) }],
-        structuredContent: result,
+        structuredContent: structured,
         isError: false
       }
     end
