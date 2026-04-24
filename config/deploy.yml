@@ -32,8 +32,6 @@ servers:
       - 49.13.165.191
     labels:
       traefik.enable: "false"
-    options:
-      network: kamal
     proxy:
       ssl: true
       host: mcp-analytics.com
