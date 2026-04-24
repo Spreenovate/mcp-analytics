@@ -8,11 +8,10 @@
 # kamal-proxy (automatically deployed by Kamal) terminates TLS via Let's Encrypt.
 #
 # Expected env/secrets (in .kamal/secrets):
-#   KAMAL_REGISTRY_PASSWORD   Docker Hub / GHCR password
-#   RAILS_MASTER_KEY          Rails secret key base
-#   SMTP_USERNAME
-#   SMTP_PASSWORD
-#   CLICKHOUSE_PASSWORD
+#   KAMAL_REGISTRY_PASSWORD   GHCR Personal Access Token
+#   RAILS_MASTER_KEY          Decrypts config/credentials.yml.enc (which holds
+#                             the Postmark API token under :postmark, :api_token)
+#   CLICKHOUSE_PASSWORD       Shared between ClickHouse, Rails, and Go ingest
 #
 # Deploy:
 #   kamal setup          # first time
@@ -81,14 +80,10 @@ env:
     ADDITIONAL_HOSTS: "www.mcp-analytics.com"
     CLICKHOUSE_URL: "http://mcp-analytics-clickhouse:8123"
     CLICKHOUSE_DB: "mcpa"
-    SMTP_ADDRESS: "smtp.postmarkapp.com"
-    SMTP_PORT: "587"
     MAIL_FROM: "agent@mcp-analytics.com"
     OPERATOR_EMAIL: "info@spreenovate.de"
   secret:
     - RAILS_MASTER_KEY
-    - SMTP_USERNAME
-    - SMTP_PASSWORD
     - CLICKHOUSE_PASSWORD
 
 # Shared storage volume — lives on the server filesystem, binds into containers.

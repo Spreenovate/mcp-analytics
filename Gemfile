@@ -38,6 +38,10 @@ gem "thruster", require: false
 # We don't pull in an ORM-style gem — queries are shaped and parameterised
 # directly. Rails stays on SQLite for account/site data.
 
+# Postmark API delivery for ActionMailer. API token lives in encrypted
+# credentials under :postmark, :api_token.
+gem "postmark-rails"
+
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
   gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"

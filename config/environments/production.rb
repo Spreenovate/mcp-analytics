@@ -58,14 +58,14 @@ Rails.application.configure do
 
   # Set host to be used by links generated in mailer templates.
   config.action_mailer.default_url_options = { host: ENV.fetch("PUBLIC_HOST", "mcp-analytics.com") }
-  config.action_mailer.delivery_method = :smtp
-  config.action_mailer.smtp_settings = {
-    address:              ENV.fetch("SMTP_ADDRESS", "smtp.postmarkapp.com"),
-    port:                 ENV.fetch("SMTP_PORT", 587).to_i,
-    user_name:            ENV["SMTP_USERNAME"],
-    password:             ENV["SMTP_PASSWORD"],
-    authentication:       :plain,
-    enable_starttls_auto: true
+
+  # Postmark API delivery — token lives in encrypted credentials.
+  # Set via: bin/rails credentials:edit
+  #   postmark:
+  #     api_token: <Server API token from Postmark>
+  config.action_mailer.delivery_method = :postmark
+  config.action_mailer.postmark_settings = {
+    api_token: Rails.application.credentials.dig(:postmark, :api_token)
   }
 
   # Specify outgoing SMTP server. Remember to add smtp/* credentials via bin/rails credentials:edit.
