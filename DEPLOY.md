@@ -119,8 +119,20 @@ ausgepackt:
 
 ## 5. Erstes Setup + Deploy
 
+Der Go-Ingest-Service ist als Kamal-Accessory definiert. Kamal **baut
+Accessory-Images nicht selbst**, das müssen wir vor dem Setup einmal
+manuell machen:
+
 ```sh
-# Installiert Docker + kamal-proxy auf dem Server, lädt erste Images
+# Build + Push Go-Ingest nach ghcr.io/mcpanalytics/ingest:latest
+bin/build-ingest
+```
+
+Dann das eigentliche Setup:
+
+```sh
+# Installiert Docker + kamal-proxy auf dem Server, lädt + bootet alle
+# Container (Rails, Ingest-Accessory, ClickHouse-Accessory).
 kamal setup
 ```
 

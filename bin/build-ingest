@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Builds + pushes the Go ingest service as a GHCR image. Kamal handles the
+# Rails image automatically via `kamal deploy`, but accessories (which is
+# how we run the ingest service since Kamal 2 disallows per-server-role
+# image overrides) are not built by Kamal — we have to do it ourselves.
+#
+# Usage:
+#   bin/build-ingest               # build + push :latest
+#   bin/build-ingest v1.2.3        # build + push a specific tag
+#
+# Requires KAMAL_REGISTRY_PASSWORD in the environment (same GHCR PAT as
+# Kamal uses).
+
+set -euo pipefail
+
+TAG="${1:-latest}"
+IMAGE="ghcr.io/mcpanalytics/ingest:${TAG}"
+
+if [ -z "${KAMAL_REGISTRY_PASSWORD:-}" ]; then
+  echo "ERROR: KAMAL_REGISTRY_PASSWORD not set in environment." >&2
+  echo "Add it to ~/.zshrc or run: source .env" >&2
+  exit 1
+fi
+
+echo "==> Building ${IMAGE} (linux/amd64)"
+docker build --platform linux/amd64 -t "${IMAGE}" -f ingestion/Dockerfile ingestion/
+
+echo "==> Logging in to ghcr.io"
+echo "${KAMAL_REGISTRY_PASSWORD}" | docker login ghcr.io -u mcpanalytics --password-stdin
+
+echo "==> Pushing ${IMAGE}"
+docker push "${IMAGE}"
+
+echo "==> Done: ${IMAGE}"
+echo
+echo "Next steps:"
+echo "  First-time:   kamal setup"
+echo "  Already live: kamal accessory reboot ingest"

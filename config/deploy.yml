@@ -1,21 +1,27 @@
 # Kamal 2 deploy config for mcp-analytics.
 #
 # Single host (Hetzner CX32), three containers:
-#   - web        (this Rails app)           : mcp-analytics.com
-#   - ingest     (Go service)               : t.mcp-analytics.com
-#   - clickhouse (accessory)                : internal network only
+#   - web        Rails app           : mcp-analytics.com
+#   - ingest     Go service          : t.mcp-analytics.com (accessory, custom image)
+#   - clickhouse ClickHouse server   : internal network only (accessory)
 #
-# kamal-proxy (automatically deployed by Kamal) terminates TLS via Let's Encrypt.
+# kamal-proxy (auto-deployed by Kamal) terminates TLS via Let's Encrypt for
+# both the Rails app AND the ingest accessory.
 #
-# Expected env/secrets (in .kamal/secrets):
-#   KAMAL_REGISTRY_PASSWORD   GHCR Personal Access Token
-#   RAILS_MASTER_KEY          Decrypts config/credentials.yml.enc (which holds
-#                             the Postmark API token under :postmark, :api_token)
-#   CLICKHOUSE_PASSWORD       Shared between ClickHouse, Rails, and Go ingest
+# Expected env/secrets (see .kamal/secrets):
+#   KAMAL_REGISTRY_PASSWORD   GHCR Personal Access Token (from ~/.zshrc)
+#   RAILS_MASTER_KEY          decrypts config/credentials.yml.enc
+#   CLICKHOUSE_PASSWORD       pulled out of credentials by .kamal/secrets
 #
-# Deploy:
-#   kamal setup          # first time
-#   kamal deploy         # subsequent
+# First-time deploy (must build the ingest accessory image first since
+# Kamal does not build accessory images itself):
+#   bin/build-ingest
+#   kamal setup
+#
+# Subsequent deploys:
+#   bin/build-ingest                 # only if ingestion/ changed
+#   kamal accessory reboot ingest    # only if ingestion/ changed
+#   kamal deploy                     # always; rebuilds & redeploys Rails
 
 service: mcp-analytics
 image: mcpanalytics/rails
@@ -37,11 +43,48 @@ servers:
         interval: 10
         timeout: 2
 
-  # Second role, different image. Kamal 2 lets each role override `image`.
+# Shared env for the Rails (web) role.
+env:
+  clear:
+    RAILS_ENV: production
+    RAILS_LOG_TO_STDOUT: "1"
+    SOLID_QUEUE_IN_PUMA: "1"
+    JOB_CONCURRENCY: "1"
+    PUBLIC_BASE_URL: "https://mcp-analytics.com"
+    PUBLIC_HOST: "mcp-analytics.com"
+    TRACKER_BASE_URL: "https://t.mcp-analytics.com"
+    ADDITIONAL_HOSTS: "www.mcp-analytics.com"
+    CLICKHOUSE_URL: "http://mcp-analytics-clickhouse:8123"
+    CLICKHOUSE_DB: "mcpa"
+    MAIL_FROM: "agent@mcp-analytics.com"
+    OPERATOR_EMAIL: "info@spreenovate.de"
+  secret:
+    - RAILS_MASTER_KEY
+    - CLICKHOUSE_PASSWORD
+
+# Shared storage volume — lives on the server filesystem, binds into both
+# the Rails web container AND the ingest accessory below.
+volumes:
+  - "mcp_storage:/rails/storage"
+
+registry:
+  server: ghcr.io
+  username: mcpanalytics
+  password:
+    - KAMAL_REGISTRY_PASSWORD
+
+builder:
+  arch: amd64
+  context: .
+  dockerfile: Dockerfile
+
+accessories:
+  # Go ingest service. Different image than the Rails app, so it lives
+  # as an accessory rather than a `servers:` role (Kamal 2 does not allow
+  # per-role image overrides under `servers:`).
   ingest:
-    hosts:
-      - 49.13.165.191
-    image: mcpanalytics/ingest
+    image: ghcr.io/mcpanalytics/ingest:latest
+    host: 49.13.165.191
     cmd: /app/ingest
     options:
       network: kamal
@@ -63,46 +106,12 @@ servers:
       secret:
         - CLICKHOUSE_PASSWORD
     volumes:
-      # Mount Rails storage dir so the ingest service can read sites.db and
-      # write usage_counters. WAL mode makes concurrent access safe.
+      # Same shared storage volume as the Rails container — Go reads sites.db
+      # and writes usage_counters / unknown_site_hits / abuse_events. SQLite
+      # WAL mode makes the cross-process concurrency safe.
       - "mcp_storage:/rails/storage"
 
-# Shared env for the Rails (web) role.
-env:
-  clear:
-    RAILS_ENV: production
-    RAILS_LOG_TO_STDOUT: "1"
-    SOLID_QUEUE_IN_PUMA: "1"
-    JOB_CONCURRENCY: "1"
-    PUBLIC_BASE_URL: "https://mcp-analytics.com"
-    PUBLIC_HOST: "mcp-analytics.com"
-    TRACKER_BASE_URL: "https://t.mcp-analytics.com"
-    ADDITIONAL_HOSTS: "www.mcp-analytics.com"
-    CLICKHOUSE_URL: "http://mcp-analytics-clickhouse:8123"
-    CLICKHOUSE_DB: "mcpa"
-    MAIL_FROM: "agent@mcp-analytics.com"
-    OPERATOR_EMAIL: "info@spreenovate.de"
-  secret:
-    - RAILS_MASTER_KEY
-    - CLICKHOUSE_PASSWORD
-
-# Shared storage volume — lives on the server filesystem, binds into containers.
-volumes:
-  - "mcp_storage:/rails/storage"
-
-registry:
-  server: ghcr.io
-  username: mcpanalytics
-  password:
-    - KAMAL_REGISTRY_PASSWORD
-
-builder:
-  arch: amd64
-  context: .
-  dockerfile: Dockerfile
-
-# ClickHouse accessory. Runs on the same host, not exposed publicly.
-accessories:
+  # ClickHouse — single node, internal network only.
   clickhouse:
     image: clickhouse/clickhouse-server:24.3
     host: 49.13.165.191
