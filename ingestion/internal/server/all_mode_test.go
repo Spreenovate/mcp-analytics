@@ -132,7 +132,9 @@ func TestAllMode_ValidVisitorIDIsHashedAndUsed(t *testing.T) {
 	}
 
 	row := waitForRow(t, f, 2*time.Second)
-	expected := session.Compute([]byte("site-salt"), []byte("abcdef0123456789abcdef0123456789"))
+	// In 'all' mode, visitor_id is derived from the client cookie alone —
+	// no site_salt mixed in (salt is pointless there, it never rotates).
+	expected := session.Compute([]byte("abcdef0123456789abcdef0123456789"))
 	if row.VisitorID != expected {
 		t.Errorf("visitor_id: got %d want %d", row.VisitorID, expected)
 	}

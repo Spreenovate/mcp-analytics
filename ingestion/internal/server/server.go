@@ -134,14 +134,21 @@ func (s *Server) handleEvent(w http.ResponseWriter, r *http.Request) {
 		sessionID = session.DefaultSessionID([]byte(site.SiteSalt), ip, userAgent, site.SiteID)
 		visitorID = session.DefaultVisitorID([]byte(site.SiteSalt), ip, userAgent, site.SiteID)
 	case "all":
+		// 'all' mode is the "I take the cookie-banner responsibility and want
+		// real persistence" opt-in. No salt rotation applies; visitor_id is
+		// the client's cookie id folded to UInt64. Site owner handles GDPR
+		// consent — we give them maximum data retention in return.
 		sessionID = session.DefaultSessionID([]byte(site.SiteSalt), ip, userAgent, site.SiteID)
 		if isValidVisitorID(in.VisitorID) {
-			// Client provided a persistent cookie-backed id. Hash it to UInt64
-			// (deterministic, collision-resistant) so it slots into ClickHouse
-			// cleanly and cannot be correlated back to the raw cookie value.
-			visitorID = session.Compute([]byte(site.SiteSalt), []byte(in.VisitorID))
+			// Fold the cookie id (UUID-ish string) into UInt64. No site_salt —
+			// the cookie is already the source of truth for visitor identity.
+			// Makes the mapping stable forever, regardless of any server-side
+			// rotation we add later for other modes.
+			visitorID = session.Compute([]byte(in.VisitorID))
 		} else {
-			// Fallback to the default hash — still better than 'strict'=0.
+			// No cookie yet (DNT-blocked, private browsing with disabled storage,
+			// or a customer that forgot data-persistent="true"). Fall back to
+			// the IP+UA hash — not ideal for 'all' intent, but better than 0.
 			visitorID = session.DefaultVisitorID([]byte(site.SiteSalt), ip, userAgent, site.SiteID)
 		}
 	default:
