@@ -70,9 +70,12 @@
     }
     if (body.length > MAX_PAYLOAD_BYTES) return;
 
+    // Send as text/plain to stay in the CORS "simple request" set and
+    // avoid OPTIONS preflights per event. Server treats the body as JSON
+    // regardless of declared Content-Type.
     try {
       if (nav.sendBeacon) {
-        var blob = new Blob([body], { type: "application/json" });
+        var blob = new Blob([body], { type: "text/plain" });
         if (nav.sendBeacon(endpoint, blob)) return;
       }
     } catch (_) {}
@@ -80,7 +83,7 @@
     try {
       var xhr = new XMLHttpRequest();
       xhr.open("POST", endpoint, true);
-      xhr.setRequestHeader("Content-Type", "application/json");
+      xhr.setRequestHeader("Content-Type", "text/plain");
       xhr.send(body);
     } catch (_) {}
   }

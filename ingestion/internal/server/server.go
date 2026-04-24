@@ -53,6 +53,19 @@ type eventIn struct {
 }
 
 func (s *Server) handleEvent(w http.ResponseWriter, r *http.Request) {
+	// Always-on CORS headers: the tracker runs on customer pages under
+	// arbitrary origins, so we accept everything. Simple requests (text/plain
+	// POST) need no preflight; preflights are honoured on the OPTIONS branch
+	// below for clients that still send them.
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "content-type")
+	w.Header().Set("Access-Control-Max-Age", "86400")
+
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
