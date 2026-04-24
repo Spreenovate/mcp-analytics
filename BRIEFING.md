@@ -127,10 +127,14 @@ Vor Implementation in der aktuellen Anthropic-Doku zu Remote MCP Servern
 nachlesen und passende Variante wählen. Empfehlung als Default:
 Bearer-Token im Header, falls OAuth-Setup zu aufwändig für MVP.
 
-> **Entscheidung**: Bearer-Header als primärer Weg, `?token=` als Fallback
+> **Entscheidung MVP**: Bearer-Header als primärer Weg, `?token=` als Fallback
 > (für Clients, die keinen Custom-Header setzen können). Implementiert in
 > `app/controllers/mcp_controller.rb` (`authenticate_from_request`).
-> OAuth ist für Post-MVP vorgesehen, nicht blockierend.
+>
+> **Phase 2 (geplant)**: OAuth 2.1 Authorization Code Flow mit PKCE
+> nachrüsten. Siehe Sektion *OAUTH ROADMAP* unten — wird benötigt für
+> ChatGPT-Connectors (Pflicht), Anthropic-Directory-Listing (Pflicht) und
+> bessere User-Experience (kein Token-Paste mehr).
 
 ## DATENMODELL: Rails (SQLite)  — `[DONE]`
 
@@ -628,6 +632,11 @@ Operational:
 15. **Landing Copy + Demo-Video** (wenn UI-Ready)
 16. **CI wieder einschalten**, sobald Tests existieren
     (Workflow `.github/workflows/ci.yml` wurde am 2026-04-23 gelöscht)
+17. **OAuth 2.1 (Variante B)** implementieren — siehe Sektion *OAUTH ROADMAP*
+    weiter unten. Voraussetzung für ChatGPT-Listing und
+    Anthropic-Directory-Aufnahme.
+18. **Cursor-Directory-Submission** (niedrige Hürde, gute Indie-Dev-Reichweite)
+19. **Anthropic + ChatGPT Directory-Submission** (nach OAuth-Rollout)
 
 ### Offene Detail-Fragen (im Code zu klären)
 
@@ -638,10 +647,159 @@ Operational:
 
 ---
 
+## OAUTH ROADMAP (Phase 2, post-MVP) — `[TODO]`
+
+**Warum**: ChatGPT-Connectors erzwingen OAuth 2.1, Anthropic-Directory will
+es, Cursor empfiehlt es. Außerdem deutlich bessere UX: kein Token-Paste,
+kein URL-Editieren, ein Klick-Flow.
+
+### Zielfluss (Variante B — Consent-Screen nach Magic-Link-Click)
+
+Vollständiger End-to-End-Flow für einen **neuen User** (mit Account-Anlage
+in einem Rutsch):
+
+```
+1. User entdeckt mcp-analytics.com (Landing)
+2. User trägt URL "https://mcp-analytics.com/mcp" als Custom Connector
+   in Claude/ChatGPT/Cursor ein (kein Token!)
+3. Client POSTet auf /mcp ohne Auth
+        ↓
+4. Server: 401 + Header
+   WWW-Authenticate: Bearer
+     resource_metadata="https://mcp-analytics.com/.well-known/oauth-protected-resource"
+        ↓
+5. Client öffnet automatisch Browser-Tab:
+   https://mcp-analytics.com/oauth/authorize
+     ?client_id=<client>
+     &redirect_uri=<client-callback-url>
+     &response_type=code
+     &state=<csrf-token>
+     &code_challenge=<pkce-challenge>
+     &code_challenge_method=S256
+     &scope=read:analytics
+        ↓
+6. Server prüft Session:
+   - eingeloggt? → direkt zu Schritt 9 (Consent-Screen)
+   - NICHT eingeloggt? → session[:return_to] = aktuelle URL,
+     redirect zu /login
+        ↓
+7. /login zeigt Email-Feld, User tippt Email,
+   Magic-Link wird verschickt
+        ↓
+8. User klickt Mail-Link → /auth/:token
+   - Account wird erstellt, falls neu
+   - Session wird gesetzt
+   - redirect zu session[:return_to] = /oauth/authorize?... (alle Params
+     erhalten weil in der URL kodiert)
+        ↓
+9. Server rendert Consent-Screen:
+   ┌─────────────────────────────────────────────┐
+   │ Claude möchte auf dein mcp-analytics-Konto  │
+   │ zugreifen:                                   │
+   │   • Sites lesen                              │
+   │   • Analytics-Daten abfragen                 │
+   │   • Neue Sites hinzufügen                    │
+   │ Eingeloggt als: alex@example.com             │
+   │   [Erlauben]    [Ablehnen]                   │
+   └─────────────────────────────────────────────┘
+        ↓
+10. User klickt [Erlauben]:
+    - Server generiert kurzlebigen Authorization-Code (10 min Gültigkeit)
+    - speichert (code, user_id, code_challenge, redirect_uri, scope)
+    - 302 redirect zu Client:
+      <client-callback-url>?code=<code>&state=<state>
+        ↓
+11. Client tauscht Code gegen Access-Token:
+    POST /oauth/token
+    Body: grant_type=authorization_code, code=..., redirect_uri=...,
+          client_id=..., code_verifier=<pkce-verifier>
+    Response: { access_token, token_type: "Bearer", expires_in, ... }
+        ↓
+12. Client speichert Token intern, sendet ab jetzt jeden /mcp-Request
+    mit Authorization: Bearer <token>
+        ↓
+13. Done. User hat NIE einen Token gesehen oder kopiert.
+```
+
+Aus User-Sicht: **Add Connector → eine Mail → ein Klick auf Erlauben →
+zurück in Claude/ChatGPT/Cursor, fertig.**
+
+### Implementierung (Schätzung: 1–2 Tage)
+
+Bestand wiederverwendbar:
+- ✅ Magic-Link-Login (`SessionsController#create`/`#show`)
+- ✅ User-Modell + Email-Verification
+- ✅ Settings-UI (für Token-Revocation später erweitern)
+
+Neue Bausteine:
+
+1. **Discovery-Endpoints** (statisches JSON):
+   - `GET /.well-known/oauth-authorization-server`
+   - `GET /.well-known/oauth-protected-resource`
+2. **Authorize-Endpoint**:
+   - `GET /oauth/authorize` — Consent-Screen rendern, Login erzwingen
+     via `session[:return_to]` Mechanik
+   - `POST /oauth/authorize` — Approve/Deny verarbeiten, Code generieren,
+     redirect zum Client
+3. **Token-Endpoint**:
+   - `POST /oauth/token` — Code-→-Token-Tausch, PKCE verifizieren
+4. **McpController-Patch**:
+   - Bei fehlender/ungültiger Auth: `401` mit `WWW-Authenticate`-Header
+     statt nur Public-Tools zu zeigen
+5. **Neue Tabellen**:
+   - `oauth_clients` — bekannte Clients (Claude, ChatGPT, Cursor) mit
+     erlaubten redirect_uris
+   - `oauth_authorization_codes` — kurzlebig, ~10 min, mit PKCE-Challenge
+   - `oauth_access_tokens` — kann den existierenden `users.api_token`
+     ablösen oder ergänzen (Token-Rotation, Multi-Client-Support)
+6. **Settings-UI erweitern**:
+   - Liste der autorisierten Clients mit „Revoke"-Button pro Eintrag
+
+### Bewusste Vereinfachungen für Phase 2
+
+- **Keine Dynamic Client Registration** im ersten Wurf. ChatGPT verlangt
+  das eigentlich, aber wir starten mit hartkodierten Clients (Claude,
+  Cursor). DCR kann nachgezogen werden, wenn ChatGPT-Listing tatsächlich
+  ansteht.
+- **Ein Scope reicht**: `read:analytics`. Granulare Scopes (nur lesen vs.
+  Sites verwalten) erst wenn Use-Case dafür da ist.
+- **Refresh-Tokens optional**. Access-Token mit langer Gültigkeit (z.B.
+  1 Jahr) reicht für MVP-Niveau, Settings-Revoke ist die Notbremse.
+- **PKCE Pflicht**, kein Secret-basierter Flow für public Clients.
+
+### Variante A vs. B — warum B
+
+Variante A (Implicit Consent): Magic-Link-Klick = Account + Auth in einem,
+**ohne** Consent-Screen. Spart einen Klick, aber Permission-Visibility
+nur in der Email-Vorschau. Risiko bei Directory-Reviews als „dark pattern"
+markiert zu werden.
+
+Variante B (Consent nach Login): Magic-Link → Session → Consent-Screen →
+Erlauben. Ein Klick mehr, dafür:
+- Gleicher Code-Pfad für Neu-User und Bestand-User (nur ein Wartungs-Pfad)
+- Audit-sicher gegenüber Directory-Reviewern
+- User sieht klar was er erlaubt
+
+**Entscheidung**: Variante B.
+
+### Offene Fragen für Phase 2
+
+- Welche Scopes wollen wir später unterscheiden?
+- Token-Lebensdauer Default? (Vorschlag: 1 Jahr Access-Token, Revoke per
+  Settings)
+- Wie verhalten wir uns bei Token-Rotation gegenüber bereits ausgegebenen
+  alten `api_token`s aus MVP-Phase? (Vorschlag: weiterhin akzeptieren,
+  Settings-Page weist auf neue OAuth-Variante hin)
+
+---
+
 ## CHANGELOG (Working Doc)
 
 - **2026-04-23** — Initial scaffold (Week 1–4 Output) eingecheckt.
   CI vorerst deaktiviert (keine Tests). Dieses Working Doc angelegt.
+- **2026-04-24** — OAuth-Roadmap (Phase 2) ins Briefing aufgenommen.
+  Variante B (Consent-Screen nach Magic-Link-Login) als Zielarchitektur
+  festgelegt. Implementierung erst nach Deploy + Dogfooding.
 - **2026-04-23** — Garbage-Site-IP-Block:
   - Neues Go-Paket `ingestion/internal/ipblock` (sliding window, threshold 100
     unique unknown site_ids per IP per hour → 1h block)
