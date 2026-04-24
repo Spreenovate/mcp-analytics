@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>mcp-analytics — Web analytics. No dashboard. Just answers.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #0a0a0a;
+    --accent: #00FF88;
+    --border: 3px;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* --- layout ---------------------------------------------------------- */
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 32px 28px 120px; }
+
+  header.topnav {
+    display: flex; justify-content: space-between; align-items: baseline;
+    border-bottom: var(--border) solid var(--fg);
+    padding-bottom: 20px; margin-bottom: 56px;
+  }
+  header.topnav .brand {
+    font-family: "JetBrains Mono", monospace;
+    font-weight: 700;
+    font-size: 20px;
+    letter-spacing: -0.01em;
+  }
+  header.topnav .brand::before { content: "> "; color: var(--accent); }
+  header.topnav .brand .tag {
+    font-size: 12px;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #555;
+    margin-left: 10px;
+    padding-left: 10px;
+    border-left: 1.5px solid #ccc;
+  }
+  header.topnav nav a {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 13px;
+    color: var(--fg);
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-left: 24px;
+  }
+  header.topnav nav a:hover { background: var(--accent); }
+
+  /* --- kicker above hero ---------------------------------------------- */
+  .kicker {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.25em;
+    margin-bottom: 28px;
+    display: inline-block;
+    padding: 6px 12px;
+    border: 2.5px solid var(--fg);
+  }
+  .kicker .dot { color: var(--accent); }
+
+  /* --- hero ------------------------------------------------------------ */
+  .hero h1 {
+    font-family: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+    font-weight: 900;
+    font-size: clamp(56px, 10vw, 144px);
+    line-height: 1.0;
+    letter-spacing: -0.03em;
+    margin: 0 0 40px;
+    text-transform: uppercase;
+  }
+  .hero h1 .accent {
+    background: var(--accent);
+    padding: 0 0.15em;
+    /* Keep the highlight visually contained inside the line box. */
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+  .hero .sub {
+    max-width: 620px;
+    font-size: 18px;
+    line-height: 1.5;
+    margin: 0 0 56px;
+  }
+
+  /* --- signup box ------------------------------------------------------ */
+  .signup {
+    border: var(--border) solid var(--fg);
+    padding: 32px;
+    margin: 0 0 96px;
+    max-width: 640px;
+  }
+  .signup .label {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 12px;
+    display: inline-block;
+    background: var(--fg);
+    color: var(--bg);
+    padding: 4px 8px;
+  }
+  .signup h2 {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 900;
+    font-size: 28px;
+    margin: 8px 0 20px;
+    text-transform: uppercase;
+    letter-spacing: -0.01em;
+  }
+  .signup p.help {
+    margin: 0 0 20px;
+    font-size: 14px;
+    color: var(--fg);
+  }
+  .signup form {
+    display: flex;
+    gap: 0;
+    border: var(--border) solid var(--fg);
+  }
+  .signup input[type=email] {
+    flex: 1;
+    border: 0;
+    outline: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 16px;
+    padding: 16px 18px;
+    border-right: var(--border) solid var(--fg);
+  }
+  .signup input[type=email]::placeholder { color: #999; }
+  .signup button {
+    border: 0;
+    background: var(--fg);
+    color: var(--accent);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 14px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 16px 28px;
+    cursor: pointer;
+  }
+  .signup button:hover { background: var(--accent); color: var(--fg); }
+  .signup small {
+    display: block;
+    margin-top: 16px;
+    font-size: 12px;
+    color: #666;
+  }
+
+  /* --- section headers ------------------------------------------------ */
+  h2.section {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    margin: 0 0 32px;
+    padding-bottom: 12px;
+    border-bottom: var(--border) solid var(--fg);
+  }
+  h2.section::before {
+    content: attr(data-num) " / ";
+    color: var(--accent);
+    background: var(--fg);
+    padding: 2px 8px;
+    margin-right: 12px;
+  }
+
+  /* --- how-it-works --------------------------------------------------- */
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+    border: var(--border) solid var(--fg);
+    margin-bottom: 96px;
+  }
+  .step {
+    padding: 28px;
+    border-right: var(--border) solid var(--fg);
+  }
+  .step:last-child { border-right: 0; }
+  .step .num {
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 72px;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -0.05em;
+    margin: 0 0 16px;
+    color: var(--fg);
+  }
+  .step h3 {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 0 0 8px;
+  }
+  .step p { margin: 0; font-size: 14px; }
+  @media (max-width: 720px) {
+    .steps { grid-template-columns: 1fr; }
+    .step { border-right: 0; border-bottom: var(--border) solid var(--fg); }
+    .step:last-child { border-bottom: 0; }
+  }
+
+  /* --- snippet / claude conversation ---------------------------------- */
+  .demo {
+    margin-bottom: 96px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    border: var(--border) solid var(--fg);
+  }
+  .demo > div { padding: 28px; }
+  .demo > div:first-child { border-right: var(--border) solid var(--fg); }
+  .demo h3 {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin: 0 0 16px;
+  }
+  .demo pre {
+    background: #f5f5f5;
+    padding: 14px 16px;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    overflow-x: auto;
+    margin: 0;
+    border: 1.5px solid var(--fg);
+  }
+  .chat .you,
+  .chat .claude {
+    padding: 10px 12px;
+    margin: 10px 0;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .chat .you {
+    background: #f5f5f5;
+    border-left: var(--border) solid var(--fg);
+  }
+  .chat .claude {
+    background: var(--accent);
+    border-left: var(--border) solid var(--fg);
+  }
+  .chat .who {
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 11px;
+    margin-bottom: 4px;
+  }
+  .chat .claude .suggest {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1.5px dashed var(--fg);
+    font-style: italic;
+    font-size: 12px;
+  }
+  @media (max-width: 720px) {
+    .demo { grid-template-columns: 1fr; }
+    .demo > div:first-child { border-right: 0; border-bottom: var(--border) solid var(--fg); }
+  }
+
+  /* --- why ------------------------------------------------------------ */
+  .why {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    margin-bottom: 96px;
+  }
+  .why-col h3 {
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 24px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: -0.01em;
+    margin: 0 0 16px;
+    padding: 8px 12px;
+    display: inline-block;
+  }
+  .why-col.lose h3 { background: var(--fg); color: var(--bg); }
+  .why-col.gain h3 { background: var(--accent); color: var(--fg); }
+  .why-col ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .why-col li {
+    font-size: 15px;
+    padding: 10px 0;
+    border-bottom: 1.5px solid var(--fg);
+  }
+  .why-col li::before {
+    content: ">";
+    color: var(--accent);
+    font-weight: 700;
+    margin-right: 10px;
+  }
+  @media (max-width: 720px) {
+    .why { grid-template-columns: 1fr; gap: 40px; }
+  }
+
+  /* --- footer --------------------------------------------------------- */
+  footer {
+    border-top: var(--border) solid var(--fg);
+    padding-top: 24px;
+    font-size: 12px;
+    display: flex;
+    justify-content: space-between;
+    color: #666;
+  }
+  footer a { color: #666; text-decoration: underline; }
+  footer a:hover { color: var(--fg); background: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="topnav">
+    <div class="brand">
+      mcp-analytics
+      <span class="tag">web analytics · mcp native</span>
+    </div>
+    <nav>
+      <a href="#how">How</a>
+      <a href="#demo">Demo</a>
+      <a href="/login">Sign in</a>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <div class="kicker">Web analytics<span class="dot"> · </span>no dashboard</div>
+    <h1>No dashboard.<br>No charts.<br><span class="accent">Just answers.</span></h1>
+    <p class="sub">
+      Query your web analytics through Claude — or any MCP client.
+      No tabs. No dashboards. No cookie banners.
+    </p>
+  </section>
+
+  <section class="signup">
+    <span class="label">Start tracking</span>
+    <h2>Get your MCP URL</h2>
+    <p class="help">Enter your email. We'll send a verification link and your personal MCP connector URL. Paste it into Claude once — never again.</p>
+    <form action="#" method="post">
+      <input type="email" placeholder="you@example.com" required>
+      <button type="submit">Get URL →</button>
+    </form>
+    <small>Free forever up to 100,000 hits/month. EU-hosted (Germany). No credit card.</small>
+  </section>
+
+  <section id="how">
+    <h2 class="section" data-num="01">How it works</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="num">1</div>
+        <h3>Add connector</h3>
+        <p>Paste your MCP URL into Claude, Cursor, ChatGPT, or Windsurf. Once. That's it.</p>
+      </div>
+      <div class="step">
+        <div class="num">2</div>
+        <h3>Let Claude install</h3>
+        <p>Ask Claude to add the tracking snippet to your site. Strict privacy mode by default — no cookies, no banner.</p>
+      </div>
+      <div class="step">
+        <div class="num">3</div>
+        <h3>Ask anything</h3>
+        <p>"How many visitors yesterday?" "Which post converted best?" Claude translates to queries.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="demo">
+    <h2 class="section" data-num="02">What it looks like</h2>
+    <div class="demo">
+      <div>
+        <h3>Script on your site</h3>
+<pre>&lt;script defer
+  data-site="tb_8x9k2m4n"
+  src="https://t.mcp-analytics.com/script.js"&gt;
+&lt;/script&gt;</pre>
+      </div>
+      <div class="chat">
+        <h3>In your Claude chat</h3>
+        <div class="you"><div class="who">You</div>How'd yesterday go?</div>
+        <div class="claude">
+          <div class="who">Claude</div>
+          412 pageviews from 186 visitors across 3 sites. /pricing was your top page (38 views) with a 62% bounce rate.
+          <div class="suggest">→ Want me to compare it to last week, or break down which sources brought people there?</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="section" data-num="03">What you lose / gain</h2>
+    <div class="why">
+      <div class="why-col lose">
+        <h3>You lose</h3>
+        <ul>
+          <li>A dashboard to pay for</li>
+          <li>Twelve tabs always open</li>
+          <li>CSV exports at 2am</li>
+          <li>Cookie banners</li>
+          <li>Vendor lock-in</li>
+        </ul>
+      </div>
+      <div class="why-col gain">
+        <h3>You gain</h3>
+        <ul>
+          <li>Answers in your chat</li>
+          <li>Custom events, first-class</li>
+          <li>GDPR + EU hosting by default</li>
+          <li>Claude spots what to optimize</li>
+          <li>18 MCP tools, one URL</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div>© 2026 mcp-analytics · <a href="mailto:enterprise@mcp-analytics.com">enterprise</a> · <a href="#">terms</a> · <a href="#">privacy</a></div>
+    <div>made in Berlin</div>
+  </footer>
+
+</div>
+</body>
+</html>

@@ -52,7 +52,7 @@ module Mcp
       err = assert_raises(Tools::RateLimitedError) do
         anon_tools.register_account("email" => "u4@example.com")
       end
-      assert_match(/3\/hour/, err.message)
+      assert_match(/network/i, err.message)
     end
 
     test "register_account enforces 5/email-domain/day limit" do

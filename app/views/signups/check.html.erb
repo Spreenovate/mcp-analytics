@@ -1,0 +1,90 @@
+<% content_for(:title, "Check your inbox — mcp-analytics") %>
+<% content_for(:body_class, "home") %>
+
+<% content_for :head do %>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+  <style>
+    body.home {
+      --bg: #ffffff; --fg: #0a0a0a; --accent: #00FF88; --border: 3px;
+      background: var(--bg); color: var(--fg);
+      font-family: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+      font-size: 16px; line-height: 1.55;
+    }
+    body.home main { max-width: none; padding: 0; margin: 0; }
+    body.home .wrap { max-width: 720px; margin: 0 auto; padding: 80px 28px 120px; }
+
+    body.home h1 {
+      font-family: "Space Grotesk", sans-serif; font-weight: 900;
+      font-size: clamp(40px, 6vw, 72px); line-height: 1;
+      letter-spacing: -0.03em; margin: 0 0 32px;
+      text-transform: uppercase;
+    }
+    body.home h1 .accent {
+      background: var(--accent); padding: 0 0.15em; margin-left: -0.15em;
+    }
+    body.home p.lead {
+      font-size: 18px; margin: 0 0 32px;
+    }
+    body.home .panel {
+      border: var(--border) solid var(--fg);
+      padding: 28px; margin: 0 0 40px;
+    }
+    body.home .panel .label {
+      display: inline-block; font-size: 12px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.12em;
+      background: var(--fg); color: var(--bg); padding: 4px 8px;
+      margin-bottom: 16px;
+    }
+    body.home .panel .email {
+      font-family: "JetBrains Mono", monospace; font-weight: 700;
+      font-size: 18px;
+    }
+    body.home ol.steps {
+      padding-left: 0; list-style: none; counter-reset: step;
+    }
+    body.home ol.steps li {
+      counter-increment: step;
+      font-size: 15px; padding: 14px 0 14px 48px; position: relative;
+      border-bottom: 1.5px solid var(--fg);
+    }
+    body.home ol.steps li::before {
+      content: counter(step);
+      position: absolute; left: 0; top: 12px;
+      font-family: "Space Grotesk", sans-serif; font-weight: 900;
+      font-size: 24px; color: var(--accent);
+      background: var(--fg); padding: 2px 10px;
+    }
+    body.home a { color: var(--fg); }
+    body.home a:hover { background: var(--accent); }
+    body.home .footer-link {
+      margin-top: 48px; font-size: 13px; color: #666;
+    }
+  </style>
+<% end %>
+
+<div class="wrap">
+
+  <h1>Check your <span class="accent">inbox</span>.</h1>
+  <p class="lead">
+    We sent a verification link to:
+  </p>
+  <div class="panel">
+    <div class="label">Email sent</div>
+    <div class="email"><%= @email %></div>
+  </div>
+
+  <ol class="steps">
+    <li>Open your inbox and click the link in the email from <strong>agent@mcp-analytics.com</strong>.</li>
+    <li>Copy your personal MCP URL from the verification page.</li>
+    <li>Paste it into Claude (or Cursor / ChatGPT / Windsurf) as a custom MCP connector.</li>
+    <li>Ask anything: <em>"How did yesterday go?"</em></li>
+  </ol>
+
+  <div class="footer-link">
+    Didn't get the email? Check spam, or <%= link_to "try again", root_path %>.
+  </div>
+
+</div>
