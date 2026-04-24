@@ -9,6 +9,11 @@
 
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+
+    <%# Dogfooding: mcp-analytics tracking its own site. %>
+    <% if Rails.env.production? %>
+      <script defer data-site="wjxayhdd" src="https://t.mcp-analytics.com/script.js"></script>
+    <% end %>
   </head>
 
   <body>
