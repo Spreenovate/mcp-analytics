@@ -25,7 +25,13 @@ module ClickHouse
     # as `param_<name>` HTTP parameters which ClickHouse URL-escapes and quotes
     # correctly per the declared type.
     def query(sql, params: {}, types: {})
-      qs = { "default_format" => "JSON" }
+      # ClickHouse doesn't allow multi-statements by default, so database and
+      # settings go via URL params — NOT inline SQL prefixes.
+      qs = {
+        "default_format" => "JSON",
+        "database"       => @database,
+        "use_query_cache" => "0"
+      }
       params.each do |k, v|
         qs["param_#{k}"] = serialize_param(v, types[k])
       end
@@ -36,7 +42,7 @@ module ClickHouse
       req = Net::HTTP::Post.new(uri)
       req.basic_auth(@user, @password) if @user && !@user.empty?
       req["Content-Type"] = "text/plain; charset=utf-8"
-      req.body = "SET use_query_cache = 0;\nUSE #{@database};\n#{sql}"
+      req.body = sql
 
       res = Net::HTTP.start(uri.host, uri.port,
                             use_ssl: uri.scheme == "https",
