@@ -86,8 +86,6 @@ accessories:
     image: ghcr.io/spreenovate/mcp-analytics-ingest:latest
     host: 49.13.165.191
     cmd: /app/ingest
-    options:
-      network: kamal
     proxy:
       ssl: true
       host: t.mcp-analytics.com
@@ -117,7 +115,6 @@ accessories:
     host: 49.13.165.191
     port: "127.0.0.1:8123:8123"
     options:
-      network: kamal
       ulimit: "nofile=262144:262144"
     env:
       clear:
