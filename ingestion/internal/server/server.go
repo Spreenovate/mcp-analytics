@@ -45,11 +45,12 @@ func (s *Server) Routes() http.Handler {
 }
 
 type eventIn struct {
-	Site     string                 `json:"site"`
-	Name     string                 `json:"name"`
-	URL      string                 `json:"url"`
-	Referrer string                 `json:"referrer"`
-	Props    map[string]interface{} `json:"props"`
+	Site      string                 `json:"site"`
+	Name      string                 `json:"name"`
+	URL       string                 `json:"url"`
+	Referrer  string                 `json:"referrer"`
+	Props     map[string]interface{} `json:"props"`
+	VisitorID string                 `json:"visitor_id,omitempty"` // only honored in mode=all
 }
 
 func (s *Server) handleEvent(w http.ResponseWriter, r *http.Request) {
@@ -129,12 +130,20 @@ func (s *Server) handleEvent(w http.ResponseWriter, r *http.Request) {
 		sessionID = session.StrictSessionID(
 			s.DailySalt.Current(), []byte(site.SiteSalt), ip, userAgent, site.SiteID)
 		visitorID = 0
-	case "default", "all":
-		// 'all' differs from 'default' in cookie-backed persistence, which is
-		// a tracker-side concern; server-side we treat it like 'default' for
-		// MVP (persistent hash over site_salt lifetime).
+	case "default":
 		sessionID = session.DefaultSessionID([]byte(site.SiteSalt), ip, userAgent, site.SiteID)
 		visitorID = session.DefaultVisitorID([]byte(site.SiteSalt), ip, userAgent, site.SiteID)
+	case "all":
+		sessionID = session.DefaultSessionID([]byte(site.SiteSalt), ip, userAgent, site.SiteID)
+		if isValidVisitorID(in.VisitorID) {
+			// Client provided a persistent cookie-backed id. Hash it to UInt64
+			// (deterministic, collision-resistant) so it slots into ClickHouse
+			// cleanly and cannot be correlated back to the raw cookie value.
+			visitorID = session.Compute([]byte(site.SiteSalt), []byte(in.VisitorID))
+		} else {
+			// Fallback to the default hash — still better than 'strict'=0.
+			visitorID = session.DefaultVisitorID([]byte(site.SiteSalt), ip, userAgent, site.SiteID)
+		}
 	default:
 		sessionID = session.StrictSessionID(
 			s.DailySalt.Current(), []byte(site.SiteSalt), ip, userAgent, site.SiteID)
@@ -194,6 +203,26 @@ func (s *Server) handleScript(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "public, max-age=3600")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	http.ServeFile(w, r, filepath.Join(s.StaticDir, "script.js"))
+}
+
+// isValidVisitorID accepts 16..64 chars of hex / base32 / dash. Anything
+// weird gets ignored and we fall back to the server-computed hash, so a
+// misbehaving client can't poison our analytics by sending garbage ids.
+func isValidVisitorID(s string) bool {
+	if len(s) < 16 || len(s) > 64 {
+		return false
+	}
+	for _, c := range s {
+		switch {
+		case c >= '0' && c <= '9':
+		case c >= 'a' && c <= 'z':
+		case c >= 'A' && c <= 'Z':
+		case c == '-':
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 func clientIP(r *http.Request) string {

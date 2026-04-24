@@ -82,7 +82,7 @@ module Mcp
         "site_id" => site.site_id,
         "domain" => site.domain,
         "privacy_mode" => site.privacy_mode,
-        "tracking_snippet" => tracking_snippet(site.site_id),
+        "tracking_snippet" => tracking_snippet(site),
         "install_instructions" =>
           "Falls du schon mit Platzhalter gearbeitet hast: einmal in deinem " \
           "Codebase suchen+ersetzen #{PLACEHOLDER_SITE_ID} → #{site.site_id}. " \
@@ -95,7 +95,7 @@ module Mcp
       {
         "site_id" => site.site_id,
         "domain" => site.domain,
-        "snippet_html" => tracking_snippet(site.site_id),
+        "snippet_html" => tracking_snippet(site),
         "install_instructions" => "Einbauen vor </body>. SPA: das Script " \
           "hooked sich automatisch in history.pushState. Custom events: " \
           "window.mcpa('track', 'signup', { plan: 'pro' })."
@@ -217,9 +217,23 @@ module Mcp
       [n, 1000].min
     end
 
-    def tracking_snippet(site_id)
+    # Builds the tracking snippet for a given Site, baking in mode-specific
+    # behaviour via data-* attributes. See ingestion/static/script.js for
+    # what each attribute does.
+    #
+    #   strict : no extra attrs. Daily-rotating salt, visitor_id=0, DNT respected.
+    #   default: no extra attrs. Persistent hash-based visitor_id, DNT respected.
+    #   all    : data-persistent="true"    -> client-side cookie + localStorage
+    #                                         persistent visitor_id, sent in payload
+    #            data-respect-dnt="false"  -> ignore DNT by default (spec: "max retention")
+    def tracking_snippet(site)
       tracker_base = ENV.fetch("TRACKER_BASE_URL", "https://t.mcp-analytics.com")
-      %Q(<script defer data-site="#{site_id}" src="#{tracker_base}/script.js"></script>)
+      attrs = [%Q(data-site="#{site.site_id}")]
+      if site.privacy_mode == "all"
+        attrs << %q(data-persistent="true")
+        attrs << %q(data-respect-dnt="false")
+      end
+      %Q(<script defer #{attrs.join(' ')} src="#{tracker_base}/script.js"></script>)
     end
 
     DISPOSABLE_DOMAINS = %w[

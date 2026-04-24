@@ -38,6 +38,46 @@
   var MAX_PROP_KEYS = 20;
   var MAX_PAYLOAD_BYTES = 10 * 1024;
 
+  // --- Persistent visitor id (mode=all) -----------------------------------
+  // Opt-in via data-persistent="true". Cookie is first-party on the customer
+  // site, not on t.mcp-analytics.com — meaning this tracker alone cannot
+  // link a visitor across different customer domains. Good.
+  var PERSISTENT = script.getAttribute("data-persistent") === "true";
+  var COOKIE_NAME = "_mcpa_id";
+  var COOKIE_TTL_DAYS = 730;
+
+  function readCookie() {
+    var m = doc.cookie.match(new RegExp("(?:^|; )" + COOKIE_NAME + "=([^;]+)"));
+    return m ? m[1] : null;
+  }
+  function writeCookie(id) {
+    var d = new Date();
+    d.setTime(d.getTime() + COOKIE_TTL_DAYS * 86400000);
+    var attrs = "; expires=" + d.toUTCString() + "; path=/; SameSite=Lax";
+    if (loc.protocol === "https:") attrs += "; Secure";
+    doc.cookie = COOKIE_NAME + "=" + id + attrs;
+  }
+  function genId() {
+    if (win.crypto && typeof win.crypto.randomUUID === "function") {
+      return win.crypto.randomUUID().replace(/-/g, "");
+    }
+    // Fallback: 32 hex chars from Math.random (weaker, still unique enough)
+    var hex = "";
+    for (var i = 0; i < 32; i++) hex += Math.floor(Math.random() * 16).toString(16);
+    return hex;
+  }
+  function persistentVisitorId() {
+    if (!PERSISTENT) return null;
+    var id = readCookie();
+    if (!id) {
+      try { id = win.localStorage.getItem(COOKIE_NAME); } catch (_) {}
+    }
+    if (!id) id = genId();
+    writeCookie(id);
+    try { win.localStorage.setItem(COOKIE_NAME, id); } catch (_) {}
+    return id;
+  }
+
   function sanitizeProps(props) {
     if (!props || typeof props !== "object") return undefined;
     var out = {};
@@ -61,6 +101,9 @@
       referrer: doc.referrer || "",
       props: sanitizeProps(props)
     };
+
+    var vid = persistentVisitorId();
+    if (vid) payload.visitor_id = vid;
 
     var body;
     try {

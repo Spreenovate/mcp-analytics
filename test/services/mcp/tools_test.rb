@@ -138,6 +138,27 @@ module Mcp
       assert_includes result["snippet_html"], @site.site_id
     end
 
+    test "snippet for strict mode has no mode-specific attributes" do
+      strict = @user.sites.create!(domain: "s.com", privacy_mode: "strict")
+      html = auth_tools.get_tracking_snippet("site_id" => strict.site_id)["snippet_html"]
+      assert_not_includes html, "data-persistent"
+      assert_not_includes html, "data-respect-dnt"
+    end
+
+    test "snippet for default mode has no mode-specific attributes" do
+      default = @user.sites.create!(domain: "d.com", privacy_mode: "default")
+      html = auth_tools.get_tracking_snippet("site_id" => default.site_id)["snippet_html"]
+      assert_not_includes html, "data-persistent"
+      assert_not_includes html, "data-respect-dnt"
+    end
+
+    test "snippet for all mode opts into persistent visitor id and ignores DNT" do
+      allsite = @user.sites.create!(domain: "a.com", privacy_mode: "all")
+      html = auth_tools.get_tracking_snippet("site_id" => allsite.site_id)["snippet_html"]
+      assert_includes html, 'data-persistent="true"'
+      assert_includes html, 'data-respect-dnt="false"'
+    end
+
     # --- get_account / regenerate_api_token ---------------------------------
 
     test "get_account returns user info with truncated token" do
