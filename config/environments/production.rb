@@ -60,7 +60,7 @@ Rails.application.configure do
   config.action_mailer.default_url_options = { host: ENV.fetch("PUBLIC_HOST", "mcp-analytics.com") }
   config.action_mailer.delivery_method = :smtp
   config.action_mailer.smtp_settings = {
-    address:              ENV.fetch("SMTP_ADDRESS", "smtp.eu.mailgun.org"),
+    address:              ENV.fetch("SMTP_ADDRESS", "smtp.postmarkapp.com"),
     port:                 ENV.fetch("SMTP_PORT", 587).to_i,
     user_name:            ENV["SMTP_USERNAME"],
     password:             ENV["SMTP_PASSWORD"],

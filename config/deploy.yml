@@ -24,7 +24,7 @@ image: mcpanalytics/rails
 servers:
   web:
     hosts:
-      - 1.2.3.4
+      - 49.13.165.191
     labels:
       traefik.enable: "false"
     options:
@@ -41,7 +41,7 @@ servers:
   # Second role, different image. Kamal 2 lets each role override `image`.
   ingest:
     hosts:
-      - 1.2.3.4
+      - 49.13.165.191
     image: mcpanalytics/ingest
     cmd: /app/ingest
     options:
@@ -81,10 +81,10 @@ env:
     ADDITIONAL_HOSTS: "www.mcp-analytics.com"
     CLICKHOUSE_URL: "http://mcp-analytics-clickhouse:8123"
     CLICKHOUSE_DB: "mcpa"
-    SMTP_ADDRESS: "smtp.eu.mailgun.org"
+    SMTP_ADDRESS: "smtp.postmarkapp.com"
     SMTP_PORT: "587"
-    MAIL_FROM: "no-reply@mcp-analytics.com"
-    OPERATOR_EMAIL: "alex@mcp-analytics.com"
+    MAIL_FROM: "agent@mcp-analytics.com"
+    OPERATOR_EMAIL: "info@spreenovate.de"
   secret:
     - RAILS_MASTER_KEY
     - SMTP_USERNAME
@@ -110,7 +110,7 @@ builder:
 accessories:
   clickhouse:
     image: clickhouse/clickhouse-server:24.3
-    host: 1.2.3.4
+    host: 49.13.165.191
     port: "127.0.0.1:8123:8123"
     options:
       network: kamal
