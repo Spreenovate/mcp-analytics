@@ -94,24 +94,26 @@ ssh root@<hetzner-ipv4> "mkdir -p /var/lib/clickhouse && chown -R 101:101 /var/l
 
 ---
 
-## 4. Secrets in Shell exportieren
+## 4. Secrets bereitstellen
 
-Lokal — nicht committen, nicht in Files schreiben:
+Auf einer frischen Dev-Maschine brauchst du genau **zwei** Sachen lokal:
 
-```sh
-export KAMAL_REGISTRY_PASSWORD=<ghcr-pat>
-export RAILS_MASTER_KEY=$(cat config/master.key)
-export SMTP_USERNAME=<mailgun-smtp-user>
-export SMTP_PASSWORD=<mailgun-smtp-pw>
-export CLICKHOUSE_PASSWORD=$(openssl rand -hex 32)
-```
+1. `config/master.key` — sicher kopieren von der Quelle deines Vertrauens
+   (1Password, anderer Dev-Rechner, etc.). Liegt nicht im Repo.
+2. `KAMAL_REGISTRY_PASSWORD` — dein GHCR PAT, in `~/.zshrc` oder `.env`:
+   ```sh
+   export KAMAL_REGISTRY_PASSWORD=ghp_xxxxxxxxxxxxxxxxxxxxxxxx
+   ```
+   Dann `source .env` (oder neue Shell öffnen, falls in `.zshrc`).
 
-Kamal liest die aus `.kamal/secrets`, wo die Variablen-Namen referenziert
-sind (siehe Datei).
+Alle anderen App-Secrets liegen verschlüsselt in `config/credentials.yml.enc`
+(im Repo) und werden zur Deploy-Zeit von `.kamal/secrets` per `rails runner`
+ausgepackt:
+- `clickhouse.password` (geteilt zwischen Rails, Go-Ingest, ClickHouse)
+- `postmark.api_token` (für ActionMailer)
+- `secret_key_base` (Rails-Standard)
 
-**`CLICKHOUSE_PASSWORD` ist neu** — wird beim ersten Deploy in der
-ClickHouse-Initialisierung gesetzt. Notiere ihn dir, du brauchst ihn
-ggf. für Backup-Skripte.
+**Neue Secrets editieren**: `EDITOR=nano bin/rails credentials:edit`
 
 ---
 
