@@ -92,3 +92,32 @@ footer { margin-top: 4rem; color: var(--muted); font-size: .85rem; }
 
 .success { color: #047857; font-weight: 600; }
 .warn    { color: #b45309; font-weight: 600; }
+
+.copyable {
+  cursor: pointer;
+  transition: transform .05s ease, box-shadow .15s ease;
+  user-select: all;
+}
+.copyable:hover  { box-shadow: 0 0 0 2px var(--accent) inset; }
+.copyable:active { transform: translateY(1px); }
+.copyable:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.toast {
+  position: fixed;
+  bottom: 1.5rem; left: 50%;
+  transform: translateX(-50%) translateY(8px);
+  background: #0f172a; color: #fff;
+  padding: .55rem 1rem; border-radius: 8px;
+  font-size: .9rem; font-weight: 500;
+  opacity: 0;
+  transition: opacity .15s ease, transform .15s ease;
+  z-index: 100;
+  pointer-events: none;
+}
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}

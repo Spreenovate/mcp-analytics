@@ -4,21 +4,71 @@
 <p class="muted">Your account is ready. Keep this page open while you update your MCP connector.</p>
 
 <div class="card">
-  <p><strong>Your API token</strong></p>
-  <p class="kbd" id="token"><%= @user.api_token %></p>
+  <p><strong>Your API token</strong> <span class="muted">— click to copy</span></p>
+  <p class="kbd copyable" data-copy="<%= @user.api_token %>" role="button" tabindex="0"><%= @user.api_token %></p>
 </div>
 
 <div class="card">
-  <p><strong>Updated MCP URL (paste this into your connector)</strong></p>
-  <p class="kbd" id="mcp-url"><%= @mcp_url_with_token %></p>
+  <p><strong>Updated MCP URL</strong> <span class="muted">— click to copy, then paste into your connector</span></p>
+  <p class="kbd copyable" data-copy="<%= @mcp_url_with_token %>" role="button" tabindex="0"><%= @mcp_url_with_token %></p>
 </div>
 
 <h2>What to do next</h2>
 <ol>
-  <li>Copy the MCP URL above.</li>
-  <li>In Claude (or your MCP client), update the mcp-analytics connector with this URL.</li>
+  <li>Click the MCP URL above to copy it.</li>
+  <li>In Claude (or your MCP client), update the mcp-analytics connector with this URL. <em>Note: some clients (including claude.ai) don't let you edit a connector's URL — you'll have to remove the old connector and add a new one with the URL above. One-time annoyance.</em></li>
   <li>Return to your chat and say “done”. Claude will call <code>list_sites</code> and <code>add_site</code> to finish the setup.</li>
   <li>Once you have a real <code>site_id</code>, replace any occurrence of <code>DUMMY_SITE_ID_REPLACE_AFTER_VERIFY</code> in your code with it.</li>
 </ol>
 
+<div id="copy-toast" class="toast" hidden>Copied ✓</div>
+
 <footer><%= link_to "Go to settings", settings_path %></footer>
+
+<script>
+  (function () {
+    var toast = document.getElementById('copy-toast');
+    var toastTimer;
+
+    function showToast(text) {
+      toast.textContent = text;
+      toast.hidden = false;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(function () {
+        toast.classList.remove('show');
+        setTimeout(function () { toast.hidden = true; }, 200);
+      }, 1400);
+    }
+
+    function copy(el) {
+      var text = el.getAttribute('data-copy');
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(
+          function () { showToast('Copied ✓'); },
+          function () { showToast('Copy failed — select manually'); }
+        );
+      } else {
+        // Legacy fallback
+        var r = document.createRange();
+        r.selectNode(el);
+        window.getSelection().removeAllRanges();
+        window.getSelection().addRange(r);
+        try {
+          document.execCommand('copy');
+          window.getSelection().removeAllRanges();
+          showToast('Copied ✓');
+        } catch (e) {
+          showToast('Copy failed');
+        }
+      }
+    }
+
+    document.querySelectorAll('.copyable').forEach(function (el) {
+      el.addEventListener('click', function () { copy(el); });
+      el.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); copy(el); }
+      });
+    });
+  })();
+</script>
