@@ -21,6 +21,7 @@ yarn-debug.log*
 .dockerignore
 .env.*
 .env
+!.env.example
 
 # Secrets — never commit
 /config/master.key
