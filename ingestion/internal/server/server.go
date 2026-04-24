@@ -53,11 +53,15 @@ type eventIn struct {
 }
 
 func (s *Server) handleEvent(w http.ResponseWriter, r *http.Request) {
-	// Always-on CORS headers: the tracker runs on customer pages under
-	// arbitrary origins, so we accept everything. Simple requests (text/plain
-	// POST) need no preflight; preflights are honoured on the OPTIONS branch
-	// below for clients that still send them.
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+	// CORS: the tracker runs under arbitrary origins and browsers sometimes
+	// attach credentials (cookies) to sendBeacon requests. With credentials
+	// we can't use `Access-Control-Allow-Origin: *` — echo the request's
+	// Origin back instead (same practical effect as wildcard, without the
+	// conflict). Vary ensures caches don't mix responses across origins.
+	if origin := r.Header.Get("Origin"); origin != "" {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+		w.Header().Set("Vary", "Origin")
+	}
 	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "content-type")
 	w.Header().Set("Access-Control-Max-Age", "86400")
