@@ -14,7 +14,7 @@
 set -euo pipefail
 
 TAG="${1:-latest}"
-IMAGE="ghcr.io/mcpanalytics/ingest:${TAG}"
+IMAGE="ghcr.io/spreenovate/mcp-analytics-ingest:${TAG}"
 
 if [ -z "${KAMAL_REGISTRY_PASSWORD:-}" ]; then
   echo "ERROR: KAMAL_REGISTRY_PASSWORD not set in environment." >&2
@@ -26,7 +26,8 @@ echo "==> Building ${IMAGE} (linux/amd64)"
 docker build --platform linux/amd64 -t "${IMAGE}" -f ingestion/Dockerfile ingestion/
 
 echo "==> Logging in to ghcr.io"
-echo "${KAMAL_REGISTRY_PASSWORD}" | docker login ghcr.io -u mcpanalytics --password-stdin
+GHCR_USER="${GHCR_USER:-derAlekx}"
+echo "${KAMAL_REGISTRY_PASSWORD}" | docker login ghcr.io -u "${GHCR_USER}" --password-stdin
 
 echo "==> Pushing ${IMAGE}"
 docker push "${IMAGE}"

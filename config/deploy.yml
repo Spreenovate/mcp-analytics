@@ -24,7 +24,7 @@
 #   kamal deploy                     # always; rebuilds & redeploys Rails
 
 service: mcp-analytics
-image: mcpanalytics/rails
+image: spreenovate/mcp-analytics-rails
 
 servers:
   web:
@@ -69,7 +69,7 @@ volumes:
 
 registry:
   server: ghcr.io
-  username: mcpanalytics
+  username: spreenovate
   password:
     - KAMAL_REGISTRY_PASSWORD
 
@@ -83,7 +83,7 @@ accessories:
   # as an accessory rather than a `servers:` role (Kamal 2 does not allow
   # per-role image overrides under `servers:`).
   ingest:
-    image: ghcr.io/mcpanalytics/ingest:latest
+    image: ghcr.io/spreenovate/mcp-analytics-ingest:latest
     host: 49.13.165.191
     cmd: /app/ingest
     options:
