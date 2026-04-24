@@ -10,9 +10,11 @@
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
 
-    <%# Dogfooding: mcp-analytics tracking its own site. %>
+    <%# Dogfooding: mcp-analytics tracking its own site.
+        data-respect-dnt="false" is TEMPORARY to diagnose Firefox DNT issue —
+        remove after verification. %>
     <% if Rails.env.production? %>
-      <script defer data-site="wjxayhdd" src="https://t.mcp-analytics.com/script.js"></script>
+      <script defer data-site="wjxayhdd" data-respect-dnt="false" src="https://t.mcp-analytics.com/script.js"></script>
     <% end %>
   </head>
 
