@@ -79,6 +79,11 @@
       flex: 1; border: 0; outline: 0; background: var(--bg); color: var(--fg);
       font-family: "JetBrains Mono", monospace; font-size: 16px;
       padding: 16px 18px; border-right: var(--border) solid var(--fg);
+      -webkit-appearance: none; appearance: none;
+      box-shadow: none; border-radius: 0;
+    }
+    body.home .signup input[type=email]:focus {
+      background: #fffce0;  /* subtle warm focus tint, no border change */
     }
     body.home .signup input[type=email]::placeholder { color: #999; }
     body.home .signup input[type=submit] {
@@ -86,6 +91,8 @@
       font-family: "JetBrains Mono", monospace; font-size: 14px;
       font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;
       padding: 16px 28px; cursor: pointer;
+      -webkit-appearance: none; appearance: none;
+      border-radius: 0;
     }
     body.home .signup input[type=submit]:hover { background: var(--accent); color: var(--fg); }
     body.home .signup small { display: block; margin-top: 16px; font-size: 12px; color: #666; }
@@ -127,18 +134,20 @@
       margin-bottom: 96px; display: grid; grid-template-columns: 1fr 1fr;
       gap: 0; border: var(--border) solid var(--fg);
     }
-    body.home .demo > div { padding: 28px; }
+    body.home .demo > div { padding: 28px; min-width: 0; }  /* min-width:0 lets grid items shrink below content's natural width */
     body.home .demo > div:first-child { border-right: var(--border) solid var(--fg); }
     body.home .demo h3 {
       font-family: "JetBrains Mono", monospace; font-size: 13px;
       text-transform: uppercase; letter-spacing: 0.1em; margin: 0 0 16px;
     }
     body.home .demo pre {
-      background: #f5f5f5; padding: 14px 16px;
+      background: #f5f5f5; color: var(--fg);
+      padding: 14px 16px;
       font-family: "JetBrains Mono", monospace; font-size: 12px;
       line-height: 1.5; overflow-x: auto; margin: 0;
       border: 1.5px solid var(--fg);
     }
+    body.home .demo pre code { color: inherit; background: none; padding: 0; }
     body.home .chat .you, body.home .chat .claude {
       padding: 12px 14px; margin: 10px 0; font-size: 13px; line-height: 1.55;
     }
@@ -176,12 +185,31 @@
     body.home footer.lp a:hover { color: var(--fg); background: var(--accent); }
 
     @media (max-width: 720px) {
+      body.home .wrap { padding: 24px 18px 80px; }
+
+      /* Center the brand, drop the tag — keep nav links to the right. */
+      body.home header.topnav { flex-direction: column; align-items: center; gap: 16px; padding-bottom: 16px; margin-bottom: 48px; }
+      body.home header.topnav .brand { text-align: center; }
+      body.home header.topnav .brand .tag { display: none; }
+      body.home header.topnav nav { display: flex; gap: 0; }
+      body.home header.topnav nav a { margin: 0 12px; }
+
       body.home .steps { grid-template-columns: 1fr; }
       body.home .step { border-right: 0; border-bottom: var(--border) solid var(--fg); }
       body.home .step:last-child { border-bottom: 0; }
+
       body.home .demo { grid-template-columns: 1fr; }
       body.home .demo > div:first-child { border-right: 0; border-bottom: var(--border) solid var(--fg); }
+      body.home .demo > div { padding: 20px; }
+      body.home .demo pre { font-size: 11px; }   /* slightly smaller monospace to fit narrow viewports */
+
       body.home .why { grid-template-columns: 1fr; gap: 40px; }
+
+      body.home .signup { padding: 20px; }
+      body.home .signup form { flex-direction: column; }
+      body.home .signup input[type=email] { border-right: 0; border-bottom: var(--border) solid var(--fg); }
+
+      body.home footer.lp { flex-direction: column; gap: 8px; align-items: flex-start; }
     }
   </style>
 <% end %>
@@ -194,9 +222,9 @@
       <span class="tag">web analytics · mcp native</span>
     </div>
     <nav>
+      <a href="#signup-form">Get started</a>
       <a href="#how">How</a>
       <a href="#demo">Demo</a>
-      <%= link_to "Sign in", login_path %>
     </nav>
   </header>
 
@@ -209,7 +237,7 @@
     </p>
   </section>
 
-  <section class="signup">
+  <section class="signup" id="signup-form">
     <span class="label">Start tracking</span>
     <h2>Get your MCP URL</h2>
     <p class="help">Enter your email. We'll send a verification link and your personal MCP connector URL. Paste it into Claude once — never again.</p>
