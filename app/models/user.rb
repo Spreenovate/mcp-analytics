@@ -4,7 +4,6 @@ class User < ApplicationRecord
   }.freeze
 
   has_many :sites, dependent: :destroy
-  has_many :magic_links, dependent: :destroy
 
   validates :email, presence: true, uniqueness: true,
             format: { with: URI::MailTo::EMAIL_REGEXP }

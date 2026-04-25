@@ -20,7 +20,12 @@ module Mcp
       }
     ].freeze
 
+    # The 'get_started_guide' is also useful for authed users who want a
+    # refresher on tools and conventions, so it appears in both lists.
+    GET_STARTED_GUIDE = UNAUTHENTICATED.last
+
     AUTHENTICATED = [
+      GET_STARTED_GUIDE,
       {
         name: "list_sites",
         description: "List all sites on the authenticated account.",

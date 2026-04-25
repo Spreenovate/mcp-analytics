@@ -1,0 +1,86 @@
+<%# Reusable brutalist style for narrow text-heavy pages (terms, privacy).
+    Include via render "pages/brutalist_doc_styles" inside content_for(:head). %>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+<style>
+  body.home {
+    --bg: #ffffff; --fg: #0a0a0a; --accent: #00FF88; --border: 3px;
+    background: var(--bg); color: var(--fg);
+    font-family: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+    font-size: 16px; line-height: 1.6;
+  }
+  body.home main { max-width: none; padding: 0; margin: 0; }
+  body.home .wrap { max-width: 760px; margin: 0 auto; padding: 64px 28px 120px; }
+
+  body.home .topnav {
+    display: flex; justify-content: space-between; align-items: baseline;
+    border-bottom: var(--border) solid var(--fg);
+    padding-bottom: 16px; margin-bottom: 56px;
+  }
+  body.home .topnav .brand {
+    font-family: "JetBrains Mono", monospace; font-weight: 700; font-size: 18px;
+  }
+  body.home .topnav .brand::before { content: "> "; color: var(--accent); }
+  body.home .topnav a {
+    font-family: "JetBrains Mono", monospace; font-size: 13px;
+    color: var(--fg); text-decoration: none;
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  body.home .topnav a:hover { background: var(--accent); }
+
+  body.home h1 {
+    font-family: "Space Grotesk", sans-serif; font-weight: 900;
+    font-size: clamp(40px, 6vw, 72px); line-height: 1;
+    letter-spacing: -0.03em; margin: 0 0 32px; text-transform: uppercase;
+  }
+  body.home h1 .accent {
+    background: var(--accent); padding: 0 0.15em; margin-left: -0.15em;
+  }
+
+  body.home h2 {
+    font-family: "JetBrains Mono", monospace; font-size: 14px;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em;
+    margin: 56px 0 16px; padding-bottom: 8px;
+    border-bottom: 2px solid var(--fg);
+  }
+  body.home h3 {
+    font-family: "Space Grotesk", sans-serif; font-weight: 700;
+    font-size: 18px; margin: 28px 0 8px; text-transform: none; letter-spacing: 0;
+  }
+  body.home p, body.home li { margin: 0 0 12px; font-size: 15px; }
+  body.home ul { padding-left: 20px; }
+  body.home strong { font-weight: 700; }
+  body.home a { color: var(--fg); }
+  body.home a:hover { background: var(--accent); }
+
+  body.home .panel {
+    border: var(--border) solid var(--fg);
+    padding: 24px; margin: 16px 0 24px;
+    background: #fafafa;
+  }
+  body.home .panel p { margin: 0 0 8px; }
+  body.home .panel p:last-child { margin: 0; }
+
+  body.home dl { margin: 16px 0; }
+  body.home dl dt {
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+    font-size: 12px; margin-top: 14px; color: #555;
+  }
+  body.home dl dd { margin: 4px 0 0; font-size: 15px; }
+
+  body.home footer.lp {
+    margin-top: 80px; padding-top: 16px;
+    border-top: var(--border) solid var(--fg);
+    font-size: 12px; color: #666;
+    display: flex; justify-content: space-between;
+  }
+  body.home footer.lp a { color: #666; text-decoration: underline; }
+
+  @media (max-width: 720px) {
+    body.home .wrap { padding: 32px 18px 80px; }
+    body.home .topnav { flex-direction: column; align-items: flex-start; gap: 12px; }
+    body.home footer.lp { flex-direction: column; gap: 6px; align-items: flex-start; }
+  }
+</style>

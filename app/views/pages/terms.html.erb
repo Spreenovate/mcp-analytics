@@ -1,0 +1,90 @@
+<% content_for(:title, "Terms & Imprint — mcp-analytics") %>
+<% content_for(:body_class, "home") %>
+<% content_for(:head) { render "pages/brutalist_doc_styles" } %>
+
+<div class="wrap">
+
+  <div class="topnav">
+    <a class="brand" href="/">mcp-analytics</a>
+    <%= link_to "← Back home", root_path %>
+  </div>
+
+  <h1>Terms <span class="accent">+ Imprint</span></h1>
+
+  <h2>Imprint (§ 5 TMG)</h2>
+  <div class="panel">
+    <p><strong>mcp-analytics</strong> is a brand of Spreenovate GmbH.</p>
+    <dl>
+      <dt>Operator</dt>
+      <dd>Spreenovate GmbH<br>Prenzlauer Allee 186<br>10405 Berlin<br>Germany</dd>
+
+      <dt>Managing Directors</dt>
+      <dd>Fabian Hallstein, Alexander Kamphorst</dd>
+
+      <dt>Contact</dt>
+      <dd><%= mail_to "info@spreenovate.de" %></dd>
+
+      <dt>Commercial Register</dt>
+      <dd>Amtsgericht Berlin-Charlottenburg, HRB 202643B</dd>
+
+      <dt>VAT ID (USt-IdNr.)</dt>
+      <dd>DE322439602</dd>
+
+      <dt>Responsible for content (§ 18 (2) MStV)</dt>
+      <dd>Fabian Hallstein, Alexander Kamphorst (address as above)</dd>
+    </dl>
+  </div>
+
+  <h2>Service</h2>
+  <p>
+    mcp-analytics is a privacy-first web analytics service operated entirely from
+    the European Union (Hetzner data centre, Falkenstein, Germany). It is queried
+    through the Model Context Protocol (MCP) — there is no analytics dashboard.
+    Read the <%= link_to "privacy policy", privacy_path %> for details on data
+    handling.
+  </p>
+
+  <h2>Free tier</h2>
+  <p>
+    Up to 100,000 hits per month per account, unlimited sites. We may rate-limit
+    or pause accounts that significantly exceed the free tier; we will notify
+    you by email before doing so. No credit card is required.
+  </p>
+
+  <h2>Acceptable use</h2>
+  <ul>
+    <li>Don't use the tracking script to capture personally identifiable information (PII) — names, raw email addresses, payment details. Custom-event property values are stored verbatim and are your responsibility.</li>
+    <li>Don't use mcp-analytics for unlawful tracking, harassment, surveillance, or any activity that violates the GDPR or local privacy laws of the visitors you measure.</li>
+    <li>Don't try to exploit, overload, or reverse-engineer the service. Reasonable security testing of <em>your own</em> account is fine — please disclose findings to <%= mail_to "security@spreenovate.de" %>.</li>
+  </ul>
+
+  <h2>Liability</h2>
+  <p>
+    The service is provided "as is" without warranty of any kind. To the extent
+    permitted by law, Spreenovate GmbH is not liable for indirect or
+    consequential damages arising from use of the service. Liability for damages
+    caused by gross negligence or willful misconduct is unaffected.
+  </p>
+
+  <h2>Changes</h2>
+  <p>
+    We may update these terms. Material changes will be announced by email at
+    least 30 days before they take effect. Continued use after that constitutes
+    acceptance.
+  </p>
+
+  <h2>Governing law</h2>
+  <p>
+    German law applies. Place of jurisdiction is Berlin, Germany, to the extent
+    legally permitted.
+  </p>
+
+  <footer class="lp">
+    <div>© <%= Date.current.year %> Spreenovate GmbH</div>
+    <div>
+      <%= link_to "Privacy", privacy_path %> ·
+      <%= link_to "Home", root_path %>
+    </div>
+  </footer>
+
+</div>

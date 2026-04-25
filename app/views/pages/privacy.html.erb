@@ -1,0 +1,130 @@
+<% content_for(:title, "Privacy — mcp-analytics") %>
+<% content_for(:body_class, "home") %>
+<% content_for(:head) { render "pages/brutalist_doc_styles" } %>
+
+<div class="wrap">
+
+  <div class="topnav">
+    <a class="brand" href="/">mcp-analytics</a>
+    <%= link_to "← Back home", root_path %>
+  </div>
+
+  <h1>Privacy <span class="accent">policy</span></h1>
+
+  <p>
+    This page describes what mcp-analytics stores, why, and how you can exercise
+    your GDPR rights. Last updated <%= Date.current.strftime("%B %Y") %>.
+  </p>
+
+  <h2>1. Controller</h2>
+  <div class="panel">
+    <p>
+      Spreenovate GmbH, Prenzlauer Allee 186, 10405 Berlin, Germany.<br>
+      Managing directors: Fabian Hallstein, Alexander Kamphorst.<br>
+      Contact: <%= mail_to "info@spreenovate.de" %>.
+    </p>
+    <p>
+      We have not appointed a Data Protection Officer because the company is
+      below the German DPO threshold (§ 38 BDSG).
+    </p>
+  </div>
+
+  <h2>2. Two roles to keep apart</h2>
+  <p>
+    mcp-analytics has two very different relationships with personal data:
+  </p>
+  <h3>(a) You — the mcp-analytics account holder</h3>
+  <p>
+    We store your <strong>email address</strong> and an <strong>API token</strong>.
+    Legal basis: contract performance (Art. 6 (1)(b) GDPR). The email is used for
+    transactional messages only — verification link, occasional service notices,
+    plan-limit warnings. No marketing.
+  </p>
+  <h3>(b) Visitors of <em>your</em> sites</h3>
+  <p>
+    When a visitor loads a page that includes our tracking snippet, we record
+    pseudonymous event data. <strong>You</strong> are the controller for that
+    data; we are your processor (Art. 28 GDPR). A separate data-processing
+    agreement is available on request.
+  </p>
+
+  <h2>3. What we collect from your visitors</h2>
+  <p>The data set per pageview / event is the same regardless of privacy mode:</p>
+  <ul>
+    <li>Timestamp, event name, URL path, URL host</li>
+    <li>Referrer host (and path in <code>default</code>/<code>all</code> modes)</li>
+    <li>UTM parameters (source, medium, campaign)</li>
+    <li>Browser, browser version, operating system, device class</li>
+    <li>Custom event properties you choose to send via <code>mcpa('track', …)</code></li>
+  </ul>
+  <p>
+    We do <strong>not</strong> store the raw IP address, the raw User-Agent, or
+    any directly-identifying data. Geo data (country/region/city) is reserved in
+    the schema but currently empty.
+  </p>
+
+  <h2>4. How visitors are counted (and why no banner)</h2>
+  <p>The <code>strict</code> privacy mode (default for new sites) computes the visitor identifier as:</p>
+  <div class="panel">
+    <p><code>session_id = SHA-256(daily_salt + site_salt + ip + user_agent + site_id)</code></p>
+    <p>The <code>daily_salt</code> rotates at 00:00 UTC. The IP and User-Agent are <strong>discarded</strong> after the hash is computed — they are never written to disk.</p>
+  </div>
+  <p>
+    Result: visitors cannot be re-identified across days; no cookie, no
+    localStorage, no fingerprint that survives midnight UTC. The German DSK and
+    the EDPB consider this sufficient anonymisation to skip the cookie banner
+    requirement (ePrivacy / TTDSG § 25). The <code>default</code> mode uses a
+    yearly-rotating site-salt instead and is also cookie-free; the
+    <code>all</code> mode opts into a 2-year first-party cookie and shifts
+    consent responsibility to you (the site owner).
+  </p>
+  <p>
+    Do-Not-Track signals are honoured as a hard opt-out in <code>strict</code>
+    and <code>default</code>; in <code>all</code> mode the site owner decides.
+  </p>
+
+  <h2>5. Where the data lives</h2>
+  <ul>
+    <li><strong>Hetzner Online GmbH</strong> (Falkenstein, Germany) — primary infrastructure. <a href="https://www.hetzner.com/legal/privacy-policy" rel="noopener">Hetzner privacy policy</a>.</li>
+    <li><strong>ClickHouse</strong> on the same Hetzner host — analytics events. 2-year TTL on raw events.</li>
+    <li><strong>SQLite</strong> on the same Hetzner host — accounts, sites, usage counters.</li>
+    <li><strong>Postmark (ActiveCampaign LLC)</strong>, USA — transactional email delivery. Transfer is covered by Standard Contractual Clauses (SCCs) and DPF certification. Only your email address and the verification-link content are transmitted.</li>
+  </ul>
+
+  <h2>6. Retention</h2>
+  <ul>
+    <li>Raw events in ClickHouse: <strong>2 years</strong>, then automatic delete via TTL.</li>
+    <li>Account data: until you ask us to delete it.</li>
+    <li>Verification tokens: 24 hours validity, purged after use.</li>
+    <li>Server access logs (kamal-proxy): rotated every <strong>10 MB</strong> per container, no centralised retention.</li>
+  </ul>
+
+  <h2>7. Your rights</h2>
+  <p>You have the right to:</p>
+  <ul>
+    <li>access your data (Art. 15 GDPR)</li>
+    <li>correct it (Art. 16)</li>
+    <li>erase it (Art. 17) — write us at <%= mail_to "info@spreenovate.de" %></li>
+    <li>port it out (Art. 20)</li>
+    <li>object to processing (Art. 21)</li>
+    <li>complain to a supervisory authority — for Berlin that is the
+      <a href="https://www.datenschutz-berlin.de/" rel="noopener">Berliner Beauftragte für Datenschutz und Informationsfreiheit</a>.</li>
+  </ul>
+
+  <h2>8. Cookies on this site</h2>
+  <p>
+    The mcp-analytics website (the one you are reading) does not set any
+    tracking cookies. Rails sets a single transactional session cookie
+    (<code>_mcp_analytics_session</code>) only after you submit a form — it
+    expires when you close the browser.
+  </p>
+
+  <footer class="lp">
+    <div>© <%= Date.current.year %> Spreenovate GmbH</div>
+    <div>
+      <%= link_to "Terms + Imprint", terms_path %> ·
+      <%= link_to "Home", root_path %>
+    </div>
+  </footer>
+
+</div>
