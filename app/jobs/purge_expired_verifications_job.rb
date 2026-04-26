@@ -8,10 +8,6 @@ class PurgeExpiredVerificationsJob < ApplicationJob
       .where("used_at IS NOT NULL OR expires_at < ?", 7.days.ago)
       .delete_all
 
-    MagicLink
-      .where("used_at IS NOT NULL OR expires_at < ?", 1.day.ago)
-      .delete_all
-
     UnknownSiteHit
       .where("hour < ?", 30.days.ago)
       .delete_all
