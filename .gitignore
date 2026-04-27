@@ -34,6 +34,9 @@ yarn-debug.log*
 .idea/
 .vscode/
 
+# Claude Code per-user local settings (permissions allowlist etc.)
+.claude/settings.local.json
+
 # Go build artifacts
 /ingestion/bin/
 /ingestion/*.out
