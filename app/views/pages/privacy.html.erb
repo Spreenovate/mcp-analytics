@@ -1,6 +1,9 @@
 <% content_for(:title, "Privacy — mcp-analytics") %>
 <% content_for(:body_class, "home") %>
-<% content_for(:head) { render "pages/brutalist_doc_styles" } %>
+<% content_for :head do %>
+  <meta name="robots" content="noindex, nofollow">
+  <%= render "pages/brutalist_doc_styles" %>
+<% end %>
 
 <div class="wrap">
 
@@ -21,7 +24,7 @@
     <p>
       Spreenovate GmbH, Prenzlauer Allee 186, 10405 Berlin, Germany.<br>
       Managing directors: Fabian Hallstein, Alexander Kamphorst.<br>
-      Contact: <%= mail_to "info@spreenovate.de" %>.
+      Contact: <%= mail_to "info@mcp-analytics.com" %>.
     </p>
     <p>
       We have not appointed a Data Protection Officer because the company is
@@ -104,7 +107,7 @@
   <ul>
     <li>access your data (Art. 15 GDPR)</li>
     <li>correct it (Art. 16)</li>
-    <li>erase it (Art. 17) — write us at <%= mail_to "info@spreenovate.de" %></li>
+    <li>erase it (Art. 17) — write us at <%= mail_to "info@mcp-analytics.com" %></li>
     <li>port it out (Art. 20)</li>
     <li>object to processing (Art. 21)</li>
     <li>complain to a supervisory authority — for Berlin that is the
@@ -122,7 +125,7 @@
   <footer class="lp">
     <div>© <%= Date.current.year %> Spreenovate GmbH</div>
     <div>
-      <%= link_to "Terms + Imprint", terms_path %> ·
+      <%= link_to "Terms + Imprint", terms_path, rel: "nofollow" %> ·
       <%= link_to "Home", root_path %>
     </div>
   </footer>

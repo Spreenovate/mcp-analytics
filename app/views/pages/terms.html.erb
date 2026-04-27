@@ -1,6 +1,9 @@
 <% content_for(:title, "Terms & Imprint — mcp-analytics") %>
 <% content_for(:body_class, "home") %>
-<% content_for(:head) { render "pages/brutalist_doc_styles" } %>
+<% content_for :head do %>
+  <meta name="robots" content="noindex, nofollow">
+  <%= render "pages/brutalist_doc_styles" %>
+<% end %>
 
 <div class="wrap">
 
@@ -22,7 +25,7 @@
       <dd>Fabian Hallstein, Alexander Kamphorst</dd>
 
       <dt>Contact</dt>
-      <dd><%= mail_to "info@spreenovate.de" %></dd>
+      <dd><%= mail_to "info@mcp-analytics.com" %></dd>
 
       <dt>Commercial Register</dt>
       <dd>Amtsgericht Berlin-Charlottenburg, HRB 202643B</dd>
@@ -40,7 +43,7 @@
     mcp-analytics is a privacy-first web analytics service operated entirely from
     the European Union (Hetzner data centre, Falkenstein, Germany). It is queried
     through the Model Context Protocol (MCP) — there is no analytics dashboard.
-    Read the <%= link_to "privacy policy", privacy_path %> for details on data
+    Read the <%= link_to "privacy policy", privacy_path, rel: "nofollow" %> for details on data
     handling.
   </p>
 
@@ -82,7 +85,7 @@
   <footer class="lp">
     <div>© <%= Date.current.year %> Spreenovate GmbH</div>
     <div>
-      <%= link_to "Privacy", privacy_path %> ·
+      <%= link_to "Privacy", privacy_path, rel: "nofollow" %> ·
       <%= link_to "Home", root_path %>
     </div>
   </footer>
