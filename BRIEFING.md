@@ -793,10 +793,179 @@ Erlauben. Ein Klick mehr, dafür:
 
 ---
 
+## BOT- & AI-AGENT-KLASSIFIKATION (Phase-Plan, post-MVP) — `[PHASE 1 DONE]`
+
+**Warum**: aktuell droppt der Go-Ingest jeden Request mit Bot-UA. Damit
+verlieren wir das vielleicht interessanteste Signal eines AI-nativen
+Analytics-Tools — Sichtbarkeit darüber, welche AI-Agenten (ChatGPT-User,
+Claude-User, Perplexity, GPTBot, …) eine Seite lesen, und welche
+Search-Indexer / Social-Unfurler / Scanner sie crawlen. Gleichzeitig
+müssen die Default-Customer-Numbers sauber bleiben — Bot-Noise darf nicht
+„Pageviews" inflieren.
+
+### State of the Art (Recherche April 2026)
+
+- **Cloudflare AI Crawl Control** (GA Aug 2025) — Klassifikation nach
+  Crawl-Purpose: `Training / Search / User-action / Undeclared`. Wird
+  de-facto-Schema. Aber Edge-Layer, nur für CF-Kunden.
+- **DataDome / TollBit** — Edge-installiert, AI-Bot-Tracking + Monetisierung.
+  Enterprise-Pricing.
+- **Plausible / Fathom / Umami / Vercel Analytics** — droppen Bots
+  pauschal, kein first-class AI-Bot-View. Marktlücke.
+- **Web Bot Auth** (IETF Draft, 2025): Ed25519-signierte Agenten,
+  Cloudflare + AWS + Visa shippen das schon. OpenAI/Anthropic-Agenten
+  signieren teilweise. In 12-18 Monaten DER Verifizierungs-Standard.
+
+### Bekannte AI-Agent UAs (April 2026)
+
+- **OpenAI**: `GPTBot` (Training), `OAI-SearchBot` (Search-Index),
+  `ChatGPT-User` (Live-User-Fetch). 3 separate IP-Files publiziert.
+- **Anthropic**: `ClaudeBot` (Training), `Claude-User` (User-Fetch),
+  `Claude-SearchBot`. **Keine** öffentlichen IP-Ranges → Verifikation
+  nur via robots.txt + reverse DNS.
+- **Google**: `Googlebot` (Search), `Google-Extended` (Gemini-Training-
+  Opt-Out), `Gemini-Deep-Research` (agentic).
+- **Perplexity**: `PerplexityBot` (Index), `Perplexity-User` (Live).
+- **Apple**: `Applebot` + `Applebot-Extended`.
+- **Meta**: `Meta-ExternalAgent`, `meta-externalfetcher`.
+- **Andere**: `Bytespider` (ByteDance), `cohere-ai`, `Mistral-User`,
+  `CCBot` (Common Crawl, surrogate trainer).
+- **Spoofing-Rate**: HUMAN-Report 2025 sagt ~5.7% der „AI-Bot-UAs" sind
+  Fakes. UA allein nicht trustworthy → IP-Range + zukünftig Signature
+  als zweite Bestätigung.
+
+### Phase 1 — Binary Classification + Raw UA  — `[DONE 2026-04-27]`
+
+Stop dropping bots. Add `traffic_class` (LowCardinality, default 'user')
+und `user_agent` (raw String) Spalten zu `events`. Default-MCP-Queries
+filtern `WHERE traffic_class = 'user'` automatisch. Zwei neue MCP-Tools
+exposen die Bot-Sicht: `top_user_agents` (mit optionalem
+`traffic_class`-Filter) und `traffic_class_breakdown`.
+
+**Limit der Phase 1**: nur Bots die JS ausführen (modernes Googlebot,
+Headless-Chrome) tauchen auf, weil unser Tracker JS-basiert ist. Der
+Großteil der Crawler (GPTBot-Training, ClaudeBot, CCBot, Slackbot,
+Censys) ignoriert JS und ist damit unsichtbar in unseren Analytics.
+Diese Lücke schließt erst Phase 4 (Server-Side Ingestion).
+
+### Phase 2 — Refined Crawl-Purpose Klassifikation — `[TODO]`
+
+Aufwand: ~3-4h. Trigger: 2+ Kunden fragen explizit danach.
+
+`traffic_class` Werte erweitern auf Cloudflare-kompatible Taxonomie:
+`user / ai_user_action / ai_search / ai_training / search_index /
+social_unfurl / scanner / bot_other`. Klassifikation kombiniert:
+
+1. **UA-Pattern-Matching** — kuratierte Liste der ~30 bekannten AI-Agent-
+   und Indexer-UAs (s. oben), mit purpose-mapping pro UA.
+2. **Cloud-IP-Range-Lookup** — OpenAI publiziert 3 JSON-Files
+   (`openai.com/gptbot.json`, `searchbot.json`, `chatgpt-user.json`).
+   Google publiziert seit jeher seine Files. AWS/GCP/Azure/CF haben
+   öffentliche Range-JSONs. Anthropic publiziert keine — dort nur UA +
+   reverse DNS als Indikator.
+3. **Heuristik** — UA = generic Chrome + IP in Cloud-Range + nur 1 Hit
+   → wahrscheinlich Scanner.
+
+Ops-Burden: Ranges + UA-Liste monatlich aktualisieren (~1-2h/Monat).
+
+### Phase 3 — Web Bot Auth Signature Verification — `[FUTURE]`
+
+Aufwand: ~1 Tag. Trigger: wenn signierte Agenten Mainstream werden
+(Schätzung: 2026 H2 / 2027 H1).
+
+Implementation des Web-Bot-Auth-Standards (RFC 9421 HTTP Message
+Signatures + Ed25519). Server verifiziert die Signature aus den
+`Signature` / `Signature-Input` / `Signature-Agent` Headers. Public-Keys
+des Agenten kommen aus `/.well-known/http-message-signatures-directory`
+des Agenten-Domains. Erlaubt Marketing-Claim *„this many VERIFIED Claude
+agents read your site this week"* — belastbar, nicht UA-Roulette.
+
+### Phase 4 — Server-Side Ingestion (Hybrid Tracking) — `[TODO, BIGGEST UNLOCK]`
+
+Aufwand: ~7h für komplette Implementierung. Trigger: nach Phase 1
+Validation, vor breitem Marketing-Push.
+
+**Das Problem**: JS-Tracker sieht keine Bots die JS ignorieren — das
+sind ~80% der echten Crawler (GPTBot-Training, Slackbot, Censys, etc.).
+Server-side Tracking ist die Lösung — Kunde installiert eine Middleware
+die jeden HTTP-Request hinten an unser /event POSTet.
+
+**Datenmodell-Add**: neue Spalte `source` (`tracker` | `server` | `pixel`).
+Existing Aggregat-Queries default auf `source IN ('tracker', 'server')`
++ existierender `traffic_class` Filter.
+
+**Drei Implementations-Stufen**:
+
+| 4A | Pixel-Endpoint `/p.gif?site=xxx&path=/` | ~1h |
+|---|---|---|
+|    | Für static Sites (Astro, Hugo, GitHub-Pages) ohne Server-Runtime. Image-Tag in HTML, jeder Request der Image lädt = 1 Event. Subset-Coverage von Middleware, aber funktioniert auch wo keine Middleware geht. | |
+| 4B | Ruby-Middleware-Gem `mcp-analytics-rack` | ~3h |
+|    | 50-Zeilen Rack-Middleware. Async Background-POST an /event aus jedem Request. **Fängt ALLE HTTP-Hits inkl. AI-Bots.** Killer-Feature für Indie-Rails-SaaS. | |
+| 4C | Node/Next.js/Hono Middleware | ~2h |
+|    | Gleicher Spec, TypeScript. NPM publish. | |
+| 4D | Cloudflare Worker / Vercel Edge Middleware | ~1h |
+|    | Edge-Variante für CF/Vercel-Hostings. Sieht auch CDN-Cache-Hits. | |
+
+**Adoption-Pfad pro Kunde:**
+
+| Stufe | Installation | Was Kunde sieht |
+|---|---|---|
+| 0 (Default) | Nur JS-Tracker | User-Traffic (heute) |
+| + Phase 4B | `gem "mcp-analytics-rack"` + Config | Alles inkl. Bots |
+| + Phase 3 | (Server-side, transparent) | Verifizierte Bots |
+
+**Frage „brauche ich Pixel UND Middleware?"**: Nein. Middleware ist eine
+Obermenge vom Pixel auf der Origin. Pixel ist nur Fallback für static-only
+Sites die keine Server-Runtime haben.
+
+**Marketing-Story nach Phase 4**:
+> *„The only privacy-first analytics that shows you which AI agents,
+>   search bots, and link unfurlers are reading your content — alongside
+>   your real visitors. EU-hosted, MCP-native, no banner needed."*
+
+Plausible/Fathom haben das nicht. Cloudflare hat's nur wenn du CF nutzt.
+DataDome ist Enterprise-Pricing. Wir wären in der Privacy-Analytics-Nische
+das einzige Tool mit dieser Sichtbarkeit.
+
+### Klares NICHT-Versprechen
+
+Auch mit allen 4 Phasen können wir niemals sagen:
+- *„Ein Mensch hat ChatGPT nach dir gefragt"* — wir sehen den HTTP-Fetch,
+  nicht den Chat-Kontext drumherum
+- *„Cross-Site-AI-Tracking"* — Cookies sind per Domain, das geht prinzipiell
+  nicht ohne Fingerprinting (was wir bewusst nicht machen)
+- *„Welche Frage der User wirklich gestellt hat"* — nur die URL die gefetched
+  wurde
+- *„Zero Maintenance"* — neue AI-Agenten launchen monatlich, IP-Ranges
+  shiften, UA-Patterns brauchen Updates. ~1-2h/Monat dauerhaft.
+
+---
+
 ## CHANGELOG (Working Doc)
 
 - **2026-04-23** — Initial scaffold (Week 1–4 Output) eingecheckt.
   CI vorerst deaktiviert (keine Tests). Dieses Working Doc angelegt.
+- **2026-04-27** — Bot- und AI-Agent-Klassifikation Phase 1 deployed:
+  `traffic_class` + `user_agent` Spalten in `events`, Default-Queries
+  filtern jetzt nach `user`, neue MCP-Tools `top_user_agents` und
+  `traffic_class_breakdown`. Phase 2 (Crawl-Purpose Taxonomie),
+  Phase 3 (Web Bot Auth Signaturen) und Phase 4 (Server-side Hybrid
+  Tracking via Middleware) als detaillierte Roadmap im Briefing
+  dokumentiert. State-of-the-Art Recherche eingeflossen (Cloudflare
+  AI Crawl Control, DataDome, Web Bot Auth IETF). Phase 4 (Middleware-
+  Gem) als „Biggest Unlock" markiert — schließt die JS-Tracker-blind-
+  spot-Lücke (Bots die kein JS rendern).
+- **2026-04-26** — Landing-Page-Sweep: Brand-Sicherheit von
+  `info@spreenovate.de` auf `info@mcp-analytics.com` (nur Site, nicht
+  Operator-Alerts), `/terms` + `/privacy` mit `noindex,nofollow`,
+  alle Outbound-Links zu Legal-Pages mit `rel=nofollow`.
+- **2026-04-25** — Drop /login + /settings + magic_link Stack komplett.
+  Token-Recovery jetzt via Idempotent-Re-Signup über die Landing-Form.
+  /terms (mit Imprint § 5 TMG) + /privacy (GDPR) brutalist gebaut.
+  `get_started_guide` jetzt auch in AUTHENTICATED Tool-Liste.
+- **2026-04-24** — Brutalist Landing-Page (v4) live, Email-Signup-Form
+  via SignupsController + Signup Service (shared mit MCP register_account).
+  Click-to-Copy auf Verify-Page. v1-v4 Mockups in `mockups/` archiviert.
 - **2026-04-24** — OAuth-Roadmap (Phase 2) ins Briefing aufgenommen.
   Variante B (Consent-Screen nach Magic-Link-Login) als Zielarchitektur
   festgelegt. Implementierung erst nach Deploy + Dogfooding.
