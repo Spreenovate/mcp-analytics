@@ -647,6 +647,49 @@ Operational:
 
 ---
 
+## DIRECTORY-SUBMISSIONS — Status-Tracking
+
+Submissions an externe MCP-Direktories werden manuell reviewed. Listings
+können 1-21 Tage dauern oder ganz versanden. Hier die Liste aller
+eingereichten — **regelmäßig prüfen ob veröffentlicht wurde**.
+
+Empfohlener Rhythmus: **alle 7 Tage** durchgehen, bei länger als 21 Tagen
+ohne Reaktion freundlich nachfassen oder erneut einreichen.
+
+| Datum eingereicht | Direktory | URL | Status | Letzter Check |
+|---|---|---|---|---|
+| 2026-04-27 | mcpservers.org | https://mcpservers.org | ⏳ pending review | — |
+| 2026-04-27 | mcp.so | https://mcp.so | ⏳ pending review | — |
+| 2026-04-27 | sylviangth/awesome-remote-mcp-servers | GitHub PR | ⏳ pending merge | — |
+
+**Status-Codes:**
+- ⏳ pending — eingereicht, wartet auf Review
+- ✅ live — listed + verlinkt
+- ❌ rejected — abgelehnt (Grund eintragen, ggf. anpassen + neu einreichen)
+- 🚫 ghosted — > 21 Tage keine Reaktion, Folgemaßnahme prüfen
+
+**Wenn etwas LIVE geht:**
+- Listing-URL eintragen
+- Backlink von dort prüfen (DoFollow vs NoFollow — beeinflusst SEO-Wert)
+- Falls möglich, Click-Through-Tracking einrichten (eigene Site-IDs in URL-Params, e.g. `?utm_source=mcp.so`)
+
+**Noch nicht eingereicht** (Pipeline für nächste Sessions):
+
+| Direktory | URL | Hürde |
+|---|---|---|
+| modelcontextprotocol.io/registry | offizielle Anthropic Registry | mittel — Format-strikt |
+| Smithery | smithery.ai | mittel — eigene Install-Pipeline |
+| Glama | glama.ai/mcp | niedrig — Form |
+| PulseMCP | pulsemcp.com | niedrig — Form |
+| wong2/awesome-mcp-servers | GitHub | niedrig — PR |
+| punkpeye/awesome-mcp-servers | GitHub | niedrig — PR |
+| appcypher/awesome-mcp-servers | GitHub | niedrig — PR |
+| Cursor Directory | cursor.directory/plugins | niedrig — Form |
+| Anthropic Connector Directory | claude.com/docs/connectors/building/submission | hoch — verlangt OAuth + Privacy Policy + Public Docs (Phase 2) |
+| ChatGPT Connectors | OpenAI partner program | hoch — verlangt OAuth + DCR (Phase 2 + 4) |
+
+---
+
 ## OAUTH ROADMAP (Phase 2, post-MVP) — `[TODO]`
 
 **Warum**: ChatGPT-Connectors erzwingen OAuth 2.1, Anthropic-Directory will
