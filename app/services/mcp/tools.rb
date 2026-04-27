@@ -181,6 +181,22 @@ module Mcp
       )
     end
 
+    # --- Bots & user-agents -------------------------------------------------
+
+    def top_user_agents(args)
+      site = find_site!(args["site_id"])
+      queries(site).top_user_agents(
+        Analytics::Period.parse(args["period"]),
+        limit: clamped_limit(args["limit"]),
+        traffic_class: args["traffic_class"]
+      )
+    end
+
+    def traffic_class_breakdown(args)
+      site = find_site!(args["site_id"])
+      queries(site).traffic_class_breakdown(Analytics::Period.parse(args["period"]))
+    end
+
     # --- helpers ------------------------------------------------------------
 
     private

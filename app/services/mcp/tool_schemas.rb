@@ -181,6 +181,32 @@ module Mcp
         }
       },
       {
+        name: "top_user_agents",
+        description: "Top User-Agent strings with their traffic_class (user / bot). Default analytics queries hide bots; this surfaces them so you can see AI agents (ChatGPT-User, Claude-User, GPTBot, ...), search indexers (Googlebot), social unfurlers (Slackbot), and scanners. Pass traffic_class to filter to one bucket.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            site_id: { type: "string" },
+            period: { type: "string", default: "last_7_days" },
+            limit: { type: "integer", default: 25 },
+            traffic_class: { type: "string", enum: %w[user bot] }
+          },
+          required: ["site_id"]
+        }
+      },
+      {
+        name: "traffic_class_breakdown",
+        description: "Hit counts and percentages by traffic_class (user vs bot) for the period.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            site_id: { type: "string" },
+            period: { type: "string", default: "last_7_days" }
+          },
+          required: ["site_id"]
+        }
+      },
+      {
         name: "get_account",
         description: "Account info — email, plan, usage.",
         inputSchema: { type: "object", properties: {} }

@@ -93,8 +93,14 @@ func (s *Server) handleEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userAgent := r.Header.Get("User-Agent")
+
+	// Phase 1 bot classification: instead of dropping bot traffic, label it
+	// and write the row anyway. Default analytics queries filter to
+	// traffic_class='user'; the new top_user_agents MCP tool surfaces the
+	// non-user traffic so customers can see who's visiting them.
+	trafficClass := "user"
 	if bot.IsBot(userAgent) {
-		return
+		trafficClass = "bot"
 	}
 
 	ip := clientIP(r)
@@ -195,6 +201,8 @@ func (s *Server) handleEvent(w http.ResponseWriter, r *http.Request) {
 		DeviceType:     uap.DeviceType,
 		PropKeys:       propKeys,
 		PropValues:     propValues,
+		TrafficClass:   trafficClass,
+		UserAgent:      truncate(userAgent, 512),
 	}
 
 	s.Batcher.Submit(ev)

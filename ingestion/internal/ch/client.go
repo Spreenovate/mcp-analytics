@@ -46,6 +46,8 @@ type Event struct {
 	City           string    `json:"city"`
 	PropKeys       []string  `json:"prop_keys"`
 	PropValues     []string  `json:"prop_values"`
+	TrafficClass   string    `json:"traffic_class"`     // 'user' or 'bot' in Phase 1
+	UserAgent      string    `json:"user_agent"`        // raw UA — kept for retroactive classification
 	IngestedAt     time.Time `json:"-"`
 }
 

@@ -213,6 +213,40 @@ Wenn Schritt 10 funktioniert: **MVP ist live.**
 
 ---
 
+## Schema migrations on existing prod ClickHouse
+
+The `clickhouse/init/*.sql` files only run on a brand-new ClickHouse data
+directory. For an instance that's already serving prod, schema changes
+need to be applied manually.
+
+### Phase-1 bot classification (April 2026)
+
+Adds `traffic_class` and `user_agent` columns to `events`. Idempotent
+(uses `ADD COLUMN IF NOT EXISTS`).
+
+```sh
+ssh root@<hetzner-ipv4> "docker exec mcp-analytics-clickhouse \
+  clickhouse-client --multiquery --query \"$(cat <<'SQL'
+ALTER TABLE mcpa.events
+  ADD COLUMN IF NOT EXISTS traffic_class LowCardinality(String) DEFAULT 'user',
+  ADD COLUMN IF NOT EXISTS user_agent    String                 DEFAULT '';
+SQL
+)\""
+```
+
+**Order of operations for the rollout:**
+1. Apply ALTER (above) — safe, additive, no impact on running queries.
+2. `bin/build-ingest` + `kamal accessory reboot ingest` — new Go binary
+   starts populating the columns and stops dropping bot UAs.
+3. `kamal deploy` — Rails picks up the new `top_user_agents` /
+   `traffic_class_breakdown` MCP tools and the `traffic_class='user'`
+   filter on existing aggregates.
+
+Old rows keep their `traffic_class='user'` default — historical aggregates
+stay identical, only new traffic is classified.
+
+---
+
 ## Troubleshooting
 
 **`kamal setup` hängt bei „Building image"**:

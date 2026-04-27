@@ -159,6 +159,47 @@ func TestAllMode_InvalidVisitorIDFallsBackToHash(t *testing.T) {
 	}
 }
 
+func TestEvent_TrafficClassAndRawUA_PopulatedInClickHouseRow(t *testing.T) {
+	f := newAllModeFixture(t)
+	defer f.close()
+
+	// Real human UA -> traffic_class=user, raw UA preserved.
+	body := `{"site":"allmode1","name":"pageview","url":"https://example.com/"}`
+	req := httptest.NewRequest("POST", "/event", strings.NewReader(body))
+	humanUA := "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:150.0) Gecko/20100101 Firefox/150.0"
+	req.Header.Set("User-Agent", humanUA)
+	req.Header.Set("X-Forwarded-For", "203.0.113.9")
+	f.srv.Routes().ServeHTTP(httptest.NewRecorder(), req)
+
+	row := waitForRow(t, f, 2*time.Second)
+	if row.TrafficClass != "user" {
+		t.Errorf("traffic_class for human UA: got %q want 'user'", row.TrafficClass)
+	}
+	if row.UserAgent != humanUA {
+		t.Errorf("raw UA mismatch: got %q want %q", row.UserAgent, humanUA)
+	}
+}
+
+func TestEvent_BotUA_LabelsTrafficClassAsBot(t *testing.T) {
+	f := newAllModeFixture(t)
+	defer f.close()
+
+	body := `{"site":"allmode1","name":"pageview","url":"https://example.com/"}`
+	req := httptest.NewRequest("POST", "/event", strings.NewReader(body))
+	botUA := "Mozilla/5.0 (compatible; ChatGPT-User/1.0; +https://openai.com/bot)"
+	req.Header.Set("User-Agent", botUA)
+	req.Header.Set("X-Forwarded-For", "203.0.113.9")
+	f.srv.Routes().ServeHTTP(httptest.NewRecorder(), req)
+
+	row := waitForRow(t, f, 2*time.Second)
+	if row.TrafficClass != "bot" {
+		t.Errorf("traffic_class for bot UA: got %q want 'bot'", row.TrafficClass)
+	}
+	if row.UserAgent != botUA {
+		t.Errorf("raw UA: got %q want %q", row.UserAgent, botUA)
+	}
+}
+
 func TestAllMode_MissingVisitorIDFallsBackToHash(t *testing.T) {
 	f := newAllModeFixture(t)
 	defer f.close()

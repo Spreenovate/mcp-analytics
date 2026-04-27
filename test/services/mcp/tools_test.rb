@@ -258,6 +258,50 @@ module Mcp
       end
     end
 
+    test "top_user_agents returns shaped rows with traffic_class" do
+      stub_clickhouse([[
+        { "user_agent" => "Mozilla/5.0 ChatGPT-User/1.0", "traffic_class" => "bot",  "hits" => 12 },
+        { "user_agent" => "Mozilla/5.0 (Macintosh) Safari/605", "traffic_class" => "user", "hits" =>  8 }
+      ]]) do
+        result = auth_tools.top_user_agents("site_id" => @site.site_id, "period" => "today")
+        assert_equal 2, result.length
+        assert_equal "bot", result.first["traffic_class"]
+        assert_equal 12,    result.first["hits"]
+      end
+    end
+
+    test "traffic_class_breakdown returns percentages summing to ~1.0" do
+      stub_clickhouse([[
+        { "traffic_class" => "user", "hits" => 80 },
+        { "traffic_class" => "bot",  "hits" => 20 }
+      ]]) do
+        result = auth_tools.traffic_class_breakdown("site_id" => @site.site_id, "period" => "today")
+        assert_equal 2, result.length
+        assert_equal 0.8, result.first["percentage"]
+        assert_equal 0.2, result.last["percentage"]
+      end
+    end
+
+    test "default analytics queries do NOT include bot traffic" do
+      # Verify the SQL emitted by overview includes the traffic_class filter.
+      captured = []
+      fake = Object.new
+      fake.define_singleton_method(:query) do |sql, **_kwargs|
+        captured << sql
+        []
+      end
+      ClickHouse.singleton_class.alias_method(:__orig_client, :client)
+      ClickHouse.singleton_class.define_method(:client) { fake }
+      begin
+        auth_tools.get_overview("site_id" => @site.site_id, "period" => "today")
+      ensure
+        ClickHouse.singleton_class.alias_method(:client, :__orig_client)
+        ClickHouse.singleton_class.remove_method(:__orig_client)
+      end
+      assert captured.all? { |sql| sql.include?("traffic_class = 'user'") },
+        "every default query must filter out bot traffic"
+    end
+
     private
 
     # Stubs ClickHouse.client to return queued result sets in order.

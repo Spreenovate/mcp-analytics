@@ -143,7 +143,10 @@ func TestEvent_UnknownSite_NoInsert_ButLoggedToUnknown(t *testing.T) {
 	}
 }
 
-func TestEvent_BotUA_DroppedSilently(t *testing.T) {
+func TestEvent_BotUA_KeptAndLabeled(t *testing.T) {
+	// Phase-1 bot classification: bot UAs are no longer dropped — the row
+	// is written with traffic_class='bot' and the raw UA preserved so the
+	// new top_user_agents MCP tool can surface them.
 	f := newFixture(t)
 	defer f.cleanup()
 
@@ -156,10 +159,7 @@ func TestEvent_BotUA_DroppedSilently(t *testing.T) {
 	if rr.Code != http.StatusNoContent {
 		t.Errorf("status: got %d want 204", rr.Code)
 	}
-	time.Sleep(150 * time.Millisecond)
-	if atomic.LoadInt64(f.chCalls) != 0 {
-		t.Errorf("bot should be dropped, got %d calls", atomic.LoadInt64(f.chCalls))
-	}
+	waitForCalls(t, f.chCalls, 1, 2*time.Second)
 }
 
 func TestEvent_MalformedBody_StillReturns204(t *testing.T) {
