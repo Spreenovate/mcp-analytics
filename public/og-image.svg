@@ -1,0 +1,34 @@
+<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <!-- Background -->
+  <rect width="1200" height="630" fill="#ffffff"/>
+
+  <!-- Top border accent (brutalist 3px line) -->
+  <rect x="0" y="0" width="1200" height="6" fill="#0a0a0a"/>
+
+  <!-- Brand wordmark top-left -->
+  <g font-family="ui-monospace, 'JetBrains Mono', Menlo, monospace" font-weight="700" fill="#0a0a0a">
+    <text x="56" y="76" font-size="22">
+      <tspan fill="#00FF88">&gt;</tspan> mcp-analytics
+    </text>
+    <text x="56" y="106" font-size="14" fill="#555" letter-spacing="2px">WEB ANALYTICS · MCP NATIVE</text>
+  </g>
+
+  <!-- Hero text — three lines, last with green plate behind -->
+  <g font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-weight="900" font-size="118" fill="#0a0a0a" letter-spacing="-3">
+
+    <text x="56" y="284">NO DASHBOARD.</text>
+    <text x="56" y="402">NO CHARTS.</text>
+
+    <!-- Green plate behind "JUST ANSWERS." -->
+    <rect x="38" y="438" width="710" height="120" fill="#00FF88"/>
+    <text x="56" y="528">JUST ANSWERS.</text>
+  </g>
+
+  <!-- Bottom-right meta -->
+  <g font-family="ui-monospace, 'JetBrains Mono', Menlo, monospace" fill="#555" font-size="14" letter-spacing="1px" text-anchor="end">
+    <text x="1144" y="600">mcp-analytics.com</text>
+  </g>
+
+  <!-- Bottom border accent -->
+  <rect x="0" y="624" width="1200" height="6" fill="#0a0a0a"/>
+</svg>

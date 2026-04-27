@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__50befdc7-2d02-4f25-b4ba-39c91c5406ca__list_sites",
+      "mcp__50befdc7-2d02-4f25-b4ba-39c91c5406ca__traffic_class_breakdown"
+    ]
+  }
+}

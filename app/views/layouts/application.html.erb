@@ -1,15 +1,83 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <title><%= content_for(:title) || "mcp-analytics" %></title>
+    <%
+      page_title       = content_for?(:title) ? content_for(:title) : "mcp-analytics — web analytics. no dashboard. just answers."
+      page_description = content_for?(:description) ? content_for(:description) :
+        "Web analytics you query through Claude — or any MCP client. No tabs, no dashboards, no cookie banners. EU-hosted."
+      base_url         = ENV.fetch("PUBLIC_BASE_URL", "https://mcp-analytics.com")
+      canonical_url    = base_url + request.path
+      og_image_url     = base_url + "/og-image.png"
+    %>
+
+    <title><%= page_title %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <meta name="description" content="Analytics for your AI workflow. Query your data via MCP instead of clicking through dashboards.">
+    <meta name="description" content="<%= page_description %>">
+    <meta name="theme-color" content="#00FF88">
+    <link rel="canonical" href="<%= canonical_url %>">
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
 
+    <%# Favicons %>
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+    <%# Open Graph (Facebook, LinkedIn, Slack, Discord, iMessage) %>
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="mcp-analytics">
+    <meta property="og:title" content="<%= page_title %>">
+    <meta property="og:description" content="<%= page_description %>">
+    <meta property="og:url" content="<%= canonical_url %>">
+    <meta property="og:image" content="<%= og_image_url %>">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="mcp-analytics — No dashboard. No charts. Just answers.">
+    <meta property="og:locale" content="en_US">
+
+    <%# Twitter / X cards %>
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="<%= page_title %>">
+    <meta name="twitter:description" content="<%= page_description %>">
+    <meta name="twitter:image" content="<%= og_image_url %>">
+    <meta name="twitter:image:alt" content="mcp-analytics — No dashboard. No charts. Just answers.">
+
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%= yield :head %>
+
+    <%# JSON-LD structured data — only on root %>
+    <% if request.path == "/" %>
+      <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "mcp-analytics",
+        "url": "<%= base_url %>",
+        "image": "<%= og_image_url %>",
+        "description": "<%= page_description %>",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Any (web-based, MCP-native)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "EUR",
+          "description": "Free up to 100,000 hits/month, unlimited sites."
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Spreenovate GmbH",
+          "url": "https://mcp-analytics.com",
+          "address": {
+            "@type": "PostalAddress",
+            "streetAddress": "Prenzlauer Allee 186",
+            "postalCode": "10405",
+            "addressLocality": "Berlin",
+            "addressCountry": "DE"
+          }
+        }
+      }
+      </script>
+    <% end %>
 
     <%# Dogfooding: mcp-analytics tracking its own site. %>
     <% if Rails.env.production? %>
