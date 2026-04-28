@@ -193,7 +193,7 @@ module Mcp
       end
     end
 
-    test "get_timeseries returns timestamp/value pairs" do
+    test "get_timeseries returns site context plus timestamp/value pairs" do
       stub_clickhouse([[
         { "bucket" => "2026-04-22", "value" => 7 },
         { "bucket" => "2026-04-23", "value" => 11 }
@@ -202,18 +202,22 @@ module Mcp
           "site_id" => @site.site_id, "metric" => "pageviews",
           "period" => "last_7_days", "granularity" => "day"
         )
-        assert_equal 2, result.length
-        assert_equal 11, result.last["value"]
+        assert_equal @site.site_id, result["site_id"]
+        assert_equal @site.domain,  result["domain"]
+        assert_equal 2, result["items"].length
+        assert_equal 11, result["items"].last["value"]
       end
     end
 
-    test "top_pages returns shaped rows" do
+    test "top_pages returns site context plus rows" do
       stub_clickhouse([[
         { "url_path" => "/", "pageviews" => 50, "unique_visitors" => 30 }
       ]]) do
         result = auth_tools.top_pages("site_id" => @site.site_id, "period" => "last_7_days")
-        assert_equal "/", result.first["url_path"]
-        assert_equal 50, result.first["pageviews"]
+        assert_equal @site.site_id, result["site_id"]
+        assert_equal @site.domain,  result["domain"]
+        assert_equal "/", result["items"].first["url_path"]
+        assert_equal 50, result["items"].first["pageviews"]
       end
     end
 
@@ -221,7 +225,8 @@ module Mcp
       result = auth_tools.breakdown(
         "site_id" => @site.site_id, "dimension" => "country", "period" => "last_7_days"
       )
-      assert_equal "geo not enabled in MVP", result.first["note"]
+      assert_equal @site.site_id, result["site_id"]
+      assert_equal "geo not enabled in MVP", result["items"].first["note"]
     end
 
     test "breakdown rejects unknown dimension" do
@@ -231,18 +236,19 @@ module Mcp
       end
     end
 
-    test "list_events returns shaped rows" do
+    test "list_events returns site context plus rows" do
       stub_clickhouse([[
         { "event_name" => "pageview", "count" => 100, "unique_sessions" => 40 },
         { "event_name" => "signup",   "count" =>   5, "unique_sessions" =>  5 }
       ]]) do
         result = auth_tools.list_events("site_id" => @site.site_id, "period" => "last_7_days")
-        assert_equal 2, result.length
-        assert_equal "pageview", result.first["event_name"]
+        assert_equal @site.site_id, result["site_id"]
+        assert_equal 2, result["items"].length
+        assert_equal "pageview", result["items"].first["event_name"]
       end
     end
 
-    test "compare_periods computes absolute and percent change" do
+    test "compare_periods returns site context plus comparison" do
       stub_clickhouse([
         [{ "value" => 100 }],   # period_a scalar
         [{ "value" =>  80 }]    # period_b scalar
@@ -251,6 +257,8 @@ module Mcp
           "site_id" => @site.site_id, "metric" => "pageviews",
           "period_a" => "last_7_days", "period_b" => "last_30_days"
         )
+        assert_equal @site.site_id, result["site_id"]
+        assert_equal @site.domain,  result["domain"]
         assert_equal 100, result["a_value"]
         assert_equal  80, result["b_value"]
         assert_equal  20, result["absolute_change"]
@@ -258,27 +266,29 @@ module Mcp
       end
     end
 
-    test "top_user_agents returns shaped rows with traffic_class" do
+    test "top_user_agents returns site context plus rows with traffic_class" do
       stub_clickhouse([[
         { "user_agent" => "Mozilla/5.0 ChatGPT-User/1.0", "traffic_class" => "bot",  "hits" => 12 },
         { "user_agent" => "Mozilla/5.0 (Macintosh) Safari/605", "traffic_class" => "user", "hits" =>  8 }
       ]]) do
         result = auth_tools.top_user_agents("site_id" => @site.site_id, "period" => "today")
-        assert_equal 2, result.length
-        assert_equal "bot", result.first["traffic_class"]
-        assert_equal 12,    result.first["hits"]
+        assert_equal @site.site_id, result["site_id"]
+        assert_equal 2, result["items"].length
+        assert_equal "bot", result["items"].first["traffic_class"]
+        assert_equal 12,    result["items"].first["hits"]
       end
     end
 
-    test "traffic_class_breakdown returns percentages summing to ~1.0" do
+    test "traffic_class_breakdown returns site context plus percentage rows" do
       stub_clickhouse([[
         { "traffic_class" => "user", "hits" => 80 },
         { "traffic_class" => "bot",  "hits" => 20 }
       ]]) do
         result = auth_tools.traffic_class_breakdown("site_id" => @site.site_id, "period" => "today")
-        assert_equal 2, result.length
-        assert_equal 0.8, result.first["percentage"]
-        assert_equal 0.2, result.last["percentage"]
+        assert_equal @site.site_id, result["site_id"]
+        assert_equal 2, result["items"].length
+        assert_equal 0.8, result["items"].first["percentage"]
+        assert_equal 0.2, result["items"].last["percentage"]
       end
     end
 

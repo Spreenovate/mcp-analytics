@@ -120,81 +120,89 @@ module Mcp
     end
 
     # --- Analytics ----------------------------------------------------------
+    #
+    # Every analytics tool wraps its result with the queried site's id and
+    # domain so the calling LLM can echo *which* site the numbers belong to
+    # in its answer. Without this an authed user with multiple sites can
+    # easily see the wrong site's numbers and not realise it.
 
     def get_overview(args)
       site = find_site!(args["site_id"])
-      queries(site).overview(Analytics::Period.parse(args["period"]))
+      with_site(site, queries(site).overview(Analytics::Period.parse(args["period"])))
     end
 
     def get_timeseries(args)
       site = find_site!(args["site_id"])
       metric = args.fetch("metric")
       granularity = args["granularity"] || "day"
-      queries(site).timeseries(metric, Analytics::Period.parse(args["period"]), granularity: granularity)
+      with_site(site, "items" => queries(site).timeseries(metric, Analytics::Period.parse(args["period"]), granularity: granularity))
     end
 
     def top_pages(args)
       site = find_site!(args["site_id"])
-      queries(site).top_pages(Analytics::Period.parse(args["period"]),
-                              limit: clamped_limit(args["limit"]))
+      with_site(site, "items" => queries(site).top_pages(Analytics::Period.parse(args["period"]),
+                                                          limit: clamped_limit(args["limit"])))
     end
 
     def top_referrers(args)
       site = find_site!(args["site_id"])
-      queries(site).top_referrers(Analytics::Period.parse(args["period"]),
-                                  limit: clamped_limit(args["limit"]))
+      with_site(site, "items" => queries(site).top_referrers(Analytics::Period.parse(args["period"]),
+                                                              limit: clamped_limit(args["limit"])))
     end
 
     def top_sources(args)
       site = find_site!(args["site_id"])
-      queries(site).top_sources(Analytics::Period.parse(args["period"]),
-                                limit: clamped_limit(args["limit"]))
+      with_site(site, "items" => queries(site).top_sources(Analytics::Period.parse(args["period"]),
+                                                            limit: clamped_limit(args["limit"])))
     end
 
     def breakdown(args)
       site = find_site!(args["site_id"])
       dimension = args.fetch("dimension")
-      queries(site).breakdown(dimension, Analytics::Period.parse(args["period"]),
-                              limit: clamped_limit(args["limit"]))
+      with_site(site, "items" => queries(site).breakdown(dimension, Analytics::Period.parse(args["period"]),
+                                                          limit: clamped_limit(args["limit"])))
     end
 
     def list_events(args)
       site = find_site!(args["site_id"])
-      queries(site).list_events(Analytics::Period.parse(args["period"]))
+      with_site(site, "items" => queries(site).list_events(Analytics::Period.parse(args["period"])))
     end
 
     def event_details(args)
       site = find_site!(args["site_id"])
-      queries(site).event_details(
+      result = queries(site).event_details(
         args.fetch("event_name"),
         Analytics::Period.parse(args["period"]),
         group_by_property: args["group_by_property"]
       )
+      # event_details returns either an array (when group_by_property given) or a hash
+      payload = result.is_a?(Array) ? { "items" => result } : result
+      with_site(site, payload)
     end
 
     def compare_periods(args)
       site = find_site!(args["site_id"])
-      queries(site).compare(
+      with_site(site, queries(site).compare(
         args.fetch("metric"),
         Analytics::Period.parse(args["period_a"]),
         Analytics::Period.parse(args["period_b"])
-      )
+      ))
     end
 
     # --- Bots & user-agents -------------------------------------------------
 
     def top_user_agents(args)
       site = find_site!(args["site_id"])
-      queries(site).top_user_agents(
+      with_site(site, "items" => queries(site).top_user_agents(
         Analytics::Period.parse(args["period"]),
         limit: clamped_limit(args["limit"]),
         traffic_class: args["traffic_class"]
-      )
+      ))
     end
 
     def traffic_class_breakdown(args)
       site = find_site!(args["site_id"])
-      queries(site).traffic_class_breakdown(Analytics::Period.parse(args["period"]))
+      with_site(site, "items" => queries(site).traffic_class_breakdown(Analytics::Period.parse(args["period"])))
     end
 
     # --- helpers ------------------------------------------------------------
@@ -211,6 +219,13 @@ module Mcp
       site = @user.active_sites.find_by(site_id: site_id)
       raise NotFoundError, "site not found: #{site_id}" unless site
       site
+    end
+
+    # Wrap any analytics payload with the queried site's identity so the
+    # MCP client can echo the site/domain in its answer to the user.
+    # Standard shape: { site_id, domain, ...payload }
+    def with_site(site, payload)
+      { "site_id" => site.site_id, "domain" => site.domain }.merge(payload)
     end
 
     def queries(site)

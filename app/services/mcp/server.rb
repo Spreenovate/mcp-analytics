@@ -103,7 +103,11 @@ module Mcp
     def authed_instructions
       "You are connected to mcp-analytics with an authenticated token. " \
       "Use list_sites to discover site_ids, then query with get_overview, " \
-      "top_pages, top_referrers, etc. Period defaults to last_7_days."
+      "top_pages, top_referrers, etc. Period defaults to last_7_days. " \
+      "If the account has more than one site and the user did not specify " \
+      "which one, ASK before querying. Every analytics response includes " \
+      "site_id and domain — always echo the domain in your answer so the " \
+      "user can confirm you queried the right site."
     end
 
     def unauthed_instructions
