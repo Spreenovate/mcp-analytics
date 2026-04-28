@@ -18,9 +18,10 @@
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
 
-    <%# Favicons %>
-    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <%# Favicons — .ico first so Safari falls back cleanly if SVG handling is flaky %>
     <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="mask-icon" href="/icon.svg" color="#0a0a0a">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
     <%# Open Graph (Facebook, LinkedIn, Slack, Discord, iMessage) %>
