@@ -1042,6 +1042,78 @@ hat erstmal nichts davon.
 
 ---
 
+---
+
+## "PLAUSIBLE FÜR MCP-SERVER" (2. Produktsäule, post-MVP) — `[STRATEGIC, TODO]`
+
+**Konzept:** Web-Analytics-Style Tracking, aber für MCP-Server selbst. Wer
+einen MCP-Server baut und shipped (Anthropic-Directory-Submitter, Cursor-Plugin
+Builder, Indie-MCP-Devs), kriegt heute **null** Visibility ob/wer ihn nutzt.
+Lücke im Markt, niemand bedient sie. First-Mover-Position möglich.
+
+### Warum strategisch wichtig
+
+- Brand wird breiter: nicht "Web-Analytics über MCP" sondern "die Analytics-Firma
+  für alles MCP". 2. Säule für Show HN Reload.
+- Differenziert hart von Plausible/Fathom — die können das nie nachbauen.
+- Distribution-Channel: jeder Kunde der unser SDK in seinen MCP einbaut → in
+  seiner README "powered by mcp-analytics". Kostenloses Marketing.
+- Cross-Sell: Web-Analytics-Kunden die selbst MCP-Server bauen kriegen das
+  automatisch dazu.
+
+### Technik (Variante A — SDK/Middleware, RICHTIG)
+
+Kunde importiert ein Package in seinen MCP-Server-Code:
+
+```ruby
+use McpAnalytics::Middleware, api_key: "mcps_xxx"
+```
+```typescript
+server.use(mcpAnalytics({ apiKey: "mcps_xxx" }))
+```
+
+Middleware wrapped Tool-Dispatch, postet async an `/mcp-event`:
+```json
+{ "tool": "search_files", "client": "claude.ai",
+  "session_id": "...", "latency_ms": 124, "error": null, "ts": "..." }
+```
+
+Server-Side: gleicher Go-Ingest-Service, anderer Endpoint, neue ClickHouse-
+Tabelle `mcp_calls` (Schema-Vorschlag siehe Server-Side-MCP-Features oben),
+neue Aggregations-MCP-Tools für den Kunden.
+
+Variante B (Proxy) — **NICHT machen**. Killer-Latency, vendor-lock-in.
+
+### Neue MCP-Tools für den Kunden
+
+- `get_mcp_server_overview(period)` — total calls, top tool, top client, error rate
+- `top_mcp_tools(period, limit)` — welche Tools wie oft
+- `mcp_clients_breakdown(period)` — Claude vs Cursor vs ChatGPT vs custom
+- `mcp_errors(period)` — welche Tools werfen Errors, mit Sample-Args
+- `mcp_latency_distribution(tool, period)` — p50/p95/p99 pro Tool
+
+### Aufwand
+
+~1 Woche MVP: Ruby Gem + Node SDK + Ingestion + ClickHouse-Schema +
+4-5 neue MCP-Tools + Docs + Landing-Section. Wartung danach: ~2-3h/Monat
+plus weitere SDKs nach Demand (Python, Go).
+
+### Reihenfolge (mein Vorschlag)
+
+1. Web-Analytics-MVP polieren (OAuth, Distribution, erste 50 zahlende User)
+2. **Dann** MCP-Server-Analytics als 2. Säule
+3. Show HN Reload mit dickerem Story: "we're building the analytics layer
+   for the MCP ecosystem"
+
+### Risiken
+
+- Markt klein heute (~1000 öffentliche MCP-Server, davon vielleicht 50
+  kommerziell ernsthaft). Free-Tier wäre Standard, Paid-Conversion niedrig.
+- Enterprise-MCPs (Notion, Slack, Linear) haben eigene Analytics → Indie-Pond.
+- Multi-Sprache-SDK-Wartung skaliert nicht-linear.
+
+---
+
 ### Klares NICHT-Versprechen
 
 Auch mit allen 4 Phasen können wir niemals sagen:
