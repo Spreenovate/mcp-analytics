@@ -180,9 +180,14 @@ module Mcp
 
     test "get_overview shapes ClickHouse rows into the expected hash" do
       stub_clickhouse([
-        [{ "pageviews" => 10, "unique_visitors" => 4, "sessions" => 5 }],
-        [{ "bounced" => 2, "total" => 5 }],
-        [{ "avg_seconds" => 42.5 }]
+        [{ "pageviews" => 10, "unique_visitors" => 4, "sessions" => 5 }],   # headline
+        [{ "bounced" => 2, "total" => 5 }],                                  # bounce
+        [{ "avg_seconds" => 42.5 }],                                         # duration
+        [{ "pageviews" => 8, "unique_visitors" => 3, "sessions" => 4 }],     # previous period headline
+        [{ "url_path" => "/", "pageviews" => 6 }],                           # top page
+        [{ "source" => "news.ycombinator.com", "visits" => 3 }],             # top source
+        [{ "bot_hits" => 2, "total_hits" => 12 }],                           # bot share
+        [{ "event_name" => "signup_submitted", "count" => 4 }]               # top events
       ]) do
         result = auth_tools.get_overview("site_id" => @site.site_id, "period" => "last_7_days")
         assert_equal 10, result[:pageviews]
@@ -190,6 +195,11 @@ module Mcp
         assert_equal 5,  result[:sessions]
         assert_equal 0.4, result[:bounce_rate]
         assert_equal 42.5, result[:avg_session_duration_seconds]
+        assert_equal 0.25, result[:pageviews_change_pct] # (10-8)/8
+        assert_equal "/", result[:top_page][:url_path]
+        assert_equal "news.ycombinator.com", result[:top_source][:source]
+        assert_in_delta 0.1667, result[:bot_share], 0.001
+        assert_equal "signup_submitted", result[:top_events].first[:event_name]
       end
     end
 
@@ -308,8 +318,14 @@ module Mcp
         ClickHouse.singleton_class.alias_method(:client, :__orig_client)
         ClickHouse.singleton_class.remove_method(:__orig_client)
       end
-      assert captured.all? { |sql| sql.include?("traffic_class = 'user'") },
-        "every default query must filter out bot traffic"
+      # Allow exception: the bot_share sub-query inside overview deliberately
+      # counts ALL classes so it can compute a ratio. Identify it by its
+      # countIf(traffic_class != 'user') signature.
+      offenders = captured.reject do |sql|
+        sql.include?("traffic_class = 'user'") || sql.include?("countIf(traffic_class")
+      end
+      assert offenders.empty?,
+        "every default query must filter out bot traffic, offenders:\n#{offenders.join("\n---\n")}"
     end
 
     private

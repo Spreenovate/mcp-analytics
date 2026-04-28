@@ -77,7 +77,7 @@ module Mcp
       },
       {
         name: "get_overview",
-        description: "Key metrics (pageviews, visitors, sessions, bounce rate, avg session duration).",
+        description: "TL;DR for the period: headline metrics (pageviews, visitors, sessions, bounce rate, avg session duration) plus pageviews_change_pct vs the previous equivalent window, top page, top traffic source, bot share, and top 3 custom events. Designed so a single call answers 'how did <period> go?' without chaining other tools.",
         inputSchema: {
           type: "object",
           properties: {

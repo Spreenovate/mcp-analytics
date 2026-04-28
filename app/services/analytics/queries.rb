@@ -12,8 +12,12 @@ module Analytics
 
     # --- Overview -----------------------------------------------------------
 
+    # Headline TL;DR for the period. Designed so a single tool call gives
+    # the LLM enough to answer "wie lief gestern?" without chaining 4 more
+    # tools. Includes vs-previous-period delta, top page, top traffic source,
+    # bot share, and the top 3 custom events.
     def overview(period)
-      sql = <<~SQL
+      headline_sql = <<~SQL
         SELECT
           countIf(event_name = 'pageview') AS pageviews,
           uniqIf(visitor_id, visitor_id != 0) AS unique_visitors,
@@ -22,7 +26,7 @@ module Analytics
         WHERE site_id = {site:String} AND traffic_class = 'user'
           AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
       SQL
-      row = @client.query(sql, params: scope_params(period)).first || {}
+      row = @client.query(headline_sql, params: scope_params(period)).first || {}
 
       bounce_row = @client.query(<<~SQL, params: scope_params(period)).first || {}
         SELECT
@@ -49,15 +53,75 @@ module Analytics
         )
       SQL
 
+      # Same headline query, but for the previous equivalent window.
+      prev_row = @client.query(headline_sql, params: scope_params(period.previous)).first || {}
+
+      top_page_row = @client.query(<<~SQL, params: scope_params(period)).first || {}
+        SELECT url_path, count() AS pageviews
+        FROM events
+        WHERE site_id = {site:String} AND traffic_class = 'user'
+          AND event_name = 'pageview'
+          AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
+        GROUP BY url_path
+        ORDER BY pageviews DESC
+        LIMIT 1
+      SQL
+
+      top_source_row = @client.query(<<~SQL, params: scope_params(period)).first || {}
+        SELECT
+          multiIf(utm_source != '', utm_source,
+                  referrer_host != '', referrer_host,
+                  'direct') AS source,
+          count() AS visits
+        FROM events
+        WHERE site_id = {site:String} AND traffic_class = 'user'
+          AND event_name = 'pageview'
+          AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
+        GROUP BY source
+        ORDER BY visits DESC
+        LIMIT 1
+      SQL
+
+      # Bot share: deliberately does NOT filter traffic_class — we want the ratio.
+      bot_row = @client.query(<<~SQL, params: scope_params(period)).first || {}
+        SELECT
+          countIf(traffic_class != 'user') AS bot_hits,
+          count() AS total_hits
+        FROM events
+        WHERE site_id = {site:String}
+          AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
+      SQL
+
+      top_events = @client.query(<<~SQL, params: scope_params(period))
+        SELECT event_name, count() AS count
+        FROM events
+        WHERE site_id = {site:String} AND traffic_class = 'user'
+          AND event_name != 'pageview'
+          AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
+        GROUP BY event_name
+        ORDER BY count DESC
+        LIMIT 3
+      SQL
+
       total = (bounce_row["total"] || 0).to_i
       bounced = (bounce_row["bounced"] || 0).to_i
+      pv = (row["pageviews"] || 0).to_i
+      prev_pv = (prev_row["pageviews"] || 0).to_i
+      bot_hits = (bot_row["bot_hits"] || 0).to_i
+      total_hits = (bot_row["total_hits"] || 0).to_i
 
       {
-        pageviews: (row["pageviews"] || 0).to_i,
+        pageviews: pv,
         unique_visitors: (row["unique_visitors"] || 0).to_i,
         sessions: (row["sessions"] || 0).to_i,
         bounce_rate: total.zero? ? 0.0 : (bounced.to_f / total).round(4),
-        avg_session_duration_seconds: (duration_row["avg_seconds"] || 0).to_f.round(1)
+        avg_session_duration_seconds: (duration_row["avg_seconds"] || 0).to_f.round(1),
+        pageviews_change_pct: prev_pv.zero? ? nil : ((pv - prev_pv).to_f / prev_pv).round(4),
+        previous_period: { from: period.previous.from_sql, to: period.previous.to_sql, pageviews: prev_pv },
+        top_page: top_page_row["url_path"] ? { url_path: top_page_row["url_path"], pageviews: top_page_row["pageviews"].to_i } : nil,
+        top_source: top_source_row["source"] ? { source: top_source_row["source"], visits: top_source_row["visits"].to_i } : nil,
+        bot_share: total_hits.zero? ? 0.0 : (bot_hits.to_f / total_hits).round(4),
+        top_events: top_events.map { |r| { event_name: r["event_name"], count: r["count"].to_i } }
       }
     end
 

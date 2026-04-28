@@ -976,6 +976,72 @@ Plausible/Fathom haben das nicht. Cloudflare hat's nur wenn du CF nutzt.
 DataDome ist Enterprise-Pricing. Wir wären in der Privacy-Analytics-Nische
 das einzige Tool mit dieser Sichtbarkeit.
 
+---
+
+## SERVER-SIDE MCP-FEATURES (Roadmap, post-MVP) — `[TODO]`
+
+Zwei Features die aus dem MCP-Layer selbst Wertschöpfung ziehen statt nur Daten
+ausliefern. Beide kamen aus der Diskussion ums Tracking des Signup-Funnels —
+wenn wir clientseitig schon `signup_submitted` tracken, was tracken wir dann
+noch serverseitig?
+
+### Feature A — `record_event` MCP-Tool (Server-Side Events) — `~1-2h`
+
+Neues authenticated MCP-Tool: `record_event(site_id, name, properties)`.
+Schreibt direkt in ClickHouse `events`, `traffic_class='server'` (oder neue
+Klasse `'mcp'`). Use Case: Backend-Conversions ohne extra Library.
+Beispiel-Setup für Kunde:
+- Stripe-Webhook hookt Claude an → Claude callt `record_event` mit `purchase`
+- Cronjob pingt Claude → Claude tracked `daily_report_sent`
+- Rails-Callback in `User#after_create` → optional via Webhook
+
+Vorteil: erste Stufe von Phase-4 Server-Side ohne dass Kunde Middleware
+installiert. Funktioniert für alles das Claude/MCP erreicht.
+
+Schema:
+```ruby
+{ name: "record_event",
+  description: "Server-side event ingestion. Records a custom event without
+  needing the JS tracker. Useful for backend conversions (Stripe webhooks,
+  cronjobs) that the browser never sees.",
+  inputSchema: {
+    site_id: String, name: String, properties: { type: "object" } } }
+```
+
+### Feature B — MCP Usage Analytics (Selbsttracking) — `~1-2 Tage`
+
+Wir loggen jeden tool-call: welcher User, welches Tool, welche Args (sanitized),
+Latency, Error-Rate. Neue ClickHouse-Tabelle `mcp_calls`. Neues Tool
+`get_mcp_usage(period)` exposed das dem Kunden.
+
+Use Cases für Kunde:
+- "Welche Analytics-Fragen hat mein Team diese Woche gestellt?"
+- "Welche Tools werden nie genutzt? Wo verstehen wir die Daten nicht?"
+- Audit-Trail wer was wann abgefragt hat (DSGVO-Pflicht für Teams)
+
+Use Cases intern:
+- Welche Tools sind redundant? → killen
+- Welche Args sind häufig kaputt? → besseres Schema
+- Latency-Hotspots in ClickHouse
+
+Schema-Add:
+```sql
+CREATE TABLE mcp_calls (
+  ts DateTime64(3), user_id String, tool_name LowCardinality(String),
+  site_id String, args_hash String, latency_ms UInt32, error UInt8,
+  error_class LowCardinality(String)
+) ENGINE = MergeTree ORDER BY (user_id, ts);
+```
+
+Implementation: `Mcp::Server#handle_tool_call` mit before/after wrap der
+Latency misst und Insert in ClickHouse async-pusht.
+
+**Priorität**: A vor B. A ist 2h und schließt eine konkrete Lücke
+(Backend-Events). B ist Killer-Feature für Teams aber Single-User-Indie
+hat erstmal nichts davon.
+
+---
+
 ### Klares NICHT-Versprechen
 
 Auch mit allen 4 Phasen können wir niemals sagen:
