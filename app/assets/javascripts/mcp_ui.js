@@ -4,6 +4,20 @@
 // guarded by a feature-detect so loading on a page that doesn't use
 // the feature is a no-op.
 (function () {
+  // mcpa() queue stub — the tracker script may load after this file (defer);
+  // pushing to the queue ensures events aren't lost.
+  var mcpa = window.mcpa = window.mcpa || function () {
+    (window.mcpa.q = window.mcpa.q || []).push(arguments);
+  };
+
+  // --- Page-load conversion event --------------------------------------
+  // Pages opt in by setting <meta name="mcpa-track" content="event_name">
+  // (driven by content_for(:track_event) in the view).
+  var trackMeta = document.querySelector('meta[name="mcpa-track"]');
+  if (trackMeta) {
+    mcpa("track", trackMeta.getAttribute("content"));
+  }
+
   // --- Click-to-copy (verify & verified pages) -------------------------
   var copyTargets = document.querySelectorAll(".copyable");
   if (copyTargets.length > 0) {
@@ -41,12 +55,22 @@
         }
       }
     };
+    var trackedCopy = false;
+    var trackCopy = function (el) {
+      if (trackedCopy) return;
+      trackedCopy = true;
+      var label = el.previousElementSibling && el.previousElementSibling.previousElementSibling
+        ? el.previousElementSibling.previousElementSibling.textContent.trim()
+        : "unknown";
+      mcpa("track", "token_copied", { field: label });
+    };
     copyTargets.forEach(function (el) {
-      el.addEventListener("click", function () { copy(el); });
+      el.addEventListener("click", function () { copy(el); trackCopy(el); });
       el.addEventListener("keydown", function (e) {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
           copy(el);
+          trackCopy(el);
         }
       });
     });
