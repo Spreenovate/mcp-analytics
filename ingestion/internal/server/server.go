@@ -51,6 +51,14 @@ type eventIn struct {
 	Referrer  string                 `json:"referrer"`
 	Props     map[string]interface{} `json:"props"`
 	VisitorID string                 `json:"visitor_id,omitempty"` // only honored in mode=all
+	// Stufe-2 client-side signals (all optional).
+	Timezone          string `json:"tz,omitempty"`
+	Language          string `json:"lang,omitempty"`
+	ColorScheme       string `json:"cs,omitempty"`
+	ViewportW         uint16 `json:"vw,omitempty"`
+	ViewportH         uint16 `json:"vh,omitempty"`
+	EngagementSeconds uint32 `json:"es,omitempty"` // engagement event only
+	ScrollDepth       uint8  `json:"sd,omitempty"` // engagement event only
 }
 
 func (s *Server) handleEvent(w http.ResponseWriter, r *http.Request) {
@@ -203,6 +211,14 @@ func (s *Server) handleEvent(w http.ResponseWriter, r *http.Request) {
 		PropValues:     propValues,
 		TrafficClass:   trafficClass,
 		UserAgent:      truncate(userAgent, 512),
+		// Stufe-2 client signals. Truncate strings, clamp numbers.
+		Timezone:          truncate(in.Timezone, 64),
+		Language:          truncate(in.Language, 16),
+		ColorScheme:       truncateColorScheme(in.ColorScheme),
+		ViewportW:         clampU16(in.ViewportW, 8192),
+		ViewportH:         clampU16(in.ViewportH, 8192),
+		EngagementSeconds: clampU32(in.EngagementSeconds, 24*60*60), // cap at 1 day
+		ScrollDepth:       clampU8(in.ScrollDepth, 100),
 	}
 
 	s.Batcher.Submit(ev)
@@ -315,4 +331,34 @@ func truncate(s string, max int) string {
 		return s
 	}
 	return s[:max]
+}
+
+// truncateColorScheme accepts only 'light' or 'dark'; anything else → ''.
+// Locks the column to a tiny LowCardinality set so dimension queries stay fast.
+func truncateColorScheme(s string) string {
+	if s == "light" || s == "dark" {
+		return s
+	}
+	return ""
+}
+
+func clampU16(v uint16, max uint16) uint16 {
+	if v > max {
+		return max
+	}
+	return v
+}
+
+func clampU32(v uint32, max uint32) uint32 {
+	if v > max {
+		return max
+	}
+	return v
+}
+
+func clampU8(v uint8, max uint8) uint8 {
+	if v > max {
+		return max
+	}
+	return v
 }

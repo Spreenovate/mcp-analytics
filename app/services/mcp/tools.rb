@@ -205,6 +205,35 @@ module Mcp
       with_site(site, "items" => queries(site).traffic_class_breakdown(Analytics::Period.parse(args["period"])))
     end
 
+    # --- Stufe-2 client signals --------------------------------------------
+
+    def top_timezones(args)
+      site = find_site!(args["site_id"])
+      with_site(site, "items" => queries(site).top_timezones(Analytics::Period.parse(args["period"]),
+                                                              limit: clamped_limit(args["limit"])))
+    end
+
+    def top_languages(args)
+      site = find_site!(args["site_id"])
+      with_site(site, "items" => queries(site).top_languages(Analytics::Period.parse(args["period"]),
+                                                              limit: clamped_limit(args["limit"])))
+    end
+
+    def color_scheme_breakdown(args)
+      site = find_site!(args["site_id"])
+      with_site(site, "items" => queries(site).color_scheme_breakdown(Analytics::Period.parse(args["period"])))
+    end
+
+    def viewport_breakdown(args)
+      site = find_site!(args["site_id"])
+      with_site(site, "items" => queries(site).viewport_breakdown(Analytics::Period.parse(args["period"])))
+    end
+
+    def engagement_overview(args)
+      site = find_site!(args["site_id"])
+      with_site(site, queries(site).engagement_overview(Analytics::Period.parse(args["period"])))
+    end
+
     # --- helpers ------------------------------------------------------------
 
     private

@@ -337,6 +337,102 @@ module Analytics
       { "a_value" => a, "b_value" => b, "absolute_change" => abs, "percent_change" => pct }
     end
 
+    # --- Stufe-2 client signals --------------------------------------------
+    #
+    # All these query the user-side fields populated from privacy-clean Web
+    # APIs (Intl.DateTimeFormat, navigator.language, matchMedia, innerWidth,
+    # Page Visibility, scroll). Aggregable, not personally-identifiable.
+
+    def top_timezones(period, limit: 25)
+      simple_breakdown_query("timezone", period, limit: limit, key_alias: "timezone")
+    end
+
+    def top_languages(period, limit: 25)
+      simple_breakdown_query("language", period, limit: limit, key_alias: "language")
+    end
+
+    def color_scheme_breakdown(period)
+      sql = <<~SQL
+        SELECT color_scheme, count() AS hits
+        FROM events
+        WHERE site_id = {site:String} AND traffic_class = 'user'
+          AND event_name = 'pageview'
+          AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
+        GROUP BY color_scheme
+        ORDER BY hits DESC
+      SQL
+      rows = @client.query(sql, params: scope_params(period))
+      total = rows.sum { |r| r["hits"].to_i }
+      rows.map do |r|
+        hits = r["hits"].to_i
+        {
+          "color_scheme" => r["color_scheme"].to_s.empty? ? "unknown" : r["color_scheme"],
+          "hits" => hits,
+          "percentage" => total.zero? ? 0.0 : (hits.to_f / total).round(4)
+        }
+      end
+    end
+
+    # Bucketed viewport-width distribution: gives the LLM enough to say
+    # "70% of your traffic is on mobile-width viewports" without raw pixel dumps.
+    def viewport_breakdown(period)
+      sql = <<~SQL
+        SELECT
+          multiIf(
+            viewport_w = 0, 'unknown',
+            viewport_w < 480, 'mobile_xs',
+            viewport_w < 768, 'mobile',
+            viewport_w < 1024, 'tablet',
+            viewport_w < 1440, 'desktop',
+            'desktop_xl'
+          ) AS bucket,
+          count() AS hits
+        FROM events
+        WHERE site_id = {site:String} AND traffic_class = 'user'
+          AND event_name = 'pageview'
+          AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
+        GROUP BY bucket
+        ORDER BY hits DESC
+      SQL
+      rows = @client.query(sql, params: scope_params(period))
+      total = rows.sum { |r| r["hits"].to_i }
+      rows.map do |r|
+        hits = r["hits"].to_i
+        {
+          "bucket" => r["bucket"],
+          "hits" => hits,
+          "percentage" => total.zero? ? 0.0 : (hits.to_f / total).round(4)
+        }
+      end
+    end
+
+    # Real reading-time + scroll-depth from the engagement beacon. Pageview
+    # rows are not counted; only event_name='engagement' rows have these fields.
+    def engagement_overview(period)
+      sql = <<~SQL
+        SELECT
+          count() AS engaged_pages,
+          avg(engagement_seconds) AS avg_seconds,
+          quantile(0.5)(engagement_seconds) AS median_seconds,
+          quantile(0.9)(engagement_seconds) AS p90_seconds,
+          avg(scroll_depth) AS avg_scroll_depth,
+          quantile(0.5)(scroll_depth) AS median_scroll_depth
+        FROM events
+        WHERE site_id = {site:String} AND traffic_class = 'user'
+          AND event_name = 'engagement'
+          AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
+      SQL
+      row = @client.query(sql, params: scope_params(period)).first || {}
+      {
+        "engaged_pages" => (row["engaged_pages"] || 0).to_i,
+        "avg_engagement_seconds" => (row["avg_seconds"] || 0).to_f.round(1),
+        "median_engagement_seconds" => (row["median_seconds"] || 0).to_f.round(1),
+        "p90_engagement_seconds" => (row["p90_seconds"] || 0).to_f.round(1),
+        "avg_scroll_depth_pct" => (row["avg_scroll_depth"] || 0).to_f.round(1),
+        "median_scroll_depth_pct" => (row["median_scroll_depth"] || 0).to_f.round(1)
+      }
+    end
+
     # --- Bots & user-agents -------------------------------------------------
 
     # Top user-agents grouped by traffic_class. Default queries hide bots
@@ -395,6 +491,31 @@ module Analytics
     end
 
     private
+
+    # Shared helper for "top values of one column" with percentage breakdown.
+    def simple_breakdown_query(column, period, limit:, key_alias:)
+      sql = <<~SQL
+        SELECT #{column} AS value, count() AS hits
+        FROM events
+        WHERE site_id = {site:String} AND traffic_class = 'user'
+          AND event_name = 'pageview'
+          AND #{column} != ''
+          AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
+        GROUP BY value
+        ORDER BY hits DESC
+        LIMIT {limit:UInt32}
+      SQL
+      rows = @client.query(sql, params: scope_params(period).merge(limit: limit))
+      total = rows.sum { |r| r["hits"].to_i }
+      rows.map do |r|
+        hits = r["hits"].to_i
+        {
+          key_alias => r["value"],
+          "hits" => hits,
+          "percentage" => total.zero? ? 0.0 : (hits.to_f / total).round(4)
+        }
+      end
+    end
 
     def scope_params(period)
       { site: @site.site_id, from: period.from_sql, to: period.to_sql }

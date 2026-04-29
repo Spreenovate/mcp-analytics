@@ -302,6 +302,57 @@ module Mcp
       end
     end
 
+    test "top_timezones returns rows keyed by timezone with percentages" do
+      stub_clickhouse([[
+        { "value" => "Europe/Berlin", "hits" => 30 },
+        { "value" => "America/New_York", "hits" => 10 }
+      ]]) do
+        result = auth_tools.top_timezones("site_id" => @site.site_id, "period" => "last_7_days")
+        assert_equal @site.site_id, result["site_id"]
+        assert_equal "Europe/Berlin", result["items"].first["timezone"]
+        assert_equal 0.75, result["items"].first["percentage"]
+      end
+    end
+
+    test "color_scheme_breakdown maps empty string to 'unknown'" do
+      stub_clickhouse([[
+        { "color_scheme" => "dark", "hits" => 60 },
+        { "color_scheme" => "light", "hits" => 30 },
+        { "color_scheme" => "", "hits" => 10 }
+      ]]) do
+        result = auth_tools.color_scheme_breakdown("site_id" => @site.site_id, "period" => "today")
+        assert_equal "dark", result["items"].first["color_scheme"]
+        assert_equal "unknown", result["items"].last["color_scheme"]
+        assert_equal 0.6, result["items"].first["percentage"]
+      end
+    end
+
+    test "viewport_breakdown returns bucketed widths" do
+      stub_clickhouse([[
+        { "bucket" => "desktop", "hits" => 50 },
+        { "bucket" => "mobile",  "hits" => 30 },
+        { "bucket" => "tablet",  "hits" => 20 }
+      ]]) do
+        result = auth_tools.viewport_breakdown("site_id" => @site.site_id, "period" => "today")
+        assert_equal "desktop", result["items"].first["bucket"]
+        assert_equal 0.5, result["items"].first["percentage"]
+      end
+    end
+
+    test "engagement_overview returns engagement seconds + scroll depth" do
+      stub_clickhouse([[
+        { "engaged_pages" => 12,
+          "avg_seconds" => 45.5, "median_seconds" => 30.0, "p90_seconds" => 120.0,
+          "avg_scroll_depth" => 65.0, "median_scroll_depth" => 75.0 }
+      ]]) do
+        result = auth_tools.engagement_overview("site_id" => @site.site_id, "period" => "today")
+        assert_equal @site.site_id, result["site_id"]
+        assert_equal 12, result["engaged_pages"]
+        assert_equal 45.5, result["avg_engagement_seconds"]
+        assert_equal 65.0, result["avg_scroll_depth_pct"]
+      end
+    end
+
     test "default analytics queries do NOT include bot traffic" do
       # Verify the SQL emitted by overview includes the traffic_class filter.
       captured = []

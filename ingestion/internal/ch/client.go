@@ -48,6 +48,14 @@ type Event struct {
 	PropValues     []string  `json:"prop_values"`
 	TrafficClass   string    `json:"traffic_class"`     // 'user' or 'bot' in Phase 1
 	UserAgent      string    `json:"user_agent"`        // raw UA — kept for retroactive classification
+	// Stufe-2 client-side signals. All from privacy-clean Web APIs.
+	Timezone          string `json:"timezone"`
+	Language          string `json:"language"`
+	ColorScheme       string `json:"color_scheme"`        // 'light' | 'dark' | ''
+	ViewportW         uint16 `json:"viewport_w"`
+	ViewportH         uint16 `json:"viewport_h"`
+	EngagementSeconds uint32 `json:"engagement_seconds"`  // populated on event_name='engagement' rows
+	ScrollDepth       uint8  `json:"scroll_depth"`        // 0..100, same
 	IngestedAt     time.Time `json:"-"`
 }
 

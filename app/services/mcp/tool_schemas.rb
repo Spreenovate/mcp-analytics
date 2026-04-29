@@ -232,6 +232,68 @@ module Mcp
         scope: Oauth::Scopes::READ
       },
       {
+        name: "top_timezones",
+        description: "Top IANA timezones (Europe/Berlin, America/New_York, ...) of visitors. Quasi-geo signal without IP-based lookups — captured client-side via Intl.DateTimeFormat.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            site_id: { type: "string" },
+            period: { type: "string", default: "last_7_days" },
+            limit: { type: "integer", default: 10 }
+          },
+          required: ["site_id"]
+        }
+      },
+      {
+        name: "top_languages",
+        description: "Top browser languages (de-DE, en-US, ...) of visitors. From navigator.language.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            site_id: { type: "string" },
+            period: { type: "string", default: "last_7_days" },
+            limit: { type: "integer", default: 10 }
+          },
+          required: ["site_id"]
+        }
+      },
+      {
+        name: "color_scheme_breakdown",
+        description: "Share of visitors with prefers-color-scheme: dark vs light. Useful for product decisions ('should we default to dark mode?').",
+        inputSchema: {
+          type: "object",
+          properties: {
+            site_id: { type: "string" },
+            period: { type: "string", default: "last_7_days" }
+          },
+          required: ["site_id"]
+        }
+      },
+      {
+        name: "viewport_breakdown",
+        description: "Pageviews bucketed by viewport width: mobile_xs (<480), mobile (<768), tablet (<1024), desktop (<1440), desktop_xl (≥1440). Real usable viewport, not screen resolution.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            site_id: { type: "string" },
+            period: { type: "string", default: "last_7_days" }
+          },
+          required: ["site_id"]
+        }
+      },
+      {
+        name: "engagement_overview",
+        description: "Real reading time + scroll depth from the engagement beacon (fired on pagehide). Returns engaged_pages count, avg/median/p90 engagement seconds, and avg/median scroll-depth percentage. Better signal than session duration which counts inactive tabs.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            site_id: { type: "string" },
+            period: { type: "string", default: "last_7_days" }
+          },
+          required: ["site_id"]
+        }
+      },
+      {
         name: "get_account",
         description: "Account info — email, plan, usage.",
         inputSchema: { type: "object", properties: {} },

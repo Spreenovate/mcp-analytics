@@ -35,6 +35,19 @@
     return;
   }
 
+  // Self-exclude (?mcpa_exclude=1 sets, =0 unsets). Builders can opt themselves
+  // out of their own analytics by visiting once with the param. Stored in
+  // localStorage so it survives navigation but not browser data clears.
+  try {
+    var s = loc.search || "";
+    if (s.indexOf("mcpa_exclude=1") !== -1) win.localStorage.setItem("mcpa_exclude", "1");
+    if (s.indexOf("mcpa_exclude=0") !== -1) win.localStorage.removeItem("mcpa_exclude");
+    if (win.localStorage.getItem("mcpa_exclude") === "1") {
+      win.mcpa = function () {};
+      return;
+    }
+  } catch (_) { /* private mode etc. — keep tracking */ }
+
   var MAX_PROP_KEYS = 20;
   var MAX_PAYLOAD_BYTES = 10 * 1024;
 
@@ -93,7 +106,32 @@
     return out;
   }
 
-  function send(name, props) {
+  function clientSignals() {
+    var s = {};
+    try {
+      var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (tz) s.tz = tz;
+    } catch (_) {}
+    try {
+      var lang = nav.language || (nav.languages && nav.languages[0]);
+      if (lang) s.lang = String(lang).slice(0, 16);
+    } catch (_) {}
+    try {
+      if (win.matchMedia) {
+        if (win.matchMedia("(prefers-color-scheme: dark)").matches) s.cs = "dark";
+        else if (win.matchMedia("(prefers-color-scheme: light)").matches) s.cs = "light";
+      }
+    } catch (_) {}
+    try {
+      // innerWidth/Height = real usable viewport. Cap to keep ints small.
+      var vw = win.innerWidth | 0, vh = win.innerHeight | 0;
+      if (vw > 0 && vw < 8192) s.vw = vw;
+      if (vh > 0 && vh < 8192) s.vh = vh;
+    } catch (_) {}
+    return s;
+  }
+
+  function send(name, props, extra) {
     var payload = {
       site: site,
       name: name,
@@ -101,6 +139,12 @@
       referrer: doc.referrer || "",
       props: sanitizeProps(props)
     };
+
+    var sig = clientSignals();
+    for (var k in sig) if (sig.hasOwnProperty(k)) payload[k] = sig[k];
+    if (extra) {
+      for (var k2 in extra) if (extra.hasOwnProperty(k2)) payload[k2] = extra[k2];
+    }
 
     var vid = persistentVisitorId();
     if (vid) payload.visitor_id = vid;
@@ -133,10 +177,62 @@
 
   var lastPath = null;
 
+  // Engagement state per page lifetime.
+  var pageStart = 0;       // ms when current page became active
+  var activeMs = 0;        // accumulated active milliseconds
+  var maxScrollPct = 0;    // 0..100, max scroll depth reached
+  var engagementSent = false;
+
+  function now() { return Date.now ? Date.now() : new Date().getTime(); }
+
+  function startEngagement() {
+    pageStart = now();
+    activeMs = 0;
+    maxScrollPct = computeScrollPct();
+    engagementSent = false;
+  }
+
+  function computeScrollPct() {
+    try {
+      var de = doc.documentElement, body = doc.body;
+      var height = Math.max(de.scrollHeight, body ? body.scrollHeight : 0);
+      var visible = win.innerHeight || de.clientHeight || 0;
+      var scroll = win.scrollY || de.scrollTop || (body ? body.scrollTop : 0) || 0;
+      if (height <= visible) return 100; // page fits viewport, treat as fully read
+      var pct = ((scroll + visible) / height) * 100;
+      if (pct < 0) pct = 0;
+      if (pct > 100) pct = 100;
+      return pct | 0;
+    } catch (_) { return 0; }
+  }
+
+  function onScroll() {
+    var p = computeScrollPct();
+    if (p > maxScrollPct) maxScrollPct = p;
+  }
+
+  function tickActive() {
+    if (!doc.hidden && pageStart > 0) {
+      activeMs += now() - pageStart;
+      pageStart = now();
+    }
+  }
+
+  function flushEngagement() {
+    if (engagementSent) return;
+    tickActive();
+    var seconds = Math.round(activeMs / 1000);
+    if (seconds <= 0 && maxScrollPct <= 0) return;
+    engagementSent = true;
+    send("engagement", null, { es: seconds, sd: maxScrollPct });
+  }
+
   function pageview() {
     var path = loc.pathname + loc.search + loc.hash;
     if (path === lastPath) return;
+    if (lastPath !== null) flushEngagement(); // SPA nav: send engagement for old page
     lastPath = path;
+    startEngagement();
     send("pageview", null);
   }
 
@@ -167,6 +263,21 @@
     };
     win.addEventListener("popstate", pageview);
   }
+
+  // Engagement listeners. visibilitychange pauses/resumes the active timer.
+  // pagehide/beforeunload triggers the final beacon. We use both because
+  // mobile browsers often skip beforeunload — pagehide is the modern guarantee.
+  doc.addEventListener("visibilitychange", function () {
+    if (doc.hidden) {
+      tickActive();
+      flushEngagement();
+    } else {
+      pageStart = now(); // resume the timer
+    }
+  });
+  win.addEventListener("pagehide", flushEngagement);
+  win.addEventListener("beforeunload", flushEngagement);
+  win.addEventListener("scroll", onScroll, { passive: true });
 
   // Kick off initial pageview once DOM is ready.
   if (doc.readyState === "complete" || doc.readyState === "interactive") {
