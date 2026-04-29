@@ -34,6 +34,9 @@ Rails.application.routes.draw do
   post "/settings/connectors/:id/revoke"      => "settings#revoke_connector", as: :revoke_connector
   post "/settings/sign_out"                   => "settings#sign_out",         as: :settings_sign_out
 
+  # Docs (for humans — agents just need the MCP URL).
+  get "/docs" => "pages#docs", as: :docs
+
   # Legal pages.
   get "/terms"   => "pages#terms",   as: :terms
   get "/privacy" => "pages#privacy", as: :privacy

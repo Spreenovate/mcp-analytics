@@ -1,0 +1,498 @@
+<% content_for(:title, "Docs | mcp-analytics") %>
+<% content_for(:meta_description, "How mcp-analytics works. For humans — your agent only needs the MCP URL.") %>
+<% content_for(:body_class, "home") %>
+<% content_for :head do %>
+  <%= render "pages/brutalist_doc_styles" %>
+
+  <style>
+    /* ---- The 'these docs are for humans' callout. Loud on purpose. ---- */
+    body.home .agent-notice {
+      position: relative;
+      background: var(--fg); color: var(--bg);
+      padding: 32px 32px 28px;
+      border: var(--border) solid var(--fg);
+      margin: 0 0 56px;
+      box-shadow: 8px 8px 0 var(--accent);
+    }
+    body.home .agent-notice .meta-label {
+      display: inline-block;
+      background: var(--accent); color: var(--fg);
+      padding: 4px 10px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.18em;
+      margin-bottom: 14px;
+    }
+    body.home .agent-notice h2 {
+      font-family: "Space Grotesk", sans-serif;
+      font-weight: 900; font-size: clamp(26px, 4vw, 38px); line-height: 1.05;
+      letter-spacing: -0.02em; margin: 0 0 12px;
+      text-transform: none; color: var(--bg);
+      border-bottom: 0; padding-bottom: 0;
+    }
+    body.home .agent-notice h2 em {
+      font-style: normal; background: var(--accent); color: var(--fg);
+      padding: 0 0.15em;
+    }
+    body.home .agent-notice p {
+      font-size: 15px; margin: 0 0 22px; opacity: 0.85; max-width: 60ch;
+    }
+    body.home .agent-notice .cta {
+      display: inline-block;
+      background: var(--accent); color: var(--fg);
+      padding: 14px 24px;
+      font-family: "Space Grotesk", sans-serif; font-weight: 900;
+      font-size: 15px; text-transform: uppercase; letter-spacing: 0.1em;
+      text-decoration: none; border: 2px solid var(--accent);
+      transition: transform 0.08s ease;
+    }
+    body.home .agent-notice .cta:hover {
+      transform: translate(-2px, -2px);
+      box-shadow: 4px 4px 0 var(--bg);
+    }
+    body.home .agent-notice .agent-aside {
+      display: block;
+      margin-top: 18px; font-size: 12px; opacity: 0.55;
+      font-family: "JetBrains Mono", monospace;
+    }
+
+    /* ---- Quickstart cards ---- */
+    body.home .quickstart {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+      margin: 16px 0 32px;
+    }
+    body.home .quickstart .step {
+      border: var(--border) solid var(--fg); padding: 20px;
+      position: relative;
+    }
+    body.home .quickstart .step .num {
+      position: absolute; top: -16px; left: 16px;
+      background: var(--fg); color: var(--accent);
+      font-family: "Space Grotesk", sans-serif; font-weight: 900; font-size: 22px;
+      padding: 2px 12px;
+    }
+    body.home .quickstart .step h4 {
+      font-family: "Space Grotesk", sans-serif; font-weight: 900; font-size: 17px;
+      margin: 8px 0 8px; text-transform: none;
+    }
+    body.home .quickstart .step p { font-size: 13px; margin: 0; line-height: 1.5; }
+    body.home .quickstart .step code {
+      font-size: 12px; background: #f5f5f5; padding: 2px 5px; border: 1px solid #ddd;
+    }
+    @media (max-width: 720px) {
+      body.home .quickstart { grid-template-columns: 1fr; }
+    }
+
+    /* ---- Privacy mode comparison table ---- */
+    body.home table.modes {
+      width: 100%; border-collapse: collapse; margin: 16px 0 24px;
+      font-family: "JetBrains Mono", monospace; font-size: 13px;
+    }
+    body.home table.modes th, body.home table.modes td {
+      border: 2px solid var(--fg); padding: 10px 12px; text-align: left;
+      vertical-align: top;
+    }
+    body.home table.modes th {
+      background: var(--fg); color: var(--bg);
+      font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em;
+    }
+    body.home table.modes td.recommended {
+      background: rgba(0, 255, 136, 0.18);
+      font-weight: 700;
+    }
+    body.home table.modes .yes { color: #00aa55; font-weight: 700; }
+    body.home table.modes .no  { color: #aa0000; font-weight: 700; }
+
+    /* ---- Tool catalog ---- */
+    body.home .tool-group {
+      margin: 16px 0 24px;
+    }
+    body.home .tool-group .group-label {
+      display: inline-block;
+      background: var(--fg); color: var(--accent);
+      padding: 4px 10px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.16em;
+      margin-bottom: 10px;
+    }
+    body.home .tool-group dl { margin: 0; }
+    body.home .tool-group dt {
+      font-family: "JetBrains Mono", monospace; font-weight: 700;
+      font-size: 13px; color: var(--fg);
+      letter-spacing: 0; text-transform: none; margin-top: 12px;
+    }
+    body.home .tool-group dt code {
+      background: #f5f5f5; padding: 2px 8px; border: 1px solid #ddd;
+      color: var(--fg);
+    }
+    body.home .tool-group dd {
+      font-size: 14px; margin: 4px 0 0;
+      padding-left: 0; color: #333;
+    }
+
+    /* ---- Inline pre blocks ---- */
+    body.home pre {
+      background: var(--fg); color: var(--accent);
+      padding: 16px 20px; margin: 12px 0 20px;
+      font-family: "JetBrains Mono", monospace; font-size: 13px;
+      line-height: 1.5; overflow-x: auto;
+      border: var(--border) solid var(--fg);
+    }
+    body.home pre code { background: none; border: 0; padding: 0; color: inherit; }
+
+    /* ---- FAQ accordion-ish ---- */
+    body.home details {
+      border: 2px solid var(--fg); padding: 14px 18px; margin: 0 0 12px;
+      background: #fafafa;
+    }
+    body.home details[open] { background: #fff; }
+    body.home details summary {
+      cursor: pointer; font-weight: 700; font-size: 15px;
+      list-style: none; outline: none;
+      font-family: "Space Grotesk", sans-serif;
+    }
+    body.home details summary::-webkit-details-marker { display: none; }
+    body.home details summary::before {
+      content: "+"; display: inline-block; width: 18px;
+      color: var(--accent); font-weight: 900; font-size: 18px;
+    }
+    body.home details[open] summary::before { content: "−"; }
+    body.home details p { font-size: 14px; margin: 12px 0 0; }
+
+    /* ---- Final CTA strip ---- */
+    body.home .end-cta {
+      margin: 64px 0 0; padding: 32px 28px;
+      border: var(--border) solid var(--fg);
+      background: var(--accent);
+      text-align: center;
+    }
+    body.home .end-cta h3 {
+      font-family: "Space Grotesk", sans-serif; font-weight: 900;
+      font-size: clamp(22px, 3.5vw, 32px); line-height: 1; letter-spacing: -0.02em;
+      margin: 0 0 16px; text-transform: uppercase;
+    }
+    body.home .end-cta a {
+      display: inline-block;
+      background: var(--fg); color: var(--accent);
+      padding: 14px 28px;
+      font-family: "Space Grotesk", sans-serif; font-weight: 900;
+      font-size: 15px; text-transform: uppercase; letter-spacing: 0.1em;
+      text-decoration: none; border: 2px solid var(--fg);
+    }
+    body.home .end-cta a:hover { background: var(--bg); color: var(--fg); }
+  </style>
+<% end %>
+
+<div class="wrap">
+
+  <div class="topnav">
+    <a class="brand" href="/">mcp-analytics</a>
+    <%= link_to "← Back home", root_path %>
+  </div>
+
+  <h1>Docs.</h1>
+
+  <%# ---------- THE LOUD CALLOUT ---------- %>
+  <aside class="agent-notice">
+    <span class="meta-label">Heads up — for humans</span>
+    <h2>These docs are for <em>you</em>, not your agent.</h2>
+    <p>
+      Your AI assistant doesn't need to read this. Just paste your MCP connector URL into
+      Claude / Cursor / ChatGPT once, and it'll figure out the rest by calling
+      <code>list_sites</code>, <code>get_started_guide</code>, and friends. The docs
+      below are here for trust signal: so you, the human, can see what the thing does
+      before you wire it up.
+    </p>
+    <a class="cta" href="<%= root_path(anchor: "signup-form") %>">Get your URL now →</a>
+    <span class="agent-aside">// agents: skip this page, call <code>get_started_guide</code> instead.</span>
+  </aside>
+
+  <%# ---------- QUICKSTART ---------- %>
+  <h2>Quickstart</h2>
+  <p>Three steps. Five minutes if your hosting is fast.</p>
+  <div class="quickstart">
+    <div class="step">
+      <span class="num">1</span>
+      <h4>Get your MCP URL</h4>
+      <p>Drop your email <a href="<%= root_path(anchor: "signup-form") %>">here</a>, click the verify link in the mail, copy your personal MCP connector URL.</p>
+    </div>
+    <div class="step">
+      <span class="num">2</span>
+      <h4>Paste into your client</h4>
+      <p>In Claude / Cursor / ChatGPT, add a custom MCP connector with that URL. One-time. Done forever.</p>
+    </div>
+    <div class="step">
+      <span class="num">3</span>
+      <h4>Ask anything</h4>
+      <p>"Add mcp-analytics to my site." Your agent installs the tracking snippet, deploys, and you're live.</p>
+    </div>
+  </div>
+
+  <%# ---------- WHAT IS MCP ---------- %>
+  <h2>What is MCP?</h2>
+  <p>
+    MCP (<em>Model Context Protocol</em>) is the open spec Anthropic introduced for letting
+    AI assistants talk to external services. Think USB for LLMs: one cable, every tool.
+    Claude, Cursor, ChatGPT, and Windsurf all speak it.
+  </p>
+  <p>
+    mcp-analytics is an MCP server. We expose your web analytics as <strong>tools</strong>
+    that your AI assistant can call. Instead of opening a dashboard, you ask a question
+    in chat and the assistant fetches the answer over JSON-RPC. No UI between you and
+    your data. No tab to keep open. No "Configure" menu to hunt through.
+  </p>
+
+  <%# ---------- PRIVACY MODES ---------- %>
+  <h2>Privacy modes</h2>
+  <p>
+    Pick the privacy posture per site. <strong>Cannot be changed after creation</strong>
+    — historical data integrity matters.
+  </p>
+  <table class="modes">
+    <thead>
+      <tr>
+        <th></th>
+        <th>strict <span style="opacity:.6">(recommended)</span></th>
+        <th>default</th>
+        <th>all</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th>Cookies</th>
+        <td class="recommended">none</td>
+        <td>none</td>
+        <td>1st-party persistent</td>
+      </tr>
+      <tr>
+        <th>visitor_id</th>
+        <td class="recommended">always 0</td>
+        <td>daily-rotating hash</td>
+        <td>persistent UUID</td>
+      </tr>
+      <tr>
+        <th>DNT respected</th>
+        <td class="recommended"><span class="yes">yes</span></td>
+        <td><span class="yes">yes</span></td>
+        <td><span class="no">no</span> (opt-in)</td>
+      </tr>
+      <tr>
+        <th>Cookie banner needed</th>
+        <td class="recommended"><span class="no">no</span></td>
+        <td><span class="no">no</span></td>
+        <td><span class="yes">yes</span> (your call)</td>
+      </tr>
+      <tr>
+        <th>Cross-day visitor tracking</th>
+        <td class="recommended"><span class="no">no</span></td>
+        <td><span class="no">no</span></td>
+        <td><span class="yes">yes</span></td>
+      </tr>
+      <tr>
+        <th>LTV / cohort analysis</th>
+        <td class="recommended"><span class="no">no</span></td>
+        <td><span class="no">no</span></td>
+        <td><span class="yes">yes</span></td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+    <strong>Strict</strong> is what you want for 95% of public-facing sites. Aggregate
+    answers, no banner, sleep at night. <strong>All</strong> is for when you've already
+    decided your business needs cross-session attribution and you're willing to handle
+    the consent banner — typical SaaS dashboards behind a login.
+  </p>
+
+  <%# ---------- THE TOOLS ---------- %>
+  <h2>The tools</h2>
+  <p>What your agent can call once your MCP URL is wired in.</p>
+
+  <div class="tool-group">
+    <span class="group-label">Account</span>
+    <dl>
+      <dt><code>list_sites</code></dt>
+      <dd>Every site on your account, with monthly hit counter.</dd>
+      <dt><code>add_site</code></dt>
+      <dd>Register a new domain. Pick the privacy mode (cannot be changed later).</dd>
+      <dt><code>remove_site</code></dt>
+      <dd>Soft-delete a site. Historical events expire on the table TTL.</dd>
+      <dt><code>get_tracking_snippet</code></dt>
+      <dd>The HTML <code>&lt;script&gt;</code> tag for a given site.</dd>
+      <dt><code>get_account</code></dt>
+      <dd>Email, plan, total usage this month.</dd>
+      <dt><code>regenerate_api_token</code></dt>
+      <dd>Burn the current MCP URL, get a new one. Use if leaked.</dd>
+    </dl>
+  </div>
+
+  <div class="tool-group">
+    <span class="group-label">Analytics — the daily questions</span>
+    <dl>
+      <dt><code>get_overview</code></dt>
+      <dd>TL;DR for a period. Pageviews, sessions, bounce, top page, top source, bot share, top events. <em>This is the one your agent should call first when you ask "how did yesterday go?"</em></dd>
+      <dt><code>get_timeseries</code></dt>
+      <dd>Pageviews / visitors / sessions over time. Hour, day, or week buckets.</dd>
+      <dt><code>top_pages</code></dt>
+      <dd>Most-visited URL paths.</dd>
+      <dt><code>top_referrers</code></dt>
+      <dd>Top referring hosts (where the link came from).</dd>
+      <dt><code>top_sources</code></dt>
+      <dd>UTM source / medium / campaign breakdowns. Tag your shared links to see exactly what worked.</dd>
+      <dt><code>breakdown</code></dt>
+      <dd>Visit counts by browser / OS / device type / country.</dd>
+      <dt><code>list_events</code></dt>
+      <dd>All custom event names with counts.</dd>
+      <dt><code>event_details</code></dt>
+      <dd>Drill into one event. Optional <code>group_by_property</code> to slice by a custom prop.</dd>
+      <dt><code>compare_periods</code></dt>
+      <dd>"Was last week better than the week before?" — head-to-head metric comparison.</dd>
+    </dl>
+  </div>
+
+  <div class="tool-group">
+    <span class="group-label">AI bots & crawlers</span>
+    <dl>
+      <dt><code>top_user_agents</code></dt>
+      <dd>The top User-Agents that visited, with traffic_class. See exactly which AI agents (ChatGPT-User, Claude-User, GPTBot, ...) and crawlers fetched your pages.</dd>
+      <dt><code>traffic_class_breakdown</code></dt>
+      <dd>What share of your traffic was bots vs real users.</dd>
+    </dl>
+  </div>
+
+  <div class="tool-group">
+    <span class="group-label">Visitor signals</span>
+    <dl>
+      <dt><code>top_timezones</code> / <code>top_languages</code></dt>
+      <dd>Quasi-geo and locale signals from <code>Intl.DateTimeFormat</code> and <code>navigator.language</code>. No IP lookups.</dd>
+      <dt><code>color_scheme_breakdown</code></dt>
+      <dd>Share of visitors with system dark mode on. Useful product signal.</dd>
+      <dt><code>viewport_breakdown</code></dt>
+      <dd>Real usable viewport widths, bucketed (mobile_xs / mobile / tablet / desktop / desktop_xl).</dd>
+      <dt><code>engagement_overview</code></dt>
+      <dd>Real reading time + scroll depth. Counts only when the tab is active, not just open.</dd>
+    </dl>
+  </div>
+
+  <%# ---------- CUSTOM EVENTS ---------- %>
+  <h2>Custom events</h2>
+  <p>
+    Pageviews are auto-tracked. Anything else you want — call <code>mcpa('track', ...)</code>
+    in your code:
+  </p>
+  <pre><code>// somewhere in your app
+window.mcpa('track', 'signup', { plan: 'pro' });
+window.mcpa('track', 'video_played', { duration_seconds: 42 });</code></pre>
+  <p>
+    Up to 20 properties per event. Strings, numbers, booleans only. Then ask Claude:
+    <em>"How many signups last week, broken down by plan?"</em> — it'll call
+    <code>event_details</code> with <code>group_by_property: "plan"</code>.
+  </p>
+
+  <%# ---------- SELF-EXCLUDE ---------- %>
+  <h2>Self-exclude (for builders)</h2>
+  <p>
+    Don't poison your own analytics with your own visits. Once on each browser/device:
+  </p>
+  <pre><code>https://your-site.com/?mcpa_exclude=1</code></pre>
+  <p>
+    The tracker stores a flag in <code>localStorage</code> and stops sending events
+    from that browser. Undo with <code>?mcpa_exclude=0</code>. Survives navigation,
+    not browser-data clears.
+  </p>
+
+  <%# ---------- FAQ ---------- %>
+  <h2>FAQ</h2>
+
+  <details>
+    <summary>Why no dashboard?</summary>
+    <p>
+      Because dashboards are where data goes to die. You open it, scan the same
+      five widgets, close it. mcp-analytics turns the workflow inside-out: <em>ask
+      a question, get an answer</em>. The agent does the chart-reading for you.
+    </p>
+  </details>
+
+  <details>
+    <summary>Will my agent figure this out without docs?</summary>
+    <p>
+      Yes. We expose <code>get_started_guide</code> as an MCP tool. Once your
+      connector URL is wired in, your agent will call it automatically when
+      it doesn't know what to do next. These human docs are just trust signal.
+    </p>
+  </details>
+
+  <details>
+    <summary>How does the free tier work?</summary>
+    <p>
+      Free up to 100,000 hits per month, unlimited sites. No card. After that
+      we'll have paid tiers — but the free tier covers the vast majority of
+      indie / side-project sites and we don't plan to take that away.
+    </p>
+  </details>
+
+  <details>
+    <summary>What about adblockers?</summary>
+    <p>
+      Tracker script is hosted at <code>t.mcp-analytics.com</code> — not in
+      the major adblock filter lists yet. Not a permanent guarantee. If
+      blocking becomes a problem we'll publish a server-side ingestion path
+      (Phase 4 on the roadmap).
+    </p>
+  </details>
+
+  <details>
+    <summary>Can I export my raw data?</summary>
+    <p>
+      Aggregate exports are coming. Raw event-level export will be available on
+      paid tiers. We never sell or share your data, full stop.
+    </p>
+  </details>
+
+  <details>
+    <summary>What's the bot classification?</summary>
+    <p>
+      Every event is tagged <code>user</code> or <code>bot</code> based on the
+      User-Agent. Default analytics queries hide bots. Use
+      <code>top_user_agents</code> and <code>traffic_class_breakdown</code> to
+      see which AI agents (ChatGPT-User, Claude-User, GPTBot, ...) fetched
+      your content. Phase 2 will refine this into purpose-based buckets
+      (ai_search, ai_training, social_unfurl, ...).
+    </p>
+  </details>
+
+  <details>
+    <summary>OAuth?</summary>
+    <p>
+      On the roadmap. Right now you paste a token-bearing MCP URL into your
+      client. Adds one minor step versus a click-to-authorize flow.
+      Phase 2 will replace this with proper OAuth 2.1 + PKCE. The current
+      tokens stay valid.
+    </p>
+  </details>
+
+  <details>
+    <summary>Where's the company based / who's behind this?</summary>
+    <p>
+      Spreenovate GmbH, Berlin. Built solo with Claude as pair programmer.
+      Servers in Hetzner Falkenstein (EU). See <%= link_to "privacy policy", privacy_path %> for the full data
+      controller info.
+    </p>
+  </details>
+
+  <%# ---------- FINAL CTA ---------- %>
+  <div class="end-cta">
+    <h3>Stop reading. Start asking.</h3>
+    <a href="<%= root_path(anchor: "signup-form") %>">Get your MCP URL →</a>
+  </div>
+
+  <footer class="lp">
+    <span>© <%= Date.current.year %> Spreenovate GmbH</span>
+    <span>
+      <%= link_to "Home", root_path %> ·
+      <%= link_to "Privacy", privacy_path %> ·
+      <%= link_to "Terms", terms_path %>
+    </span>
+  </footer>
+
+</div>

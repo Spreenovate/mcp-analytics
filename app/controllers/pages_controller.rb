@@ -7,4 +7,7 @@ class PagesController < ApplicationController
 
   def privacy
   end
+
+  def docs
+  end
 end
