@@ -204,7 +204,7 @@
       below are here for trust signal: so you, the human, can see what the thing does
       before you wire it up.
     </p>
-    <a class="cta" href="<%= root_path(anchor: "signup-form") %>">Get your URL now →</a>
+    <a class="cta" data-cta-location="top" href="<%= root_path(anchor: "signup-form") %>">Get your URL now →</a>
     <span class="agent-aside">// agents: skip this page, call <code>get_started_guide</code> instead.</span>
   </aside>
 
@@ -483,8 +483,20 @@ window.mcpa('track', 'video_played', { duration_seconds: 42 });</code></pre>
   <%# ---------- FINAL CTA ---------- %>
   <div class="end-cta">
     <h3>Stop reading. Start asking.</h3>
-    <a href="<%= root_path(anchor: "signup-form") %>">Get your MCP URL →</a>
+    <a data-cta-location="bottom" href="<%= root_path(anchor: "signup-form") %>">Get your MCP URL →</a>
   </div>
+
+  <script>
+    // Conversion signal: which CTA on /docs actually drives signups (top vs bottom).
+    (function () {
+      var mcpa = window.mcpa = window.mcpa || function () { (window.mcpa.q = window.mcpa.q || []).push(arguments); };
+      document.querySelectorAll("[data-cta-location]").forEach(function (a) {
+        a.addEventListener("click", function () {
+          mcpa('track', 'docs_cta_clicked', { location: a.getAttribute("data-cta-location") });
+        });
+      });
+    })();
+  </script>
 
   <footer class="lp">
     <span>© <%= Date.current.year %> Spreenovate GmbH</span>

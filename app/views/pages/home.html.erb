@@ -250,10 +250,25 @@
         (window.mcpa = window.mcpa || function () { (window.mcpa.q = window.mcpa.q || []).push(arguments); })('track', 'signup_failed', { reason: <%= raw flash[:signup_status].to_s.to_json %> });
       </script>
     <% end %>
-    <%= form_with url: signup_path, method: :post, local: true do |f| %>
-      <%= f.email_field :email, placeholder: "you@example.com", required: true, value: flash[:email] %>
+    <%= form_with url: signup_path, method: :post, local: true, html: { id: "signup-form-tag" } do |f| %>
+      <%= f.email_field :email, placeholder: "you@example.com", required: true, value: flash[:email], id: "signup-email" %>
       <%= f.submit "Get URL →" %>
     <% end %>
+    <script>
+      // Form-funnel signal: fires on FIRST keystroke in the email field. Lets us
+      // compute (signup_submitted / signup_form_started) = form-completion rate.
+      (function () {
+        var input = document.getElementById("signup-email");
+        if (!input) return;
+        var fired = false;
+        function once() {
+          if (fired) return;
+          fired = true;
+          (window.mcpa = window.mcpa || function () { (window.mcpa.q = window.mcpa.q || []).push(arguments); })('track', 'signup_form_started');
+        }
+        input.addEventListener("input", once, { once: true });
+      })();
+    </script>
     <small>Free forever up to 100,000 hits/month. Unlimited sites. No credit card.</small>
   </section>
 
