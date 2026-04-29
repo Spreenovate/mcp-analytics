@@ -1,10 +1,13 @@
 <% content_for(:title, "Docs | mcp-analytics") %>
-<% content_for(:meta_description, "How mcp-analytics works. For humans — your agent only needs the MCP URL.") %>
+<% content_for(:meta_description, "How mcp-analytics works. For humans. Your agent only needs the MCP URL.") %>
 <% content_for(:body_class, "home") %>
 <% content_for :head do %>
   <%= render "pages/brutalist_doc_styles" %>
 
   <style>
+    /* Outer container goes wide like home (1080px). Text column inside stays narrow. */
+    body.home .wrap { max-width: 1080px; }
+
     /* ---- The 'these docs are for humans' callout. Loud on purpose. ---- */
     body.home .agent-notice {
       position: relative;
@@ -37,6 +40,12 @@
     body.home .agent-notice p {
       font-size: 15px; margin: 0 0 22px; opacity: 0.85; max-width: 60ch;
     }
+    /* Code in the dark callout needs its own light-on-dark palette */
+    body.home .agent-notice code {
+      background: #1a1a1a; color: var(--accent);
+      border: 1px solid #333; padding: 1px 6px;
+      font-size: 13px;
+    }
     body.home .agent-notice .cta {
       display: inline-block;
       background: var(--accent); color: var(--fg);
@@ -54,6 +63,47 @@
       display: block;
       margin-top: 18px; font-size: 12px; opacity: 0.55;
       font-family: "JetBrains Mono", monospace;
+    }
+
+    /* ---- Two-column docs layout: sticky subnav + text column ---- */
+    body.home .docs-layout {
+      display: grid;
+      grid-template-columns: 220px minmax(0, 1fr);
+      gap: 56px;
+      align-items: start;
+    }
+    body.home .docs-subnav {
+      position: sticky; top: 24px;
+      border-left: var(--border) solid var(--fg);
+      padding: 4px 0 4px 18px;
+    }
+    body.home .docs-subnav .subnav-label {
+      display: inline-block;
+      font-family: "JetBrains Mono", monospace; font-size: 11px;
+      font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em;
+      background: var(--fg); color: var(--accent);
+      padding: 3px 8px; margin-bottom: 14px;
+    }
+    body.home .docs-subnav a {
+      display: block;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 12px; line-height: 1.4;
+      text-transform: uppercase; letter-spacing: 0.06em;
+      color: #555; text-decoration: none;
+      padding: 8px 0;
+      border-bottom: 1px solid #eee;
+    }
+    body.home .docs-subnav a:last-child { border-bottom: 0; }
+    body.home .docs-subnav a:hover { color: var(--fg); background: var(--accent); }
+    body.home .docs-content { max-width: 720px; min-width: 0; }
+    @media (max-width: 900px) {
+      body.home .docs-layout { grid-template-columns: 1fr; gap: 32px; }
+      body.home .docs-subnav {
+        position: static; border-left: 0;
+        border-top: var(--border) solid var(--fg);
+        padding: 16px 0 0;
+      }
+      body.home .docs-subnav a { display: inline-block; margin-right: 14px; border-bottom: 0; padding: 4px 0; }
     }
 
     /* ---- Quickstart cards ---- */
@@ -141,6 +191,28 @@
     }
     body.home pre code { background: none; border: 0; padding: 0; color: inherit; }
 
+    /* ---- Conversation block (asking questions) ---- */
+    body.home .convo {
+      margin: 16px 0 24px;
+      border: var(--border) solid var(--fg);
+      background: #fafafa;
+    }
+    body.home .convo .turn {
+      padding: 16px 20px;
+      border-bottom: 2px solid var(--fg);
+    }
+    body.home .convo .turn:last-child { border-bottom: 0; }
+    body.home .convo .who {
+      display: inline-block;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.12em;
+      padding: 2px 8px; margin-bottom: 8px;
+    }
+    body.home .convo .turn.you .who { background: var(--fg); color: var(--bg); }
+    body.home .convo .turn.claude .who { background: var(--accent); color: var(--fg); }
+    body.home .convo p { margin: 0; font-size: 14px; line-height: 1.55; }
+
     /* ---- FAQ accordion-ish ---- */
     body.home details {
       border: 2px solid var(--fg); padding: 14px 18px; margin: 0 0 12px;
@@ -186,6 +258,7 @@
 
 <div class="wrap">
 
+  <%# ---------- WIDE TOPNAV (matches home width) ---------- %>
   <div class="topnav">
     <a class="brand" href="/">mcp-analytics</a>
     <%= link_to "← Back home", root_path %>
@@ -195,21 +268,39 @@
 
   <%# ---------- THE LOUD CALLOUT ---------- %>
   <aside class="agent-notice">
-    <span class="meta-label">Heads up — for humans</span>
+    <span class="meta-label">Heads up. For humans.</span>
     <h2>These docs are for <em>you</em>, not your agent.</h2>
     <p>
       Your AI assistant doesn't need to read this. Just paste your MCP connector URL into
       Claude / Cursor / ChatGPT once, and it'll figure out the rest by calling
       <code>list_sites</code>, <code>get_started_guide</code>, and friends. The docs
-      below are here for trust signal: so you, the human, can see what the thing does
+      below are here as trust signal, so you, the human, can see what the thing does
       before you wire it up.
     </p>
     <a class="cta" data-cta-location="top" href="<%= root_path(anchor: "signup-form") %>">Get your URL now →</a>
     <span class="agent-aside">// agents: skip this page, call <code>get_started_guide</code> instead.</span>
   </aside>
 
+  <%# ---------- TWO-COL LAYOUT: subnav + content ---------- %>
+  <div class="docs-layout">
+
+    <aside class="docs-subnav">
+      <span class="subnav-label">On this page</span>
+      <a href="#quickstart">Quickstart</a>
+      <a href="#mcp">What is MCP?</a>
+      <a href="#install">Installation</a>
+      <a href="#privacy">Privacy modes</a>
+      <a href="#asking">Asking questions</a>
+      <a href="#tools">The tools</a>
+      <a href="#events">Custom events</a>
+      <a href="#self-exclude">Self-exclude</a>
+      <a href="#faq">FAQ</a>
+    </aside>
+
+    <div class="docs-content">
+
   <%# ---------- QUICKSTART ---------- %>
-  <h2>Quickstart</h2>
+  <h2 id="quickstart">Quickstart</h2>
   <p>Three steps. Five minutes if your hosting is fast.</p>
   <div class="quickstart">
     <div class="step">
@@ -230,7 +321,7 @@
   </div>
 
   <%# ---------- WHAT IS MCP ---------- %>
-  <h2>What is MCP?</h2>
+  <h2 id="mcp">What is MCP?</h2>
   <p>
     MCP (<em>Model Context Protocol</em>) is the open spec Anthropic introduced for letting
     AI assistants talk to external services. Think USB for LLMs: one cable, every tool.
@@ -243,11 +334,39 @@
     your data. No tab to keep open. No "Configure" menu to hunt through.
   </p>
 
-  <%# ---------- PRIVACY MODES ---------- %>
-  <h2>Privacy modes</h2>
+  <%# ---------- INSTALLATION ---------- %>
+  <h2 id="install">Installation</h2>
   <p>
-    Pick the privacy posture per site. <strong>Cannot be changed after creation</strong>
-    — historical data integrity matters.
+    The signup itself is the hardest part, and it's still pretty easy. Once your MCP URL is in
+    your client, <strong>you stop doing things and your agent takes over</strong>.
+  </p>
+  <p>
+    Tell Claude (or whoever): <em>"Add mcp-analytics to this project."</em> That single
+    sentence is the whole install. Claude will:
+  </p>
+  <ul>
+    <li>Call <code>add_site</code> with your domain to get a <code>site_id</code></li>
+    <li>Call <code>get_tracking_snippet</code> to get the exact <code>&lt;script&gt;</code> tag</li>
+    <li>Find the right place in your codebase (layout file, base template, root component)</li>
+    <li>Drop the snippet in, commit it, push it</li>
+  </ul>
+  <p>
+    Total work for you: typing one sentence and clicking "approve" on the diff. After
+    deploy, the first pageview lands in our database within seconds.
+  </p>
+  <p>
+    <strong>For every new project after that</strong>: same one-liner. <em>"Add mcp-analytics."</em>
+    No new account, no new URL, no new dashboard. Claude already has your connector,
+    knows the snippet, knows your repo conventions. Three minutes for Claude. Zero
+    minutes for you. Custom events take another <em>"track signups, purchases, and
+    video plays as events"</em> sentence.
+  </p>
+
+  <%# ---------- PRIVACY MODES ---------- %>
+  <h2 id="privacy">Privacy modes</h2>
+  <p>
+    Pick a privacy posture per site. <strong>Cannot be changed after creation</strong>,
+    historical data integrity matters.
   </p>
   <table class="modes">
     <thead>
@@ -268,20 +387,20 @@
       <tr>
         <th>visitor_id</th>
         <td class="recommended">always 0</td>
-        <td>daily-rotating hash</td>
+        <td>daily-rotating hash<br><small>(IP + UA + site salt)</small></td>
         <td>persistent UUID</td>
       </tr>
       <tr>
-        <th>DNT respected</th>
-        <td class="recommended"><span class="yes">yes</span></td>
-        <td><span class="yes">yes</span></td>
-        <td><span class="no">no</span> (opt-in)</td>
+        <th>Session salt</th>
+        <td class="recommended">rotates every day</td>
+        <td>fixed per site</td>
+        <td>fixed per site</td>
       </tr>
       <tr>
-        <th>Cookie banner needed</th>
+        <th>Same-day visitor dedup</th>
         <td class="recommended"><span class="no">no</span></td>
-        <td><span class="no">no</span></td>
-        <td><span class="yes">yes</span> (your call)</td>
+        <td><span class="yes">yes</span></td>
+        <td><span class="yes">yes</span></td>
       </tr>
       <tr>
         <th>Cross-day visitor tracking</th>
@@ -295,17 +414,100 @@
         <td><span class="no">no</span></td>
         <td><span class="yes">yes</span></td>
       </tr>
+      <tr>
+        <th>Referrer path stored</th>
+        <td class="recommended"><span class="no">no</span></td>
+        <td><span class="yes">yes</span></td>
+        <td><span class="yes">yes</span></td>
+      </tr>
+      <tr>
+        <th>DNT respected</th>
+        <td class="recommended"><span class="yes">yes</span></td>
+        <td><span class="yes">yes</span></td>
+        <td><span class="no">no</span> (opt-in)</td>
+      </tr>
+      <tr>
+        <th>Cookie banner needed</th>
+        <td class="recommended"><span class="no">no</span></td>
+        <td><span class="no">no</span></td>
+        <td><span class="yes">yes</span> (your call)</td>
+      </tr>
     </tbody>
   </table>
   <p>
-    <strong>Strict</strong> is what you want for 95% of public-facing sites. Aggregate
-    answers, no banner, sleep at night. <strong>All</strong> is for when you've already
-    decided your business needs cross-session attribution and you're willing to handle
-    the consent banner — typical SaaS dashboards behind a login.
+    <strong>Strict</strong> is the right call for almost every public-facing site:
+    aggregate answers, no banner, sleep at night. You lose <em>"how many unique
+    people came today"</em> as a number, but session counts plus the rich client
+    signals (timezone, viewport, engagement) usually answer the same question
+    better.
+  </p>
+  <p>
+    <strong>Default</strong> trades a tiny bit of identifiability (a daily-rotating
+    hash of IP + UA, gone at midnight) for proper same-day visitor counts and full
+    referrer paths. Still no cookies, still no banner, still wipes itself daily.
+    Pick this if you genuinely need <em>"X unique visitors today"</em> as a metric.
+  </p>
+  <p>
+    <strong>All</strong> is for when you've already decided your business needs
+    cross-session attribution, LTV cohorts, repeat-visit analysis. Persistent cookies,
+    consent banner becomes your responsibility. Typical for SaaS dashboards behind a
+    login.
+  </p>
+
+  <%# ---------- ASKING QUESTIONS ---------- %>
+  <h2 id="asking">Asking questions</h2>
+  <p>
+    Once installed, you ask Claude (or your client of choice) anything you'd
+    normally hunt through a dashboard for. Plain English. No tool names.
+    No SQL. No Configure menus.
+  </p>
+
+  <div class="convo">
+    <div class="turn you">
+      <span class="who">You</span>
+      <p>How did yesterday go?</p>
+    </div>
+    <div class="turn claude">
+      <span class="who">Claude</span>
+      <p>
+        On <strong>your-site.com</strong> yesterday: 412 pageviews from 287 sessions,
+        bounce rate 64%, top page <code>/pricing</code> (89 views), top source
+        <code>news.ycombinator.com</code>. Up 23% versus the day before. 4 signup events.
+        12% of traffic was bots, mostly GPTBot and Claude-User.
+      </p>
+    </div>
+    <div class="turn you">
+      <span class="who">You</span>
+      <p>What should I do about the bounce rate?</p>
+    </div>
+    <div class="turn claude">
+      <span class="who">Claude</span>
+      <p>
+        Looking at engagement_overview: median time on /pricing is 8s, median scroll
+        depth 22%. People are bouncing before seeing the price grid. The grid sits
+        below a 600px hero. Want me to move the grid above the fold and ship it?
+      </p>
+    </div>
+    <div class="turn you">
+      <span class="who">You</span>
+      <p>Do it.</p>
+    </div>
+  </div>
+
+  <p>
+    That last bit is the actual unlock. Claude doesn't just <em>read</em> your analytics.
+    Once it knows what's wrong, it can edit your code, run your tests, commit, push.
+    Analytics-to-ship loop on autopilot. You stay in chat. You approve or reject. The
+    diff lands. The next pageview tells you if it worked.
+  </p>
+  <p>
+    You don't have to use it that way. Asking questions and getting answers is fine
+    on its own. But if you're already living in Claude, your analytics are now part
+    of the same loop as everything else you ship.
   </p>
 
   <%# ---------- THE TOOLS ---------- %>
-  <h2>The tools</h2>
+  <h2 id="tools">The tools</h2>
   <p>What your agent can call once your MCP URL is wired in.</p>
 
   <div class="tool-group">
@@ -327,7 +529,7 @@
   </div>
 
   <div class="tool-group">
-    <span class="group-label">Analytics — the daily questions</span>
+    <span class="group-label">Analytics / the daily questions</span>
     <dl>
       <dt><code>get_overview</code></dt>
       <dd>TL;DR for a period. Pageviews, sessions, bounce, top page, top source, bot share, top events. <em>This is the one your agent should call first when you ask "how did yesterday go?"</em></dd>
@@ -346,7 +548,7 @@
       <dt><code>event_details</code></dt>
       <dd>Drill into one event. Optional <code>group_by_property</code> to slice by a custom prop.</dd>
       <dt><code>compare_periods</code></dt>
-      <dd>"Was last week better than the week before?" — head-to-head metric comparison.</dd>
+      <dd>"Was last week better than the week before?" Head-to-head metric comparison.</dd>
     </dl>
   </div>
 
@@ -375,9 +577,9 @@
   </div>
 
   <%# ---------- CUSTOM EVENTS ---------- %>
-  <h2>Custom events</h2>
+  <h2 id="events">Custom events</h2>
   <p>
-    Pageviews are auto-tracked. Anything else you want — call <code>mcpa('track', ...)</code>
+    Pageviews are auto-tracked. Anything else you want, call <code>mcpa('track', ...)</code>
     in your code:
   </p>
   <pre><code>// somewhere in your app
@@ -385,12 +587,12 @@ window.mcpa('track', 'signup', { plan: 'pro' });
 window.mcpa('track', 'video_played', { duration_seconds: 42 });</code></pre>
   <p>
     Up to 20 properties per event. Strings, numbers, booleans only. Then ask Claude:
-    <em>"How many signups last week, broken down by plan?"</em> — it'll call
+    <em>"How many signups last week, broken down by plan?"</em> and it'll call
     <code>event_details</code> with <code>group_by_property: "plan"</code>.
   </p>
 
   <%# ---------- SELF-EXCLUDE ---------- %>
-  <h2>Self-exclude (for builders)</h2>
+  <h2 id="self-exclude">Self-exclude (for builders)</h2>
   <p>
     Don't poison your own analytics with your own visits. Once on each browser/device:
   </p>
@@ -402,14 +604,15 @@ window.mcpa('track', 'video_played', { duration_seconds: 42 });</code></pre>
   </p>
 
   <%# ---------- FAQ ---------- %>
-  <h2>FAQ</h2>
+  <h2 id="faq">FAQ</h2>
 
   <details>
     <summary>Why no dashboard?</summary>
     <p>
       Because dashboards are where data goes to die. You open it, scan the same
-      five widgets, close it. mcp-analytics turns the workflow inside-out: <em>ask
-      a question, get an answer</em>. The agent does the chart-reading for you.
+      five widgets, close it. mcp-analytics turns the workflow inside out:
+      <em>ask a question, get an answer</em>. The agent does the chart-reading
+      for you.
     </p>
   </details>
 
@@ -426,26 +629,22 @@ window.mcpa('track', 'video_played', { duration_seconds: 42 });</code></pre>
     <summary>How does the free tier work?</summary>
     <p>
       Free up to 100,000 hits per month, unlimited sites. No card. After that
-      we'll have paid tiers — but the free tier covers the vast majority of
+      we'll have paid tiers, but the free tier covers the vast majority of
       indie / side-project sites and we don't plan to take that away.
-    </p>
-  </details>
-
-  <details>
-    <summary>What about adblockers?</summary>
-    <p>
-      Tracker script is hosted at <code>t.mcp-analytics.com</code> — not in
-      the major adblock filter lists yet. Not a permanent guarantee. If
-      blocking becomes a problem we'll publish a server-side ingestion path
-      (Phase 4 on the roadmap).
     </p>
   </details>
 
   <details>
     <summary>Can I export my raw data?</summary>
     <p>
-      Aggregate exports are coming. Raw event-level export will be available on
-      paid tiers. We never sell or share your data, full stop.
+      Yes. Completely. Every row, every column, every event you've sent us.
+      No paywall, no API rate-limit, no "Enterprise tier" gate. Free users
+      and paid users get the same export. You can leave whenever you want
+      and take everything with you.
+    </p>
+    <p>
+      We don't lock you in. You'll stay because the product is good, not
+      because leaving is painful.
     </p>
   </details>
 
@@ -456,27 +655,26 @@ window.mcpa('track', 'video_played', { duration_seconds: 42 });</code></pre>
       User-Agent. Default analytics queries hide bots. Use
       <code>top_user_agents</code> and <code>traffic_class_breakdown</code> to
       see which AI agents (ChatGPT-User, Claude-User, GPTBot, ...) fetched
-      your content. Phase 2 will refine this into purpose-based buckets
-      (ai_search, ai_training, social_unfurl, ...).
+      your content. More refined buckets are on the roadmap.
     </p>
   </details>
 
   <details>
     <summary>OAuth?</summary>
     <p>
-      On the roadmap. Right now you paste a token-bearing MCP URL into your
-      client. Adds one minor step versus a click-to-authorize flow.
-      Phase 2 will replace this with proper OAuth 2.1 + PKCE. The current
-      tokens stay valid.
+      Coming. Right now you paste a token-bearing MCP URL into your client.
+      We'll replace this with proper OAuth 2.1 + PKCE. Existing tokens stay valid
+      after the switch.
     </p>
   </details>
 
   <details>
-    <summary>Where's the company based / who's behind this?</summary>
+    <summary>Where is my data stored?</summary>
     <p>
-      Spreenovate GmbH, Berlin. Built solo with Claude as pair programmer.
-      Servers in Hetzner Falkenstein (EU). See <%= link_to "privacy policy", privacy_path %> for the full data
-      controller info.
+      Hetzner Falkenstein, Germany. EU jurisdiction, GDPR scope. We never log
+      raw IP addresses to disk and we never share or sell your data. See the
+      <%= link_to "privacy policy", privacy_path %> for the full data-controller
+      breakdown and sub-processor list.
     </p>
   </details>
 
@@ -486,20 +684,11 @@ window.mcpa('track', 'video_played', { duration_seconds: 42 });</code></pre>
     <a data-cta-location="bottom" href="<%= root_path(anchor: "signup-form") %>">Get your MCP URL →</a>
   </div>
 
-  <script>
-    // Conversion signal: which CTA on /docs actually drives signups (top vs bottom).
-    (function () {
-      var mcpa = window.mcpa = window.mcpa || function () { (window.mcpa.q = window.mcpa.q || []).push(arguments); };
-      document.querySelectorAll("[data-cta-location]").forEach(function (a) {
-        a.addEventListener("click", function () {
-          mcpa('track', 'docs_cta_clicked', { location: a.getAttribute("data-cta-location") });
-        });
-      });
-    })();
-  </script>
+    </div><%# end .docs-content %>
+  </div><%# end .docs-layout %>
 
   <footer class="lp">
-    <span>© <%= Date.current.year %> Spreenovate GmbH</span>
+    <span>© <%= Date.current.year %> mcp-analytics</span>
     <span>
       <%= link_to "Home", root_path %> ·
       <%= link_to "Privacy", privacy_path %> ·
@@ -508,3 +697,15 @@ window.mcpa('track', 'video_played', { duration_seconds: 42 });</code></pre>
   </footer>
 
 </div>
+
+<script>
+  // Conversion signal: which CTA on /docs actually drives signups (top vs bottom).
+  (function () {
+    var mcpa = window.mcpa = window.mcpa || function () { (window.mcpa.q = window.mcpa.q || []).push(arguments); };
+    document.querySelectorAll("[data-cta-location]").forEach(function (a) {
+      a.addEventListener("click", function () {
+        mcpa('track', 'docs_cta_clicked', { location: a.getAttribute("data-cta-location") });
+      });
+    });
+  })();
+</script>
