@@ -33,7 +33,7 @@ class SiteTest < ActiveSupport::TestCase
   end
 
   test "rotate_salt! changes salt and sets timestamp" do
-    site = @user.sites.create!(domain: "r.com", privacy_mode: "default")
+    site = @user.sites.create!(domain: "r.com", privacy_mode: "balanced")
     old_salt = site.site_salt
     freeze_time do
       site.rotate_salt!

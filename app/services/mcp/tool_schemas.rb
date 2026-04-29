@@ -49,7 +49,7 @@ module Mcp
           type: "object",
           properties: {
             domain: { type: "string" },
-            privacy_mode: { type: "string", enum: %w[strict default all], default: "strict" }
+            privacy_mode: { type: "string", enum: %w[strict balanced all], default: "strict", description: "strict (recommended): no cookies, visitor_id always 0, salt rotates daily. balanced: no cookies, daily-rotating hash, same-day visitor dedup. all: persistent cookie, cross-session tracking, you handle the consent banner." }
           },
           required: [ "domain" ]
         },

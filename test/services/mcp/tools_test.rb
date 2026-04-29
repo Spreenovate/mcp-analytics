@@ -89,11 +89,16 @@ module Mcp
 
     test "add_site creates site and returns snippet" do
       assert_difference -> { @user.sites.count }, 1 do
-        result = auth_tools.add_site("domain" => "new.com", "privacy_mode" => "default")
+        result = auth_tools.add_site("domain" => "new.com", "privacy_mode" => "balanced")
         assert_match(/\A[a-z2-7]{8}\z/, result["site_id"])
-        assert_equal "default", result["privacy_mode"]
+        assert_equal "balanced", result["privacy_mode"]
         assert_includes result["tracking_snippet"], result["site_id"]
       end
+    end
+
+    test "add_site accepts legacy 'default' as alias for 'balanced'" do
+      result = auth_tools.add_site("domain" => "legacy.com", "privacy_mode" => "default")
+      assert_equal "balanced", result["privacy_mode"], "alias should normalize to canonical"
     end
 
     test "add_site rejects unknown privacy_mode" do
@@ -145,9 +150,9 @@ module Mcp
       assert_not_includes html, "data-respect-dnt"
     end
 
-    test "snippet for default mode has no mode-specific attributes" do
-      default = @user.sites.create!(domain: "d.com", privacy_mode: "default")
-      html = auth_tools.get_tracking_snippet("site_id" => default.site_id)["snippet_html"]
+    test "snippet for balanced mode has no mode-specific attributes" do
+      balanced = @user.sites.create!(domain: "d.com", privacy_mode: "balanced")
+      html = auth_tools.get_tracking_snippet("site_id" => balanced.site_id)["snippet_html"]
       assert_not_includes html, "data-persistent"
       assert_not_includes html, "data-respect-dnt"
     end

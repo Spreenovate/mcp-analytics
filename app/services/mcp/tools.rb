@@ -58,9 +58,12 @@ module Mcp
       raise ArgumentError, "domain required" if domain.empty?
 
       privacy_mode = (args["privacy_mode"] || "strict").to_s
-      unless Site::PRIVACY_MODES.include?(privacy_mode)
+      # Accept old 'default' name as alias; the model normalizes on save.
+      normalized = Site::PRIVACY_MODE_ALIASES.fetch(privacy_mode, privacy_mode)
+      unless Site::PRIVACY_MODES.include?(normalized)
         raise ArgumentError, "privacy_mode must be one of #{Site::PRIVACY_MODES.inspect}"
       end
+      privacy_mode = normalized
 
       if @user.active_sites.where("created_at > ?", 24.hours.ago).count >= 10
         raise RateLimitedError, "site creation rate limit reached (10/day)"

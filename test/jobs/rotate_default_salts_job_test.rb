@@ -5,8 +5,8 @@ class RotateDefaultSaltsJobTest < ActiveSupport::TestCase
     @user = User.create!(email: "salt@example.com")
   end
 
-  test "rotates salts of default-mode sites older than 365 days" do
-    stale = @user.sites.create!(domain: "stale.com", privacy_mode: "default",
+  test "rotates salts of balanced-mode sites older than 365 days" do
+    stale = @user.sites.create!(domain: "stale.com", privacy_mode: "balanced",
                                 salt_rotated_at: 400.days.ago)
     old_salt = stale.site_salt
 
@@ -36,8 +36,8 @@ class RotateDefaultSaltsJobTest < ActiveSupport::TestCase
     assert_equal old_salt, allsite.reload.site_salt
   end
 
-  test "leaves default-mode sites younger than 365 days alone" do
-    fresh = @user.sites.create!(domain: "fresh.com", privacy_mode: "default",
+  test "leaves balanced-mode sites younger than 365 days alone" do
+    fresh = @user.sites.create!(domain: "fresh.com", privacy_mode: "balanced",
                                 salt_rotated_at: 30.days.ago)
     old_salt = fresh.site_salt
 

@@ -144,7 +144,8 @@ func (s *Server) handleEvent(w http.ResponseWriter, r *http.Request) {
 		sessionID = session.StrictSessionID(
 			s.DailySalt.Current(), []byte(site.SiteSalt), ip, userAgent, site.SiteID)
 		visitorID = 0
-	case "default":
+	case "balanced", "default":
+		// 'default' kept as alias for legacy rows. Same logic as 'balanced'.
 		sessionID = session.DefaultSessionID([]byte(site.SiteSalt), ip, userAgent, site.SiteID)
 		visitorID = session.DefaultVisitorID([]byte(site.SiteSalt), ip, userAgent, site.SiteID)
 	case "all":

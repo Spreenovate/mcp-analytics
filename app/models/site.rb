@@ -1,5 +1,9 @@
 class Site < ApplicationRecord
-  PRIVACY_MODES = %w[strict default all].freeze
+  PRIVACY_MODES = %w[strict balanced all].freeze
+  # 'default' was the original name for 'balanced'. Accepted as input alias
+  # so old MCP clients and existing prod rows keep working. Normalized to
+  # 'balanced' at write time via the before_validation hook.
+  PRIVACY_MODE_ALIASES = { "default" => "balanced" }.freeze
   SITE_ID_ALPHABET = "abcdefghijklmnopqrstuvwxyz234567".freeze # Crockford-ish base32
 
   belongs_to :user
@@ -9,6 +13,7 @@ class Site < ApplicationRecord
   validates :privacy_mode, inclusion: { in: PRIVACY_MODES }
   validates :site_salt, presence: true
 
+  before_validation :normalize_privacy_mode
   before_validation :assign_site_id, on: :create
   before_validation :assign_site_salt, on: :create
 
@@ -32,6 +37,11 @@ class Site < ApplicationRecord
   end
 
   private
+
+  def normalize_privacy_mode
+    return if privacy_mode.blank?
+    self.privacy_mode = PRIVACY_MODE_ALIASES.fetch(privacy_mode, privacy_mode)
+  end
 
   def assign_site_id
     return if site_id.present?
