@@ -36,12 +36,12 @@
   <p>
     mcp-analytics has two very different relationships with personal data:
   </p>
-  <h3>(a) You — the mcp-analytics account holder</h3>
+  <h3>(a) You, the mcp-analytics account holder</h3>
   <p>
     We store your <strong>email address</strong> and an <strong>API token</strong>.
     Legal basis: contract performance (Art. 6 (1)(b) GDPR). The email is used for
-    transactional messages only — verification link, occasional service notices,
-    plan-limit warnings. No marketing.
+    transactional messages only (verification link, occasional service notices,
+    plan-limit warnings). No marketing.
   </p>
   <h3>(b) Visitors of <em>your</em> sites</h3>
   <p>
@@ -52,46 +52,59 @@
   </p>
 
   <h2>3. What we collect from your visitors</h2>
-  <p>The data set per pageview / event is the same regardless of privacy mode:</p>
+  <p>The data set per pageview / event:</p>
   <ul>
     <li>Timestamp, event name, URL path, URL host</li>
-    <li>Referrer host (and path in <code>default</code>/<code>all</code> modes)</li>
+    <li>Referrer host (and path in <code>balanced</code>/<code>all</code> modes)</li>
     <li>UTM parameters (source, medium, campaign)</li>
-    <li>Browser, browser version, operating system, device class</li>
+    <li>Browser, browser version, operating system, device class (parsed from User-Agent)</li>
+    <li>The full User-Agent string (used for bot classification; not personal data on its own per Art. 4 GDPR)</li>
+    <li>Timezone, browser language, viewport size, color-scheme preference (from privacy-clean Web APIs)</li>
+    <li>Engagement time and scroll depth (fired on page-leave)</li>
+    <li>A traffic-class label (<code>user</code> or <code>bot</code>)</li>
     <li>Custom event properties you choose to send via <code>mcpa('track', …)</code></li>
   </ul>
   <p>
-    We do <strong>not</strong> store the raw IP address, the raw User-Agent, or
-    any directly-identifying data. Geo data (country/region/city) is reserved in
-    the schema but currently empty.
+    <strong>Raw IP addresses are not persisted in the analytics database.</strong>
+    The IP is used in-memory to compute the visitor/session hash and is then
+    discarded. Geo data (country/region/city) is reserved in the schema but
+    currently empty.
+  </p>
+  <p>
+    <strong>One narrow exception</strong>: if an IP repeatedly sends invalid
+    payloads (unknown site IDs) to our ingest endpoint, we record that IP in a
+    separate <code>abuse_events</code> table for anti-abuse purposes (legal
+    basis: Art. 6 (1)(f) GDPR, legitimate interest in service availability).
+    These records are not used for analytics and are not joined with visitor
+    data.
   </p>
 
   <h2>4. How visitors are counted (and why no banner)</h2>
-  <p>The <code>strict</code> privacy mode (default for new sites) computes the visitor identifier as:</p>
+  <p>The <code>strict</code> privacy mode (recommended default for new sites) computes the visitor identifier as:</p>
   <div class="panel">
     <p><code>session_id = SHA-256(daily_salt + site_salt + ip + user_agent + site_id)</code></p>
-    <p>The <code>daily_salt</code> rotates at 00:00 UTC. The IP and User-Agent are <strong>discarded</strong> after the hash is computed — they are never written to disk.</p>
+    <p>The <code>daily_salt</code> rotates at 00:00 UTC. The IP is used in-memory for this hash and then dropped; it is not written to the analytics database. The User-Agent is stored separately as a string (used for bot classification, not for re-identification).</p>
   </div>
   <p>
     Result: visitors cannot be re-identified across days; no cookie, no
     localStorage, no fingerprint that survives midnight UTC. The German DSK and
     the EDPB consider this sufficient anonymisation to skip the cookie banner
-    requirement (ePrivacy / TTDSG § 25). The <code>default</code> mode uses a
+    requirement (ePrivacy / TTDSG § 25). The <code>balanced</code> mode uses a
     yearly-rotating site-salt instead and is also cookie-free; the
     <code>all</code> mode opts into a 2-year first-party cookie and shifts
     consent responsibility to you (the site owner).
   </p>
   <p>
     Do-Not-Track signals are honoured as a hard opt-out in <code>strict</code>
-    and <code>default</code>; in <code>all</code> mode the site owner decides.
+    and <code>balanced</code>; in <code>all</code> mode the site owner decides.
   </p>
 
   <h2>5. Where the data lives</h2>
   <ul>
-    <li><strong>Hetzner Online GmbH</strong> (Falkenstein, Germany) — primary infrastructure. <a href="https://www.hetzner.com/legal/privacy-policy" rel="noopener">Hetzner privacy policy</a>.</li>
-    <li><strong>ClickHouse</strong> on the same Hetzner host — analytics events. 2-year TTL on raw events.</li>
-    <li><strong>SQLite</strong> on the same Hetzner host — accounts, sites, usage counters.</li>
-    <li><strong>Postmark (ActiveCampaign LLC)</strong>, USA — transactional email delivery. Transfer is covered by Standard Contractual Clauses (SCCs) and DPF certification. Only your email address and the verification-link content are transmitted.</li>
+    <li><strong>Hetzner Online GmbH</strong> (Falkenstein, Germany): primary infrastructure. <a href="https://www.hetzner.com/legal/privacy-policy" rel="noopener">Hetzner privacy policy</a>.</li>
+    <li><strong>ClickHouse</strong> on the same Hetzner host: analytics events. 2-year TTL on raw events.</li>
+    <li><strong>SQLite</strong> on the same Hetzner host: accounts, sites, usage counters.</li>
+    <li><strong>Postmark (ActiveCampaign LLC)</strong>, USA: transactional email delivery. Transfer is covered by Standard Contractual Clauses (SCCs) and DPF certification. Only your email address and the verification-link content are transmitted.</li>
   </ul>
 
   <h2>6. Retention</h2>
@@ -107,10 +120,10 @@
   <ul>
     <li>access your data (Art. 15 GDPR)</li>
     <li>correct it (Art. 16)</li>
-    <li>erase it (Art. 17) — write us at <%= mail_to "info@mcp-analytics.com" %></li>
+    <li>erase it (Art. 17): write us at <%= mail_to "info@mcp-analytics.com" %></li>
     <li>port it out (Art. 20)</li>
     <li>object to processing (Art. 21)</li>
-    <li>complain to a supervisory authority — for Berlin that is the
+    <li>complain to a supervisory authority. For Berlin that is the
       <a href="https://www.datenschutz-berlin.de/" rel="noopener">Berliner Beauftragte für Datenschutz und Informationsfreiheit</a>.</li>
   </ul>
 
@@ -118,7 +131,7 @@
   <p>
     The mcp-analytics website (the one you are reading) does not set any
     tracking cookies. Rails sets a single transactional session cookie
-    (<code>_mcp_analytics_session</code>) only after you submit a form — it
+    (<code>_mcp_analytics_session</code>) only after you submit a form. It
     expires when you close the browser.
   </p>
 

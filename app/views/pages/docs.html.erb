@@ -671,10 +671,11 @@ window.mcpa('track', 'video_played', { duration_seconds: 42 });</code></pre>
   <details>
     <summary>Where is my data stored?</summary>
     <p>
-      Hetzner Falkenstein, Germany. EU jurisdiction, GDPR scope. We never log
-      raw IP addresses to disk and we never share or sell your data. See the
-      <%= link_to "privacy policy", privacy_path %> for the full data-controller
-      breakdown and sub-processor list.
+      In Germany, EU jurisdiction, GDPR scope. Visitor IPs are hashed
+      in-memory for the session identifier and then dropped, so they
+      don't land in the analytics database. We never share or sell your
+      data. See the <%= link_to "privacy policy", privacy_path %> for the
+      full data-controller breakdown and sub-processor list.
     </p>
   </details>
 
