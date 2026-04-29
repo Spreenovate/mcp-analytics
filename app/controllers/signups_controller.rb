@@ -10,6 +10,7 @@ class SignupsController < ApplicationController
     else
       flash[:alert] = result.error_message
       flash[:email] = params[:email].to_s
+      flash[:signup_status] = result.status.to_s # 'invalid' | 'rate_limited' — picked up by tracker on home
       redirect_to root_path(anchor: "signup-form")
     end
   end

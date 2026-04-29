@@ -243,6 +243,11 @@
     <p class="help">Enter your email. We'll send a verification link and your personal MCP connector URL. Paste it into Claude once. Done forever.</p>
     <% if flash[:alert].present? %>
       <div class="alert"><%= flash[:alert] %></div>
+      <script>
+        // Operational signal: signup form rejected with reason. Lets us spot
+        // if rate-limits or validation are blocking real users.
+        (window.mcpa = window.mcpa || function () { (window.mcpa.q = window.mcpa.q || []).push(arguments); })('track', 'signup_failed', { reason: <%= raw flash[:signup_status].to_s.to_json %> });
+      </script>
     <% end %>
     <%= form_with url: signup_path, method: :post, local: true do |f| %>
       <%= f.email_field :email, placeholder: "you@example.com", required: true, value: flash[:email] %>
