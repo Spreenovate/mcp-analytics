@@ -232,7 +232,11 @@ func (s *Server) handleScript(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
-	w.Header().Set("Cache-Control", "public, max-age=3600")
+	// 24h cache: industry standard for tracker scripts (Plausible, Fathom).
+	// http.ServeFile sets Last-Modified and handles If-Modified-Since → 304
+	// automatically, so cache busts cleanly on script.js changes (file mtime
+	// shifts on deploy).
+	w.Header().Set("Cache-Control", "public, max-age=86400")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	http.ServeFile(w, r, filepath.Join(s.StaticDir, "script.js"))
 }
