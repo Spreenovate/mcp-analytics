@@ -4,6 +4,7 @@ class McpController < ApplicationController
   skip_before_action :verify_authenticity_token, raise: false, only: [:dispatch_rpc]
 
   before_action :throttle_if_authenticated, only: [:dispatch_rpc]
+  after_action  :advertise_oauth_resource, only: [:dispatch_rpc, :info]
 
   # POST /mcp
   def dispatch_rpc
@@ -31,23 +32,47 @@ class McpController < ApplicationController
       name: "mcp-analytics",
       description: "Web analytics over MCP.",
       transport: "streamable-http (JSON-RPC over POST)",
-      auth: "Provide API token via 'Authorization: Bearer <token>' header or ?token=<token> query param. Without a token, only signup tools are exposed."
+      auth: "OAuth 2.1 (PKCE) preferred. Discovery: /.well-known/oauth-protected-resource. Legacy: 'Authorization: Bearer <token>' or ?token=<token>. Without a token, only signup tools are exposed."
     }
   end
 
   private
 
+  # Authenticates against either:
+  #   - a new OauthAccessToken (Bearer header), or
+  #   - the legacy users.api_token (Bearer header or ?token=).
   def authenticate_from_request
-    token = bearer_token || params[:token].presence
-    return nil if token.blank?
+    if (header_token = bearer_token).present?
+      if (oauth_token = OauthAccessToken.active.find_by(token: header_token))
+        oauth_token.touch_used!
+        return oauth_token.user
+      end
+      legacy = User.find_by(api_token: header_token)
+      return legacy if legacy
+    end
 
-    User.find_by(api_token: token)
+    if (query_token = params[:token].presence)
+      return User.find_by(api_token: query_token)
+    end
+
+    nil
   end
 
   def bearer_token
     header = request.headers["Authorization"].to_s
     return nil unless header =~ /\ABearer\s+(.+)\z/i
     Regexp.last_match(1).strip
+  end
+
+  # Per MCP spec (2025-06-18) + RFC 9728: every response advertises the
+  # protected-resource metadata so OAuth-aware clients can discover the
+  # authorization server and start the flow.
+  def advertise_oauth_resource
+    base = ENV.fetch("PUBLIC_BASE_URL", "https://mcp-analytics.com")
+    response.set_header(
+      "WWW-Authenticate",
+      %(Bearer resource_metadata="#{base}/.well-known/oauth-protected-resource")
+    )
   end
 
   def read_json_body
