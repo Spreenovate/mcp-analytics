@@ -1,0 +1,33 @@
+<% content_for(:title, "Authorize #{@client.client_name} | mcp-analytics") %>
+<%= render "shared_styles" %>
+
+<div class="wrap">
+  <h1><%= @client.client_name %> wants <span class="accent">access</span>.</h1>
+
+  <div class="panel">
+    <span class="label">Logged in as</span>
+    <div class="row"><%= @user.email %></div>
+  </div>
+
+  <div class="panel">
+    <span class="label">Permissions requested</span>
+    <ul class="scopes">
+      <li>Read your sites and analytics data</li>
+      <li>Add new sites to your account</li>
+      <li>Remove sites you've registered</li>
+    </ul>
+  </div>
+
+  <%= form_with url: oauth_consent_decide_path(request_token: @auth_request.request_token), method: :post, local: true, class: "oauth-form" do |f| %>
+    <%= hidden_field_tag :grant, @grant %>
+    <div class="actions">
+      <button type="submit" name="decision" value="allow" class="btn">Allow</button>
+      <button type="submit" name="decision" value="deny" class="btn secondary">Deny</button>
+    </div>
+  <% end %>
+
+  <div class="footer-link">
+    Allowing creates a long-lived access token for <%= @client.client_name %>.
+    Revoke any time by deleting the connector in your client.
+  </div>
+</div>

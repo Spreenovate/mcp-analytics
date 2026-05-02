@@ -1,0 +1,23 @@
+<% content_for(:title, "Check your inbox | mcp-analytics") %>
+<%= render "shared_styles" %>
+
+<div class="wrap">
+  <h1>Check your <span class="accent">inbox</span>.</h1>
+  <p class="lead">
+    We sent a verification link to:
+  </p>
+  <div class="panel">
+    <div class="label">Email sent</div>
+    <div class="row"><%= @email %></div>
+  </div>
+
+  <p class="lead">
+    Click the link in the email to continue authorizing
+    <strong><%= @client.client_name %></strong>. You can close this tab — the
+    next step opens from the email.
+  </p>
+
+  <div class="footer-link">
+    Didn't get the email? Check spam.
+  </div>
+</div>

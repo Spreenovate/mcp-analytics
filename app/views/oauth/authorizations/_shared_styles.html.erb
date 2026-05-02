@@ -1,0 +1,64 @@
+<% content_for(:body_class, "home") %>
+<% content_for :head do %>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+  <style>
+    body.home {
+      --bg: #ffffff; --fg: #0a0a0a; --accent: #00FF88; --border: 3px;
+      background: var(--bg); color: var(--fg);
+      font-family: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+      font-size: 16px; line-height: 1.55;
+    }
+    body.home main { max-width: none; padding: 0; margin: 0; }
+    body.home .wrap { max-width: 720px; margin: 0 auto; padding: 80px 28px 120px; }
+    body.home h1 {
+      font-family: "Space Grotesk", sans-serif; font-weight: 900;
+      font-size: clamp(36px, 6vw, 64px); line-height: 1;
+      letter-spacing: -0.03em; margin: 0 0 24px;
+      text-transform: uppercase;
+    }
+    body.home h1 .accent {
+      background: var(--accent); padding: 0 0.15em; margin-left: -0.15em;
+    }
+    body.home p.lead { font-size: 18px; margin: 0 0 32px; }
+    body.home .panel {
+      border: var(--border) solid var(--fg);
+      padding: 24px; margin: 0 0 24px;
+    }
+    body.home .panel .label {
+      display: inline-block; font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.12em;
+      background: var(--fg); color: var(--bg); padding: 4px 8px;
+      margin-bottom: 14px;
+    }
+    body.home .panel .row { font-family: "JetBrains Mono", monospace; font-weight: 700; font-size: 15px; word-break: break-all; }
+    body.home .panel .row + .row { margin-top: 8px; }
+    body.home .panel .row .key { color: #666; font-weight: 400; margin-right: 6px; }
+    body.home form.oauth-form { display: flex; flex-direction: column; gap: 16px; margin: 0 0 24px; }
+    body.home input[type=email] {
+      font: inherit; padding: 14px 16px; border: var(--border) solid var(--fg);
+      background: #fff; width: 100%;
+    }
+    body.home button.btn {
+      font: inherit; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+      padding: 14px 22px; border: var(--border) solid var(--fg);
+      background: var(--fg); color: var(--accent); cursor: pointer;
+    }
+    body.home button.btn.secondary { background: var(--bg); color: var(--fg); }
+    body.home button.btn:hover { background: var(--accent); color: var(--fg); }
+    body.home .actions { display: flex; gap: 12px; flex-wrap: wrap; }
+    body.home .alert {
+      border: var(--border) solid #c00;
+      padding: 14px 16px; margin: 0 0 24px;
+      background: #ffecec; color: #800;
+      font-weight: 700;
+    }
+    body.home ul.scopes { padding-left: 20px; margin: 12px 0 0; }
+    body.home ul.scopes li { margin: 4px 0; }
+    body.home .footer-link { margin-top: 48px; font-size: 13px; color: #666; }
+    body.home a { color: var(--fg); }
+    body.home a:hover { background: var(--accent); }
+  </style>
+<% end %>

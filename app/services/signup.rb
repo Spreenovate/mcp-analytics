@@ -19,7 +19,7 @@ class Signup
     def rate_limited? = status == :rate_limited
   end
 
-  def self.start(email:, ip: nil)
+  def self.start(email:, ip: nil, oauth_authorization_request: nil)
     email = email.to_s.strip.downcase
 
     return Result.new(status: :invalid, error_message: "Email required.")            if email.empty?
@@ -44,7 +44,13 @@ class Signup
       return Result.new(status: :rate_limited, error_message: "Too many signups for this email domain today.")
     end
 
-    verification = EmailVerification.create!(email: email)
+    verification = EmailVerification.create!(
+      email: email,
+      oauth_authorization_request: oauth_authorization_request
+    )
+    if oauth_authorization_request
+      oauth_authorization_request.update!(email: email)
+    end
     VerificationMailer.verify(verification).deliver_later
     Result.new(status: :ok, verification: verification)
   end
