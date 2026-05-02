@@ -28,7 +28,7 @@ module Oauth
     def protected_resource
       render json: {
         resource: "#{base_url}/mcp",
-        authorization_servers: [base_url],
+        authorization_servers: [ base_url ],
         scopes_supported: %w[read:analytics],
         bearer_methods_supported: %w[header],
         resource_documentation: "#{base_url}/"

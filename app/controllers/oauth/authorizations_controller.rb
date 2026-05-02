@@ -8,7 +8,7 @@ module Oauth
   #                                     (signed grant in URL replaces a session cookie)
   #  POST /oauth/consent/:token        approve/deny → redirect back to client with code|error
   class AuthorizationsController < ApplicationController
-    skip_before_action :verify_authenticity_token, raise: false, only: [:start]
+    skip_before_action :verify_authenticity_token, raise: false, only: [ :start ]
 
     GRANT_VERIFIER_PURPOSE = "oauth_consent_grant".freeze
     GRANT_LIFETIME = 10.minutes
@@ -156,7 +156,7 @@ module Oauth
     def append_query(uri, **query)
       parsed = URI.parse(uri)
       existing = URI.decode_www_form(parsed.query.to_s)
-      query.compact.each { |k, v| existing << [k.to_s, v.to_s] }
+      query.compact.each { |k, v| existing << [ k.to_s, v.to_s ] }
       parsed.query = URI.encode_www_form(existing)
       parsed.to_s
     end
