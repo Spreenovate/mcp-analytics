@@ -22,7 +22,7 @@ module Oauth
         client_name: attrs["client_name"].presence || "Unnamed Client",
         client_uri: attrs["client_uri"],
         logo_uri: attrs["logo_uri"],
-        scope: attrs["scope"].presence || "read:analytics",
+        scope: requested_or_default_scope(attrs["scope"]),
         token_endpoint_auth_method: attrs["token_endpoint_auth_method"].presence || "none",
         dynamically_registered: true
       )
@@ -36,6 +36,15 @@ module Oauth
     end
 
     private
+
+    # DCR clients may register with no scope (ChatGPT does this) or with a
+    # scope string we don't recognise. Fall back to the full vocabulary so
+    # the consent screen can ask the user explicitly, instead of silently
+    # downgrading to read-only and surprising them later.
+    def requested_or_default_scope(requested)
+      return Scopes::DEFAULT if requested.blank?
+      Scopes.valid?(requested) ? requested : Scopes::DEFAULT
+    end
 
     def parse_body
       raw = request.body.read

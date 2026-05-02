@@ -30,7 +30,7 @@ class OauthFullFlowTest < ActionDispatch::IntegrationTest
       code_challenge: challenge,
       code_challenge_method: "S256",
       state: "state-abc",
-      scope: "read:analytics"
+      scope: "analytics:read"
     }
     assert_response :success
     auth_request = OauthAuthorizationRequest.last

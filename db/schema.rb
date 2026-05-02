@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_02_100005) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_02_100006) do
   create_table "abuse_events", force: :cascade do |t|
     t.datetime "blocked_until", null: false
     t.datetime "created_at", null: false
@@ -54,6 +54,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_02_100005) do
     t.datetime "expires_at", null: false
     t.datetime "last_used_at"
     t.integer "oauth_client_id", null: false
+    t.string "resource"
     t.datetime "revoked_at"
     t.string "scope", null: false
     t.string "token", null: false
@@ -74,6 +75,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_02_100005) do
     t.datetime "expires_at", null: false
     t.integer "oauth_client_id", null: false
     t.string "redirect_uri", null: false
+    t.string "resource"
     t.string "scope", null: false
     t.datetime "updated_at", null: false
     t.datetime "used_at"
@@ -94,7 +96,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_02_100005) do
     t.integer "oauth_client_id", null: false
     t.string "redirect_uri", null: false
     t.string "request_token", null: false
-    t.string "scope", default: "read:analytics", null: false
+    t.string "resource"
+    t.string "scope", default: "analytics:read analytics:manage", null: false
     t.string "state"
     t.datetime "updated_at", null: false
     t.integer "user_id"
@@ -114,7 +117,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_02_100005) do
     t.string "logo_uri"
     t.text "redirect_uris", null: false
     t.string "response_types", default: "code", null: false
-    t.string "scope", default: "read:analytics", null: false
+    t.string "scope", default: "analytics:read analytics:manage", null: false
     t.string "token_endpoint_auth_method", default: "none", null: false
     t.datetime "updated_at", null: false
     t.index ["client_id"], name: "index_oauth_clients_on_client_id", unique: true

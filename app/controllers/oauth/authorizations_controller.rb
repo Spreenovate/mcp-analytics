@@ -34,8 +34,20 @@ module Oauth
       return redirect_with_error(redirect_uri, "invalid_request", "code_challenge_method must be S256") unless code_challenge_method == "S256"
 
       requested_scope = params[:scope].presence || @client.scope
-      unless valid_scope?(requested_scope)
-        return redirect_with_error(redirect_uri, "invalid_scope", "Only 'read:analytics' is supported")
+      unless Scopes.valid?(requested_scope)
+        return redirect_with_error(redirect_uri, "invalid_scope",
+          "Supported scopes: #{Scopes::ALL.join(', ')}")
+      end
+
+      # RFC 8707 (Resource Indicators for OAuth 2.0). The MCP spec mandates
+      # that clients send `resource` and that we bind tokens to the
+      # specific MCP server they're meant for. Optional on the wire today
+      # (clients in the wild are inconsistent), required to match canonical
+      # if present.
+      requested_resource = params[:resource].presence
+      if requested_resource && requested_resource != canonical_resource
+        return redirect_with_error(redirect_uri, "invalid_target",
+          "resource must equal #{canonical_resource}")
       end
 
       @auth_request = OauthAuthorizationRequest.create!(
@@ -43,6 +55,7 @@ module Oauth
         redirect_uri: redirect_uri,
         state: params[:state],
         scope: requested_scope,
+        resource: requested_resource,
         code_challenge: code_challenge,
         code_challenge_method: code_challenge_method
       )
@@ -99,6 +112,7 @@ module Oauth
             oauth_client: @auth_request.oauth_client,
             redirect_uri: @auth_request.redirect_uri,
             scope: @auth_request.scope,
+            resource: @auth_request.resource,
             code_challenge: @auth_request.code_challenge,
             code_challenge_method: @auth_request.code_challenge_method
           )
@@ -148,8 +162,8 @@ module Oauth
       true
     end
 
-    def valid_scope?(scope)
-      scope.to_s.split(/\s+/).all? { |s| s == "read:analytics" }
+    def canonical_resource
+      "#{Oauth::BaseUrl.value}/mcp"
     end
 
     def render_param_error(code, description)

@@ -11,7 +11,7 @@ class OauthAuthorizationRequestTest < ActiveSupport::TestCase
       redirect_uri: "https://x.example/cb",
       code_challenge: "challenge",
       code_challenge_method: "S256",
-      scope: "read:analytics"
+      scope: "analytics:read"
     }
     OauthAuthorizationRequest.create!(defaults.merge(overrides))
   end
@@ -26,7 +26,7 @@ class OauthAuthorizationRequestTest < ActiveSupport::TestCase
   test "rejects unsupported code_challenge_method" do
     r = OauthAuthorizationRequest.new(
       oauth_client: @client, redirect_uri: "https://x.example/cb",
-      code_challenge: "x", code_challenge_method: "plain", scope: "read:analytics"
+      code_challenge: "x", code_challenge_method: "plain", scope: "analytics:read"
     )
     assert_not r.valid?
   end

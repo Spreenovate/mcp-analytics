@@ -6,7 +6,7 @@ module Oauth
       body = {
         client_name: "My Cool Client",
         redirect_uris: ["https://app.example.com/callback"],
-        scope: "read:analytics"
+        scope: "analytics:read"
       }.to_json
 
       assert_difference -> { OauthClient.count }, 1 do

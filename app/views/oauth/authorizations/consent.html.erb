@@ -20,9 +20,13 @@
   <div class="panel">
     <span class="label">Permissions requested</span>
     <ul class="scopes">
-      <li>Read your sites and analytics data</li>
-      <li>Add new sites to your account</li>
-      <li>Remove sites you've registered</li>
+      <% granted = Oauth::Scopes.parse(@auth_request.scope) %>
+      <% if granted.include?(Oauth::Scopes::READ) %>
+        <li><strong>Read</strong> your sites and analytics data</li>
+      <% end %>
+      <% if granted.include?(Oauth::Scopes::MANAGE) %>
+        <li><strong>Manage</strong> sites: add new sites and remove existing ones</li>
+      <% end %>
     </ul>
   </div>
 

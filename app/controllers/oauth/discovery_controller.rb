@@ -15,7 +15,7 @@ module Oauth
         authorization_endpoint: "#{base_url}/oauth/authorize",
         token_endpoint: "#{base_url}/oauth/token",
         registration_endpoint: "#{base_url}/oauth/register",
-        scopes_supported: %w[read:analytics],
+        scopes_supported: Scopes::ALL,
         response_types_supported: %w[code],
         grant_types_supported: %w[authorization_code],
         code_challenge_methods_supported: %w[S256],
@@ -29,7 +29,7 @@ module Oauth
       render json: {
         resource: "#{base_url}/mcp",
         authorization_servers: [ base_url ],
-        scopes_supported: %w[read:analytics],
+        scopes_supported: Scopes::ALL,
         bearer_methods_supported: %w[header],
         resource_documentation: "#{base_url}/"
       }

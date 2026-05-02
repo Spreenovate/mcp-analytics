@@ -1,14 +1,17 @@
 module Mcp
   # Dispatches JSON-RPC 2.0 requests per the MCP spec.
-  # Tools exposed depend on whether the caller is authenticated — the
-  # controller passes user: nil for anonymous sessions.
+  # Tools exposed depend on the AuthContext: anonymous callers see signup
+  # tools only; authenticated callers see analytics tools filtered by their
+  # OAuth scopes (legacy api_token callers are treated as having all scopes).
   class Server
     PROTOCOL_VERSION = "2025-06-18".freeze
     SERVER_INFO = { name: "mcp-analytics", version: "0.1.0" }.freeze
 
-    def initialize(user: nil, request: nil)
-      @user = user
-      @tools = Tools.new(user: user, request: request)
+    def initialize(auth: nil, request: nil, user: nil)
+      # `user:` kept for tests/callers that still pass a User; treated as
+      # legacy auth so the full scope vocabulary is granted.
+      @auth = auth || (user ? AuthContext.legacy(user) : AuthContext.anonymous)
+      @tools = Tools.new(user: @auth.user, request: request)
     end
 
     def handle(rpc)
@@ -22,7 +25,7 @@ module Mcp
       when "notifications/initialized", "notifications/cancelled"
         nil # notifications have no response
       when "tools/list"
-        ok(id, { tools: visible_tools })
+        ok(id, { tools: visible_tools_for_wire })
       when "tools/call"
         handle_tool_call(id, params)
       when "ping"
@@ -39,12 +42,30 @@ module Mcp
         protocolVersion: PROTOCOL_VERSION,
         serverInfo: SERVER_INFO,
         capabilities: { tools: { listChanged: false } },
-        instructions: @user ? authed_instructions : unauthed_instructions
+        instructions: @auth.authenticated? ? authed_instructions : unauthed_instructions
       }
     end
 
+    # Tools the caller is allowed to see in their current auth state.
+    # Filters by:
+    #   - authenticated vs not (the schema list itself)
+    #   - oauth_forbidden tools hidden from OAuth-issued tokens
+    #   - tools whose required scope is not granted
     def visible_tools
-      @user ? ToolSchemas::AUTHENTICATED : ToolSchemas::UNAUTHENTICATED
+      base = @auth.authenticated? ? ToolSchemas::AUTHENTICATED : ToolSchemas::UNAUTHENTICATED
+      base.select { |schema| tool_allowed?(schema) }
+    end
+
+    def visible_tools_for_wire
+      visible_tools.map { |schema| schema.except(*ToolSchemas::INTERNAL_KEYS) }
+    end
+
+    def tool_allowed?(schema)
+      return false if @auth.oauth? && schema[ToolSchemas::OAUTH_FORBIDDEN_KEY]
+
+      required = schema[ToolSchemas::SCOPE_KEY]
+      return true if required.nil? # tool has no scope requirement
+      @auth.granted?(required)
     end
 
     def handle_tool_call(id, params)
@@ -53,8 +74,10 @@ module Mcp
 
       schema = visible_tools.find { |t| t[:name] == name }
       unless schema
-        return ok(id, tool_error("Tool '#{name}' is not available. " \
-          "#{@user ? 'Call tools/list for the full list.' : 'Authenticate by providing your API token to unlock analytics tools.'}"))
+        # Distinguish "tool exists but you can't use it" from "no such tool"
+        # to give the client an actionable error.
+        full_schema = (ToolSchemas::AUTHENTICATED + ToolSchemas::UNAUTHENTICATED).find { |t| t[:name] == name }
+        return ok(id, tool_error(reason_for_unavailable(name, full_schema)))
       end
 
       begin
@@ -72,6 +95,27 @@ module Mcp
         Rails.logger.error("MCP tool '#{name}' failed: #{e.class}: #{e.message}\n#{e.backtrace.first(5).join("\n")}")
         ok(id, tool_error("Internal error while calling '#{name}'."))
       end
+    end
+
+    def reason_for_unavailable(name, schema)
+      return "Tool '#{name}' is not available. Call tools/list for the full list." if schema.nil?
+
+      if !@auth.authenticated?
+        return "Tool '#{name}' requires authentication. Provide your API token or complete the OAuth flow."
+      end
+
+      if @auth.oauth? && schema[ToolSchemas::OAUTH_FORBIDDEN_KEY]
+        return "Tool '#{name}' is not available to OAuth-issued tokens. " \
+               "Use the legacy ?token=<api_token> URL if you need to rotate your master API token."
+      end
+
+      required = schema[ToolSchemas::SCOPE_KEY]
+      if required && !@auth.granted?(required)
+        return "Tool '#{name}' requires the '#{required}' scope. " \
+               "Re-authorize this connector with that scope to use it."
+      end
+
+      "Tool '#{name}' is not available."
     end
 
     def tool_success(result)

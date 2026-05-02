@@ -23,7 +23,7 @@ module Oauth
         code_challenge: @challenge,
         code_challenge_method: "S256",
         state: "csrf-token-xyz",
-        scope: "read:analytics"
+        scope: "analytics:read"
       }.merge(overrides)
     end
 
@@ -69,6 +69,39 @@ module Oauth
       get oauth_authorize_path, params: authorize_params(code_challenge_method: "plain")
       assert_response :redirect
       assert_match(/error=invalid_request/, response.location)
+    end
+
+    test "GET /oauth/authorize with unknown scope redirects with invalid_scope" do
+      get oauth_authorize_path, params: authorize_params(scope: "drop:database")
+      assert_response :redirect
+      assert_match(/error=invalid_scope/, response.location)
+    end
+
+    test "GET /oauth/authorize accepts both analytics:read and analytics:manage" do
+      get oauth_authorize_path, params: authorize_params(scope: "analytics:read analytics:manage")
+      assert_response :success
+      assert_equal "analytics:read analytics:manage", OauthAuthorizationRequest.last.scope
+    end
+
+    # RFC 8707 (Resource Indicators)
+    test "GET /oauth/authorize persists matching resource parameter" do
+      get oauth_authorize_path,
+          params: authorize_params(resource: "#{Oauth::BaseUrl.value}/mcp")
+      assert_response :success
+      assert_equal "#{Oauth::BaseUrl.value}/mcp", OauthAuthorizationRequest.last.resource
+    end
+
+    test "GET /oauth/authorize rejects mismatched resource with invalid_target" do
+      get oauth_authorize_path,
+          params: authorize_params(resource: "https://other-mcp-server.example/mcp")
+      assert_response :redirect
+      assert_match(/error=invalid_target/, response.location)
+    end
+
+    test "GET /oauth/authorize without resource still works (backward compat)" do
+      get oauth_authorize_path, params: authorize_params
+      assert_response :success
+      assert_nil OauthAuthorizationRequest.last.resource
     end
 
     # --- POST /oauth/authorize/start ---------------------------------------

@@ -719,7 +719,8 @@ in einem Rutsch):
      &state=<csrf-token>
      &code_challenge=<pkce-challenge>
      &code_challenge_method=S256
-     &scope=read:analytics
+     &scope=analytics:read%20analytics:manage
+     &resource=https%3A%2F%2Fmcp-analytics.com%2Fmcp
         ↓
 6. Server prüft Session:
    - eingeloggt? → direkt zu Schritt 9 (Consent-Screen)
@@ -804,8 +805,13 @@ Neue Bausteine:
   das eigentlich, aber wir starten mit hartkodierten Clients (Claude,
   Cursor). DCR kann nachgezogen werden, wenn ChatGPT-Listing tatsächlich
   ansteht.
-- **Ein Scope reicht**: `read:analytics`. Granulare Scopes (nur lesen vs.
-  Sites verwalten) erst wenn Use-Case dafür da ist.
+- **Zwei Scopes mit Enforcement**: `analytics:read` (Analytics-Queries
+  + list_sites) und `analytics:manage` (zusätzlich add_site/remove_site).
+  Tools/list filtert nach gewährten Scopes; tools/call verweigert mit
+  klarer Fehlermeldung wenn Scope fehlt. `regenerate_api_token` ist
+  zusätzlich für OAuth-Sessions komplett unsichtbar (sonst könnte ein
+  OAuth-Client den Master-Token extrahieren und damit den OAuth-Lifecycle
+  umgehen).
 - **Refresh-Tokens optional**. Access-Token mit langer Gültigkeit (z.B.
   1 Jahr) reicht für MVP-Niveau, Settings-Revoke ist die Notbremse.
 - **PKCE Pflicht**, kein Secret-basierter Flow für public Clients.

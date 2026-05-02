@@ -25,5 +25,15 @@ module Oauth
       assert_kind_of Array, body["authorization_servers"]
       assert_includes body["bearer_methods_supported"], "header"
     end
+
+    test "advertises analytics:read and analytics:manage scopes" do
+      get "/.well-known/oauth-authorization-server"
+      assert_includes JSON.parse(response.body)["scopes_supported"], "analytics:read"
+      assert_includes JSON.parse(response.body)["scopes_supported"], "analytics:manage"
+
+      get "/.well-known/oauth-protected-resource"
+      assert_includes JSON.parse(response.body)["scopes_supported"], "analytics:read"
+      assert_includes JSON.parse(response.body)["scopes_supported"], "analytics:manage"
+    end
   end
 end

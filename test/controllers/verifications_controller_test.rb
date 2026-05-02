@@ -46,7 +46,7 @@ class VerificationsControllerTest < ActionDispatch::IntegrationTest
       oauth_client: client,
       redirect_uri: "https://app.example/cb",
       code_challenge: "x", code_challenge_method: "S256",
-      scope: "read:analytics"
+      scope: "analytics:read"
     )
     v = EmailVerification.create!(email: "oauth@example.com",
                                    oauth_authorization_request: auth_request)
@@ -70,7 +70,7 @@ class VerificationsControllerTest < ActionDispatch::IntegrationTest
       oauth_client: client,
       redirect_uri: "https://app.example/cb",
       code_challenge: "x", code_challenge_method: "S256",
-      scope: "read:analytics"
+      scope: "analytics:read"
     )
     v = EmailVerification.create!(email: "existing@example.com",
                                    oauth_authorization_request: auth_request)

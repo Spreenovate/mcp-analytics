@@ -13,6 +13,7 @@ module Oauth
       client_id      = params[:client_id].to_s
       redirect_uri   = params[:redirect_uri].to_s
       code_verifier  = params[:code_verifier].to_s
+      resource       = params[:resource].presence
 
       return render_error("invalid_request", "code is required")          if code_value.empty?
       return render_error("invalid_request", "client_id is required")     if client_id.empty?
@@ -22,6 +23,12 @@ module Oauth
       # PKCE verifier shape per RFC 7636 §4.1
       unless code_verifier.length.between?(43, 128) && code_verifier.match?(/\A[A-Za-z0-9\-._~]+\z/)
         return render_error("invalid_request", "code_verifier must be 43-128 chars from the unreserved set")
+      end
+
+      # RFC 8707: if the client sent a resource at /authorize, it MUST send
+      # the same value here, and the value MUST be our canonical MCP URI.
+      if resource && resource != canonical_resource
+        return render_error("invalid_target", "resource must equal #{canonical_resource}")
       end
 
       client = OauthClient.find_by(client_id: client_id)
@@ -37,23 +44,26 @@ module Oauth
         next [ :expired ] unless auth_code.usable?
         next [ :redirect_mismatch ] unless auth_code.redirect_uri == redirect_uri
         next [ :pkce_fail ] unless auth_code.verify_pkce!(code_verifier)
+        next [ :resource_mismatch ] if auth_code.resource.present? && resource.present? && auth_code.resource != resource
 
         auth_code.mark_used!
         access_token = OauthAccessToken.create!(
           user: auth_code.user,
           oauth_client: client,
-          scope: auth_code.scope
+          scope: auth_code.scope,
+          resource: auth_code.resource || resource
         )
         [ :ok ]
       end
 
       case result.first
-      when :unknown           then return render_error("invalid_grant", "Unknown authorization code")
-      when :wrong_client      then return render_error("invalid_grant", "Authorization code was not issued to this client")
-      when :used              then return render_error("invalid_grant", "Authorization code has been used")
-      when :expired           then return render_error("invalid_grant", "Authorization code expired")
-      when :redirect_mismatch then return render_error("invalid_grant", "redirect_uri mismatch")
-      when :pkce_fail         then return render_error("invalid_grant", "PKCE verification failed")
+      when :unknown            then return render_error("invalid_grant", "Unknown authorization code")
+      when :wrong_client       then return render_error("invalid_grant", "Authorization code was not issued to this client")
+      when :used               then return render_error("invalid_grant", "Authorization code has been used")
+      when :expired            then return render_error("invalid_grant", "Authorization code expired")
+      when :redirect_mismatch  then return render_error("invalid_grant", "redirect_uri mismatch")
+      when :pkce_fail          then return render_error("invalid_grant", "PKCE verification failed")
+      when :resource_mismatch  then return render_error("invalid_target", "resource does not match the value used at /authorize")
       end
 
       response.set_header("Cache-Control", "no-store")
@@ -67,6 +77,10 @@ module Oauth
     end
 
     private
+
+    def canonical_resource
+      "#{Oauth::BaseUrl.value}/mcp"
+    end
 
     def render_error(code, description)
       # Per RFC 6749 §5.2, errors are 400 with cache-control: no-store.

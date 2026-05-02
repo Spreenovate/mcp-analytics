@@ -10,7 +10,7 @@ class OauthAuthorizationCodeTest < ActiveSupport::TestCase
     c = OauthAuthorizationCode.create!(
       user: @user, oauth_client: @client,
       redirect_uri: "https://x.example/cb",
-      scope: "read:analytics",
+      scope: "analytics:read",
       code_challenge: "abc", code_challenge_method: "S256"
     )
     assert c.code.length > 20
@@ -24,7 +24,7 @@ class OauthAuthorizationCodeTest < ActiveSupport::TestCase
     c = OauthAuthorizationCode.create!(
       user: @user, oauth_client: @client,
       redirect_uri: "https://x.example/cb",
-      scope: "read:analytics",
+      scope: "analytics:read",
       code_challenge: challenge, code_challenge_method: "S256"
     )
     assert c.verify_pkce!(verifier)
@@ -36,7 +36,7 @@ class OauthAuthorizationCodeTest < ActiveSupport::TestCase
     c = OauthAuthorizationCode.create!(
       user: @user, oauth_client: @client,
       redirect_uri: "https://x.example/cb",
-      scope: "read:analytics",
+      scope: "analytics:read",
       code_challenge: "abc", code_challenge_method: "S256"
     )
     assert c.usable?

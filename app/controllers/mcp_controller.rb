@@ -8,11 +8,11 @@ class McpController < ApplicationController
 
   # POST /mcp
   def dispatch_rpc
-    user = authenticate_from_request
+    auth = authenticate_from_request
 
     # If a token WAS presented but didn't authenticate, return 401 with an
     # error code so OAuth-aware clients trigger their re-auth flow.
-    if user.nil? && bearer_token_presented?
+    if auth.user.nil? && bearer_token_presented?
       response.set_header(
         "WWW-Authenticate",
         %(Bearer error="invalid_token", resource_metadata="#{Oauth::BaseUrl.value}/.well-known/oauth-protected-resource")
@@ -26,10 +26,10 @@ class McpController < ApplicationController
     return head(:bad_request) if body.nil?
 
     if body.is_a?(Array)
-      responses = body.map { |r| Mcp::Server.new(user: user, request: request).handle(r) }.compact
+      responses = body.map { |r| Mcp::Server.new(auth: auth, request: request).handle(r) }.compact
       render json: responses
     else
-      response = Mcp::Server.new(user: user, request: request).handle(body)
+      response = Mcp::Server.new(auth: auth, request: request).handle(body)
       if response.nil?
         head :accepted
       else
@@ -53,21 +53,26 @@ class McpController < ApplicationController
   # Authenticates against either:
   #   - a new OauthAccessToken (Bearer header), or
   #   - the legacy users.api_token (Bearer header or ?token=).
+  #
+  # Returns an Mcp::AuthContext (always non-nil; with user=nil when no
+  # credentials matched) so downstream code can branch on auth_method
+  # without re-parsing the request.
   def authenticate_from_request
     if (header_token = bearer_token).present?
       if (oauth_token = OauthAccessToken.active.find_by(token: header_token))
         oauth_token.touch_used!
-        return oauth_token.user
+        return Mcp::AuthContext.oauth(oauth_token)
       end
-      legacy = User.find_by(api_token: header_token)
-      return legacy if legacy
+      if (legacy = User.find_by(api_token: header_token))
+        return Mcp::AuthContext.legacy(legacy)
+      end
     end
 
-    if (query_token = params[:token].presence)
-      return User.find_by(api_token: query_token)
+    if (query_token = params[:token].presence) && (legacy = User.find_by(api_token: query_token))
+      return Mcp::AuthContext.legacy(legacy)
     end
 
-    nil
+    Mcp::AuthContext.anonymous
   end
 
   def bearer_token

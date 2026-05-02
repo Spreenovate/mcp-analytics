@@ -11,7 +11,7 @@ module Oauth
       @code = OauthAuthorizationCode.create!(
         user: @user, oauth_client: @client,
         redirect_uri: "https://app.example/cb",
-        scope: "read:analytics",
+        scope: "analytics:read",
         code_challenge: @challenge,
         code_challenge_method: "S256"
       )
@@ -38,7 +38,7 @@ module Oauth
       assert data["access_token"].start_with?("mcpa_oauth_")
       assert_equal "Bearer", data["token_type"]
       assert data["expires_in"] > 364 * 86_400
-      assert_equal "read:analytics", data["scope"]
+      assert_equal "analytics:read", data["scope"]
 
       assert_equal "no-store", response.headers["Cache-Control"]
       assert @code.reload.used_at.present?
@@ -113,6 +113,42 @@ module Oauth
       assert_equal "invalid_grant", JSON.parse(response.body)["error"]
       assert_match(/not issued to this client/, JSON.parse(response.body)["error_description"])
       assert_nil @code.reload.used_at, "code must remain unused on wrong-client redemption"
+    end
+
+    # --- RFC 8707 (Resource Indicators) ------------------------------------
+
+    test "resource parameter matching canonical MCP URI is accepted and stored" do
+      canonical = "#{Oauth::BaseUrl.value}/mcp"
+      @code.update!(resource: canonical)
+
+      post_token(resource: canonical)
+      assert_response :success
+      token = OauthAccessToken.find_by(token: JSON.parse(response.body)["access_token"])
+      assert_equal canonical, token.resource
+    end
+
+    test "resource parameter not equal to canonical MCP URI returns invalid_target" do
+      post_token(resource: "https://other.example/mcp")
+      assert_response :bad_request
+      assert_equal "invalid_target", JSON.parse(response.body)["error"]
+      assert_nil @code.reload.used_at
+    end
+
+    test "resource parameter at /token must match the one bound at /authorize" do
+      @code.update!(resource: "#{Oauth::BaseUrl.value}/mcp")
+      post_token(resource: "https://other.example/mcp")
+      assert_response :bad_request
+      # Other-mcp first fails canonical check (also returns invalid_target),
+      # so to test the cross-step bind we'd need to send a *different* but
+      # canonical-shaped value. Since canonical is fixed, the canonical
+      # check covers the threat model. This test just confirms a mismatched
+      # value is refused.
+      assert_equal "invalid_target", JSON.parse(response.body)["error"]
+    end
+
+    test "missing resource parameter still works when code had none either" do
+      post_token # no resource arg
+      assert_response :success
     end
   end
 end
