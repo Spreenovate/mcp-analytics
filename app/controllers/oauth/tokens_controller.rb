@@ -39,6 +39,8 @@ module Oauth
         )
       end
 
+      response.set_header("Cache-Control", "no-store")
+      response.set_header("Pragma", "no-cache")
       render json: {
         access_token: access_token.token,
         token_type: "Bearer",

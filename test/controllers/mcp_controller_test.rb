@@ -134,6 +134,45 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     assert_response :bad_request
   end
 
+  # --- OAuth integration --------------------------------------------------
+
+  test "WWW-Authenticate header points at protected-resource metadata" do
+    get "/mcp"
+    assert_match %r{Bearer resource_metadata="[^"]+/\.well-known/oauth-protected-resource"},
+                 response.headers["WWW-Authenticate"]
+  end
+
+  test "valid OAuth access token authenticates and unlocks tools" do
+    client = OauthClient.create!(client_name: "X", redirect_uri_list: ["https://x.example/cb"])
+    token  = OauthAccessToken.create!(user: @user, oauth_client: client, scope: "read:analytics")
+
+    rpc_call("tools/list", headers: { "Authorization" => "Bearer #{token.token}" })
+    assert_response :success
+    names = json_body["result"]["tools"].map { |t| t["name"] }
+    assert_includes names, "list_sites"
+    assert token.reload.last_used_at.present?, "should touch last_used_at"
+  end
+
+  test "revoked OAuth access token does not authenticate" do
+    client = OauthClient.create!(client_name: "X", redirect_uri_list: ["https://x.example/cb"])
+    token  = OauthAccessToken.create!(user: @user, oauth_client: client, scope: "read:analytics")
+    token.revoke!
+
+    rpc_call("tools/list", headers: { "Authorization" => "Bearer #{token.token}" })
+    names = json_body["result"]["tools"].map { |t| t["name"] }
+    assert_not_includes names, "list_sites"
+  end
+
+  test "expired OAuth access token does not authenticate" do
+    client = OauthClient.create!(client_name: "X", redirect_uri_list: ["https://x.example/cb"])
+    token  = OauthAccessToken.create!(user: @user, oauth_client: client, scope: "read:analytics",
+                                       expires_at: 1.minute.ago)
+
+    rpc_call("tools/list", headers: { "Authorization" => "Bearer #{token.token}" })
+    names = json_body["result"]["tools"].map { |t| t["name"] }
+    assert_not_includes names, "list_sites"
+  end
+
   private
 
   def rpc(method, params: {}, token: nil)

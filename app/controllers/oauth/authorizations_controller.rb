@@ -107,7 +107,7 @@ module Oauth
     # is clicked, then redirect to /oauth/consent/:token?grant=...
     def self.mint_grant(auth_request, user)
       Rails.application.message_verifier(GRANT_VERIFIER_PURPOSE).generate(
-        { rid: auth_request.id, uid: user.id },
+        { "rid" => auth_request.id, "uid" => user.id },
         expires_in: GRANT_LIFETIME
       )
     end
@@ -123,7 +123,7 @@ module Oauth
 
       grant = params[:grant].to_s
       payload = Rails.application.message_verifier(GRANT_VERIFIER_PURPOSE).verified(grant)
-      unless payload.is_a?(Hash) && payload[:rid] == @auth_request.id && payload[:uid] == @auth_request.user_id
+      unless payload.is_a?(Hash) && payload["rid"] == @auth_request.id && payload["uid"] == @auth_request.user_id
         render :expired, status: :gone
         return false
       end

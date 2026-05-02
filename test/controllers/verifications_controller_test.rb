@@ -36,4 +36,49 @@ class VerificationsControllerTest < ActionDispatch::IntegrationTest
     end
     assert_response :gone, "second hit should be 'expired' (already used)"
   end
+
+  # --- OAuth-flow integration ---------------------------------------------
+
+  test "verify with OAuth context redirects to /oauth/consent with grant" do
+    client = OauthClient.create!(client_name: "TestApp",
+                                  redirect_uri_list: ["https://app.example/cb"])
+    auth_request = OauthAuthorizationRequest.create!(
+      oauth_client: client,
+      redirect_uri: "https://app.example/cb",
+      code_challenge: "x", code_challenge_method: "S256",
+      scope: "read:analytics"
+    )
+    v = EmailVerification.create!(email: "oauth@example.com",
+                                   oauth_authorization_request: auth_request)
+
+    assert_difference -> { User.count }, 1 do
+      get verify_path(token: v.verify_token)
+    end
+    assert_response :redirect
+    assert_match(%r{/oauth/consent/}, response.location)
+    assert_includes response.location, "grant="
+
+    user = User.find_by(email: "oauth@example.com")
+    assert_equal user.id, auth_request.reload.user_id
+  end
+
+  test "verify with OAuth context for existing user reuses the user" do
+    existing = User.create!(email: "existing@example.com", email_verified_at: Time.current)
+    client = OauthClient.create!(client_name: "TestApp",
+                                  redirect_uri_list: ["https://app.example/cb"])
+    auth_request = OauthAuthorizationRequest.create!(
+      oauth_client: client,
+      redirect_uri: "https://app.example/cb",
+      code_challenge: "x", code_challenge_method: "S256",
+      scope: "read:analytics"
+    )
+    v = EmailVerification.create!(email: "existing@example.com",
+                                   oauth_authorization_request: auth_request)
+
+    assert_no_difference -> { User.count } do
+      get verify_path(token: v.verify_token)
+    end
+    assert_response :redirect
+    assert_equal existing.id, auth_request.reload.user_id
+  end
 end
