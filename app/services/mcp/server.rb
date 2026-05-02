@@ -82,14 +82,14 @@ module Mcp
       structured = result.is_a?(Array) ? { "items" => result } : result
 
       {
-        content: [{ type: "text", text: JSON.pretty_generate(result) }],
+        content: [ { type: "text", text: JSON.pretty_generate(result) } ],
         structuredContent: structured,
         isError: false
       }
     end
 
     def tool_error(message)
-      { content: [{ type: "text", text: message }], isError: true }
+      { content: [ { type: "text", text: message } ], isError: true }
     end
 
     def ok(id, result)

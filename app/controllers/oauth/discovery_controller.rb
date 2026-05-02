@@ -38,7 +38,7 @@ module Oauth
     private
 
     def base_url
-      ENV.fetch("PUBLIC_BASE_URL", "https://mcp-analytics.com")
+      Oauth::BaseUrl.value
     end
   end
 end

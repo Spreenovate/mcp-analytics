@@ -4,6 +4,14 @@
 <div class="wrap">
   <h1><%= @client.client_name %> wants <span class="accent">access</span>.</h1>
 
+  <% if @client.dynamically_registered? %>
+    <div class="alert">
+      ⚠ <strong>Unverified third-party app.</strong> This client registered
+      itself with mcp-analytics — we have not reviewed it. Only proceed if
+      you trust the source that sent you here.
+    </div>
+  <% end %>
+
   <div class="panel">
     <span class="label">Logged in as</span>
     <div class="row"><%= @user.email %></div>

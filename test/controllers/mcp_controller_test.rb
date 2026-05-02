@@ -75,10 +75,19 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     assert_includes names, "list_sites"
   end
 
-  test "invalid token falls back to unauthenticated tools" do
+  test "invalid token returns 401 + WWW-Authenticate with error=invalid_token" do
     rpc_call("tools/list", headers: { "Authorization" => "Bearer mcpa_garbage" })
+    assert_response :unauthorized
+    assert_match %r{Bearer error="invalid_token"}, response.headers["WWW-Authenticate"]
+    assert_match %r{resource_metadata=}, response.headers["WWW-Authenticate"]
+  end
+
+  test "no token returns anonymous tools list (not 401)" do
+    rpc_call("tools/list", headers: {})
+    assert_response :success
     names = json_body["result"]["tools"].map { |t| t["name"] }
     assert_not_includes names, "list_sites"
+    assert_includes names, "register_account"
   end
 
   # --- tools/call dispatch -------------------------------------------------
@@ -153,24 +162,24 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     assert token.reload.last_used_at.present?, "should touch last_used_at"
   end
 
-  test "revoked OAuth access token does not authenticate" do
-    client = OauthClient.create!(client_name: "X", redirect_uri_list: ["https://x.example/cb"])
+  test "revoked OAuth access token returns 401" do
+    client = OauthClient.create!(client_name: "X", redirect_uri_list: [ "https://x.example/cb" ])
     token  = OauthAccessToken.create!(user: @user, oauth_client: client, scope: "read:analytics")
     token.revoke!
 
     rpc_call("tools/list", headers: { "Authorization" => "Bearer #{token.token}" })
-    names = json_body["result"]["tools"].map { |t| t["name"] }
-    assert_not_includes names, "list_sites"
+    assert_response :unauthorized
+    assert_match %r{Bearer error="invalid_token"}, response.headers["WWW-Authenticate"]
   end
 
-  test "expired OAuth access token does not authenticate" do
-    client = OauthClient.create!(client_name: "X", redirect_uri_list: ["https://x.example/cb"])
+  test "expired OAuth access token returns 401" do
+    client = OauthClient.create!(client_name: "X", redirect_uri_list: [ "https://x.example/cb" ])
     token  = OauthAccessToken.create!(user: @user, oauth_client: client, scope: "read:analytics",
                                        expires_at: 1.minute.ago)
 
     rpc_call("tools/list", headers: { "Authorization" => "Bearer #{token.token}" })
-    names = json_body["result"]["tools"].map { |t| t["name"] }
-    assert_not_includes names, "list_sites"
+    assert_response :unauthorized
+    assert_match %r{Bearer error="invalid_token"}, response.headers["WWW-Authenticate"]
   end
 
   private

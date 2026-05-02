@@ -10,7 +10,7 @@ module Mcp
         inputSchema: {
           type: "object",
           properties: { email: { type: "string", description: "User's email address." } },
-          required: ["email"]
+          required: [ "email" ]
         }
       },
       {
@@ -40,7 +40,7 @@ module Mcp
             domain: { type: "string" },
             privacy_mode: { type: "string", enum: %w[strict default all], default: "strict" }
           },
-          required: ["domain"]
+          required: [ "domain" ]
         }
       },
       {
@@ -49,7 +49,7 @@ module Mcp
         inputSchema: {
           type: "object",
           properties: { site_id: { type: "string" } },
-          required: ["site_id"]
+          required: [ "site_id" ]
         }
       },
       {
@@ -58,7 +58,7 @@ module Mcp
         inputSchema: {
           type: "object",
           properties: { site_id: { type: "string" } },
-          required: ["site_id"]
+          required: [ "site_id" ]
         }
       },
       {
@@ -70,7 +70,7 @@ module Mcp
             site_id: { type: "string" },
             period: { type: "string", default: "last_7_days" }
           },
-          required: ["site_id"]
+          required: [ "site_id" ]
         }
       },
       {
@@ -84,7 +84,7 @@ module Mcp
             period: { type: "string", default: "last_7_days" },
             granularity: { type: "string", enum: %w[hour day week], default: "day" }
           },
-          required: ["site_id", "metric"]
+          required: [ "site_id", "metric" ]
         }
       },
       {
@@ -97,7 +97,7 @@ module Mcp
             period: { type: "string", default: "last_7_days" },
             limit: { type: "integer", default: 10 }
           },
-          required: ["site_id"]
+          required: [ "site_id" ]
         }
       },
       {
@@ -110,7 +110,7 @@ module Mcp
             period: { type: "string", default: "last_7_days" },
             limit: { type: "integer", default: 10 }
           },
-          required: ["site_id"]
+          required: [ "site_id" ]
         }
       },
       {
@@ -123,7 +123,7 @@ module Mcp
             period: { type: "string", default: "last_7_days" },
             limit: { type: "integer", default: 10 }
           },
-          required: ["site_id"]
+          required: [ "site_id" ]
         }
       },
       {
@@ -137,7 +137,7 @@ module Mcp
             period: { type: "string", default: "last_7_days" },
             limit: { type: "integer", default: 10 }
           },
-          required: ["site_id", "dimension"]
+          required: [ "site_id", "dimension" ]
         }
       },
       {
@@ -149,7 +149,7 @@ module Mcp
             site_id: { type: "string" },
             period: { type: "string", default: "last_7_days" }
           },
-          required: ["site_id"]
+          required: [ "site_id" ]
         }
       },
       {
@@ -163,7 +163,7 @@ module Mcp
             period: { type: "string", default: "last_7_days" },
             group_by_property: { type: "string" }
           },
-          required: ["site_id", "event_name"]
+          required: [ "site_id", "event_name" ]
         }
       },
       {
@@ -177,7 +177,7 @@ module Mcp
             period_a: { type: "string" },
             period_b: { type: "string" }
           },
-          required: ["site_id", "metric", "period_a", "period_b"]
+          required: [ "site_id", "metric", "period_a", "period_b" ]
         }
       },
       {
@@ -191,7 +191,7 @@ module Mcp
             limit: { type: "integer", default: 25 },
             traffic_class: { type: "string", enum: %w[user bot] }
           },
-          required: ["site_id"]
+          required: [ "site_id" ]
         }
       },
       {
@@ -203,7 +203,7 @@ module Mcp
             site_id: { type: "string" },
             period: { type: "string", default: "last_7_days" }
           },
-          required: ["site_id"]
+          required: [ "site_id" ]
         }
       },
       {

@@ -1,14 +1,26 @@
 class McpController < ApplicationController
   # MCP is a JSON-RPC endpoint. Skip CSRF because clients are programmatic and
   # authenticate with a bearer token or URL token param, not a session cookie.
-  skip_before_action :verify_authenticity_token, raise: false, only: [:dispatch_rpc]
+  skip_before_action :verify_authenticity_token, raise: false, only: [ :dispatch_rpc ]
 
-  before_action :throttle_if_authenticated, only: [:dispatch_rpc]
-  after_action  :advertise_oauth_resource, only: [:dispatch_rpc, :info]
+  before_action :throttle_if_authenticated, only: [ :dispatch_rpc ]
+  after_action  :advertise_oauth_resource, only: [ :dispatch_rpc, :info ]
 
   # POST /mcp
   def dispatch_rpc
     user = authenticate_from_request
+
+    # If a token WAS presented but didn't authenticate, return 401 with an
+    # error code so OAuth-aware clients trigger their re-auth flow.
+    if user.nil? && bearer_token_presented?
+      response.set_header(
+        "WWW-Authenticate",
+        %(Bearer error="invalid_token", resource_metadata="#{Oauth::BaseUrl.value}/.well-known/oauth-protected-resource")
+      )
+      return render(json: { jsonrpc: "2.0", id: nil,
+                            error: { code: -32001, message: "Invalid or expired bearer token" } },
+                    status: :unauthorized)
+    end
 
     body = read_json_body
     return head(:bad_request) if body.nil?
@@ -64,11 +76,17 @@ class McpController < ApplicationController
     Regexp.last_match(1).strip
   end
 
+  def bearer_token_presented?
+    bearer_token.present? || params[:token].present?
+  end
+
   # Per MCP spec (2025-06-18) + RFC 9728: every response advertises the
   # protected-resource metadata so OAuth-aware clients can discover the
   # authorization server and start the flow.
   def advertise_oauth_resource
-    base = ENV.fetch("PUBLIC_BASE_URL", "https://mcp-analytics.com")
+    # Don't clobber a 401's invalid_token-tagged header.
+    return if response.headers["WWW-Authenticate"].present?
+    base = Oauth::BaseUrl.value
     response.set_header(
       "WWW-Authenticate",
       %(Bearer resource_metadata="#{base}/.well-known/oauth-protected-resource")

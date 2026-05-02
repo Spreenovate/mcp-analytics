@@ -19,24 +19,41 @@ module Oauth
       return render_error("invalid_request", "redirect_uri is required")  if redirect_uri.empty?
       return render_error("invalid_request", "code_verifier is required") if code_verifier.empty?
 
+      # PKCE verifier shape per RFC 7636 §4.1
+      unless code_verifier.length.between?(43, 128) && code_verifier.match?(/\A[A-Za-z0-9\-._~]+\z/)
+        return render_error("invalid_request", "code_verifier must be 43-128 chars from the unreserved set")
+      end
+
       client = OauthClient.find_by(client_id: client_id)
       return render_error("invalid_client", "Unknown client_id") unless client
 
-      auth_code = OauthAuthorizationCode.find_by(code: code_value, oauth_client_id: client.id)
-      return render_error("invalid_grant", "Unknown authorization code")          unless auth_code
-      return render_error("invalid_grant", "Authorization code has been used")    if auth_code.used_at.present?
-      return render_error("invalid_grant", "Authorization code expired")          unless auth_code.usable?
-      return render_error("invalid_grant", "redirect_uri mismatch")               unless auth_code.redirect_uri == redirect_uri
-      return render_error("invalid_grant", "PKCE verification failed")            unless auth_code.verify_pkce!(code_verifier)
-
       access_token = nil
-      ActiveRecord::Base.transaction do
+      result = ActiveRecord::Base.transaction do
+        # Row-lock the code so two concurrent redemptions can't both succeed.
+        auth_code = OauthAuthorizationCode.lock.find_by(code: code_value)
+        next [ :unknown ] unless auth_code
+        next [ :wrong_client ] unless auth_code.oauth_client_id == client.id
+        next [ :used ]    if auth_code.used_at.present?
+        next [ :expired ] unless auth_code.usable?
+        next [ :redirect_mismatch ] unless auth_code.redirect_uri == redirect_uri
+        next [ :pkce_fail ] unless auth_code.verify_pkce!(code_verifier)
+
         auth_code.mark_used!
         access_token = OauthAccessToken.create!(
           user: auth_code.user,
           oauth_client: client,
           scope: auth_code.scope
         )
+        [ :ok ]
+      end
+
+      case result.first
+      when :unknown           then return render_error("invalid_grant", "Unknown authorization code")
+      when :wrong_client      then return render_error("invalid_grant", "Authorization code was not issued to this client")
+      when :used              then return render_error("invalid_grant", "Authorization code has been used")
+      when :expired           then return render_error("invalid_grant", "Authorization code expired")
+      when :redirect_mismatch then return render_error("invalid_grant", "redirect_uri mismatch")
+      when :pkce_fail         then return render_error("invalid_grant", "PKCE verification failed")
       end
 
       response.set_header("Cache-Control", "no-store")

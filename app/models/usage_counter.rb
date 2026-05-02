@@ -10,7 +10,7 @@ class UsageCounter < ApplicationRecord
     n     = count.to_i
     return if n.zero?
 
-    connection.exec_insert(<<~SQL, "UsageCounter Upsert", [site_id, month, n, now, now])
+    connection.exec_insert(<<~SQL, "UsageCounter Upsert", [ site_id, month, n, now, now ])
       INSERT INTO usage_counters (site_id, month, hit_count, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?)
       ON CONFLICT(site_id, month) DO UPDATE

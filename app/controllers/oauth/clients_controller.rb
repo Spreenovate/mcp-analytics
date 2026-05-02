@@ -6,6 +6,10 @@ module Oauth
 
     # POST /oauth/register
     def create
+      unless RateLimit.allow?(key: "oauth-dcr:#{request.remote_ip}", limit: 10, window: 3600)
+        return render_error("temporarily_unavailable", "Too many registrations from this IP, try again later.", :too_many_requests)
+      end
+
       attrs = parse_body
       return render_error("invalid_client_metadata", "Body must be a JSON object", :bad_request) unless attrs.is_a?(Hash)
 
@@ -49,6 +53,9 @@ module Oauth
       {
         client_id: client.client_id,
         client_id_issued_at: client.created_at.to_i,
+        # Public PKCE clients have no secret; per RFC 7591 §3.2.1
+        # signal that with client_secret_expires_at: 0.
+        client_secret_expires_at: 0,
         client_name: client.client_name,
         client_uri: client.client_uri,
         logo_uri: client.logo_uri,

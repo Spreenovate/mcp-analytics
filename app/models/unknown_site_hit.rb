@@ -9,7 +9,7 @@ class UnknownSiteHit < ApplicationRecord
     n    = count.to_i
     return if n.zero?
 
-    connection.exec_insert(<<~SQL, "UnknownSiteHit Upsert", [site_id_attempted, hour, n, now, now])
+    connection.exec_insert(<<~SQL, "UnknownSiteHit Upsert", [ site_id_attempted, hour, n, now, now ])
       INSERT INTO unknown_site_hits (site_id_attempted, hour, hit_count, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?)
       ON CONFLICT(site_id_attempted, hour) DO UPDATE

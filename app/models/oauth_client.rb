@@ -4,10 +4,11 @@ class OauthClient < ApplicationRecord
   has_many :oauth_authorization_requests, dependent: :destroy
 
   validates :client_id, presence: true, uniqueness: true
-  validates :client_name, presence: true
+  validates :client_name, presence: true, length: { maximum: 100 }
   validates :redirect_uris, presence: true
   validate :redirect_uris_well_formed
   validate :token_endpoint_auth_method_supported
+  validate :info_uris_https_only
 
   before_validation :assign_client_id, on: :create
 
@@ -69,5 +70,22 @@ class OauthClient < ApplicationRecord
   def token_endpoint_auth_method_supported
     return if SUPPORTED_AUTH_METHODS.include?(token_endpoint_auth_method)
     errors.add(:token_endpoint_auth_method, "must be one of #{SUPPORTED_AUTH_METHODS.inspect}")
+  end
+
+  # `client_uri` and `logo_uri` end up rendered (or linked from) the consent
+  # screen. Reject http and javascript-style schemes to avoid hostile content.
+  def info_uris_https_only
+    %i[client_uri logo_uri].each do |attr|
+      val = self[attr]
+      next if val.blank?
+      begin
+        scheme = URI.parse(val).scheme
+        unless scheme == "https"
+          errors.add(attr, "must be https")
+        end
+      rescue URI::InvalidURIError
+        errors.add(attr, "is not a valid URI")
+      end
+    end
   end
 end

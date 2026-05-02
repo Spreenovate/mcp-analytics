@@ -92,5 +92,27 @@ module Oauth
       assert_response :bad_request
       assert_equal "invalid_request", JSON.parse(response.body)["error"]
     end
+
+    test "code_verifier shorter than 43 chars is rejected" do
+      post_token(code_verifier: "tooshort")
+      assert_response :bad_request
+      assert_equal "invalid_request", JSON.parse(response.body)["error"]
+      assert_match(/code_verifier/, JSON.parse(response.body)["error_description"])
+    end
+
+    test "code_verifier with disallowed chars is rejected" do
+      post_token(code_verifier: "x" * 43 + "!@#$%")
+      assert_response :bad_request
+      assert_equal "invalid_request", JSON.parse(response.body)["error"]
+    end
+
+    test "code issued to client A may not be redeemed by client B" do
+      other = OauthClient.create!(client_name: "Other", redirect_uri_list: [ "https://other.example/cb" ])
+      post_token(client_id: other.client_id)
+      assert_response :bad_request
+      assert_equal "invalid_grant", JSON.parse(response.body)["error"]
+      assert_match(/not issued to this client/, JSON.parse(response.body)["error_description"])
+      assert_nil @code.reload.used_at, "code must remain unused on wrong-client redemption"
+    end
   end
 end

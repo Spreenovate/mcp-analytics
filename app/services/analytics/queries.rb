@@ -164,7 +164,7 @@ module Analytics
       raise ArgumentError, "unknown dimension: #{dimension.inspect}" unless column
 
       if column == "country"
-        return [{ "note" => "geo not enabled in MVP" }]
+        return [ { "note" => "geo not enabled in MVP" } ]
       end
 
       sql = <<~SQL

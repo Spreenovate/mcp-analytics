@@ -13,6 +13,8 @@ module Oauth
     GRANT_VERIFIER_PURPOSE = "oauth_consent_grant".freeze
     GRANT_LIFETIME = 10.minutes
 
+    before_action :no_store_no_referrer
+
     # GET /oauth/authorize
     def new
       @client = OauthClient.find_by(client_id: params[:client_id])
@@ -82,20 +84,32 @@ module Oauth
     def decide
       load_consent_or_render_expired or return
 
-      if params[:decision] == "allow"
-        code = OauthAuthorizationCode.create!(
-          user: @auth_request.user,
-          oauth_client: @auth_request.oauth_client,
-          redirect_uri: @auth_request.redirect_uri,
-          scope: @auth_request.scope,
-          code_challenge: @auth_request.code_challenge,
-          code_challenge_method: @auth_request.code_challenge_method
-        )
+      # Lock the row so two concurrent consent submissions can't each mint a code.
+      code = nil
+      OauthAuthorizationRequest.transaction do
+        @auth_request.lock!
+        if @auth_request.consumed?
+          render :expired, status: :gone
+          return
+        end
+
+        if params[:decision] == "allow"
+          code = OauthAuthorizationCode.create!(
+            user: @auth_request.user,
+            oauth_client: @auth_request.oauth_client,
+            redirect_uri: @auth_request.redirect_uri,
+            scope: @auth_request.scope,
+            code_challenge: @auth_request.code_challenge,
+            code_challenge_method: @auth_request.code_challenge_method
+          )
+        end
         @auth_request.mark_consumed!
+      end
+
+      if code
         redirect_to(client_redirect_with(code: code.code, state: @auth_request.state),
                     allow_other_host: true)
       else
-        @auth_request.mark_consumed!
         redirect_to(client_redirect_with(error: "access_denied",
                                           error_description: "User denied access",
                                           state: @auth_request.state),
@@ -155,10 +169,20 @@ module Oauth
 
     def append_query(uri, **query)
       parsed = URI.parse(uri)
-      existing = URI.decode_www_form(parsed.query.to_s)
-      query.compact.each { |k, v| existing << [ k.to_s, v.to_s ] }
-      parsed.query = URI.encode_www_form(existing)
+      pairs = URI.decode_www_form(parsed.query.to_s)
+      override_keys = query.compact.keys.map(&:to_s)
+      pairs.reject! { |k, _| override_keys.include?(k) }
+      query.compact.each { |k, v| pairs << [ k.to_s, v.to_s ] }
+      parsed.query = URI.encode_www_form(pairs)
       parsed.to_s
+    end
+
+    # Consent + authorize pages carry the signed grant in their URL — keep
+    # them out of intermediary caches and outbound Referer headers.
+    def no_store_no_referrer
+      response.set_header("Cache-Control", "no-store")
+      response.set_header("Pragma", "no-cache")
+      response.set_header("Referrer-Policy", "no-referrer")
     end
   end
 end
