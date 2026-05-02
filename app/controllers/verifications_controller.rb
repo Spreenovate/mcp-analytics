@@ -15,6 +15,18 @@ class VerificationsController < ApplicationController
       @user.update!(email_verified_at: Time.current) if @user.email_verified_at.nil?
 
       @verification.mark_used! unless @verification.used_at
+
+      if @verification.oauth_flow?
+        auth_request = @verification.oauth_authorization_request
+        auth_request.update!(user: @user) if auth_request.user_id.nil?
+      end
+    end
+
+    if @verification.oauth_flow? && @verification.oauth_authorization_request.usable?
+      auth_request = @verification.oauth_authorization_request
+      grant = Oauth::AuthorizationsController.mint_grant(auth_request, @user)
+      redirect_to oauth_consent_path(request_token: auth_request.request_token, grant: grant)
+      return
     end
 
     @base_url = ENV.fetch("PUBLIC_BASE_URL", "https://mcp-analytics.com")
