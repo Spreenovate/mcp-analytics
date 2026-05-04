@@ -34,7 +34,14 @@ servers:
       traefik.enable: "false"
     proxy:
       ssl: true
-      host: mcp-analytics.com
+      # Both apex + www get TLS certs from Let's Encrypt (multi-SAN).
+      # We 301 www to apex inside Rails for canonical URL hygiene; the
+      # proxy just needs to terminate TLS on both so robots.txt and every
+      # other URL is reachable at every variant (GSC, AI crawlers all
+      # probe variants).
+      hosts:
+        - mcp-analytics.com
+        - www.mcp-analytics.com
       app_port: 80
       healthcheck:
         path: /up
