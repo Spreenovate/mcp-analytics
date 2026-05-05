@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_02_100006) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_05_100001) do
   create_table "abuse_events", force: :cascade do |t|
     t.datetime "blocked_until", null: false
     t.datetime "created_at", null: false
@@ -65,6 +65,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_02_100006) do
     t.index ["revoked_at"], name: "index_oauth_access_tokens_on_revoked_at"
     t.index ["token"], name: "index_oauth_access_tokens_on_token", unique: true
     t.index ["user_id"], name: "index_oauth_access_tokens_on_user_id"
+  end
+
+  create_table "oauth_audit_events", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "event", null: false
+    t.string "ip_address", limit: 45
+    t.text "metadata"
+    t.integer "oauth_access_token_id"
+    t.integer "oauth_client_id"
+    t.integer "user_id"
+    t.index ["created_at"], name: "index_oauth_audit_events_on_created_at"
+    t.index ["event"], name: "index_oauth_audit_events_on_event"
+    t.index ["oauth_access_token_id"], name: "index_oauth_audit_events_on_oauth_access_token_id"
+    t.index ["oauth_client_id"], name: "index_oauth_audit_events_on_oauth_client_id"
+    t.index ["user_id"], name: "index_oauth_audit_events_on_user_id"
   end
 
   create_table "oauth_authorization_codes", force: :cascade do |t|
@@ -173,6 +188,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_02_100006) do
   add_foreign_key "magic_links", "users"
   add_foreign_key "oauth_access_tokens", "oauth_clients"
   add_foreign_key "oauth_access_tokens", "users"
+  add_foreign_key "oauth_audit_events", "oauth_access_tokens"
+  add_foreign_key "oauth_audit_events", "oauth_clients"
+  add_foreign_key "oauth_audit_events", "users"
   add_foreign_key "oauth_authorization_codes", "oauth_clients"
   add_foreign_key "oauth_authorization_codes", "users"
   add_foreign_key "oauth_authorization_requests", "oauth_clients"

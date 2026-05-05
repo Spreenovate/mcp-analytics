@@ -11,5 +11,11 @@ module Oauth
       sanitised = raw.gsub(/[\r\n]/, "").strip
       sanitised.empty? ? DEFAULT : sanitised
     end
+
+    # The canonical MCP-server URI used as the RFC 8707 `resource` value.
+    # Defined here so /authorize, /token, and Resource-Metadata all agree.
+    def self.canonical_resource
+      "#{value}/mcp"
+    end
   end
 end

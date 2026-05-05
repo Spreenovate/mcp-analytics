@@ -17,6 +17,10 @@ module Oauth
 
     # GET /oauth/authorize
     def new
+      unless RateLimit.allow?(key: "oauth-authorize:#{request.remote_ip}", limit: 60, window: 3600)
+        return render_param_error("temporarily_unavailable", "Too many authorization attempts, try again later.")
+      end
+
       @client = OauthClient.find_by(client_id: params[:client_id])
       return render_param_error("invalid_client", "Unknown client_id") unless @client
 
@@ -121,9 +125,18 @@ module Oauth
       end
 
       if code
+        Oauth::Audit.log("consent_granted",
+          user: @auth_request.user,
+          oauth_client: @auth_request.oauth_client,
+          request: request,
+          metadata: { scope: @auth_request.scope, resource: @auth_request.resource })
         redirect_to(client_redirect_with(code: code.code, state: @auth_request.state),
                     allow_other_host: true)
       else
+        Oauth::Audit.log("consent_denied",
+          user: @auth_request.user,
+          oauth_client: @auth_request.oauth_client,
+          request: request)
         redirect_to(client_redirect_with(error: "access_denied",
                                           error_description: "User denied access",
                                           state: @auth_request.state),
@@ -163,7 +176,7 @@ module Oauth
     end
 
     def canonical_resource
-      "#{Oauth::BaseUrl.value}/mcp"
+      Oauth::BaseUrl.canonical_resource
     end
 
     def render_param_error(code, description)

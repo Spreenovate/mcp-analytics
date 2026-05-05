@@ -2,13 +2,23 @@ class OauthClient < ApplicationRecord
   has_many :oauth_authorization_codes, dependent: :destroy
   has_many :oauth_access_tokens, dependent: :destroy
   has_many :oauth_authorization_requests, dependent: :destroy
+  # Audit trail outlives the client itself (client may be removed but
+  # the audit history of what happened with it is kept). Just nullify
+  # the FK rather than destroy the row.
+  has_many :oauth_audit_events, dependent: :nullify
 
   validates :client_id, presence: true, uniqueness: true
   validates :client_name, presence: true, length: { maximum: 100 }
-  validates :redirect_uris, presence: true
+  validates :client_uri, length: { maximum: 500 }, allow_nil: true
+  validates :logo_uri,   length: { maximum: 500 }, allow_nil: true
+  validates :redirect_uris, presence: true,
+            length: { maximum: 4_000, message: "is too long (max 4000 chars total)" }
   validate :redirect_uris_well_formed
   validate :token_endpoint_auth_method_supported
   validate :info_uris_https_only
+
+  MAX_REDIRECT_URIS = 5
+  MAX_REDIRECT_URI_LENGTH = 500
 
   before_validation :assign_client_id, on: :create
 
@@ -45,6 +55,14 @@ class OauthClient < ApplicationRecord
     list = redirect_uri_list
     if list.empty?
       errors.add(:redirect_uris, "must be a non-empty JSON array of URIs")
+      return
+    end
+    if list.size > MAX_REDIRECT_URIS
+      errors.add(:redirect_uris, "may contain at most #{MAX_REDIRECT_URIS} URIs")
+      return
+    end
+    if list.any? { |uri| uri.to_s.length > MAX_REDIRECT_URI_LENGTH }
+      errors.add(:redirect_uris, "individual URIs must be at most #{MAX_REDIRECT_URI_LENGTH} chars")
       return
     end
 

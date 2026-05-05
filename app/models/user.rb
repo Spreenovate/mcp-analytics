@@ -4,6 +4,12 @@ class User < ApplicationRecord
   }.freeze
 
   has_many :sites, dependent: :destroy
+  has_many :oauth_access_tokens,           dependent: :destroy
+  has_many :oauth_authorization_codes,     dependent: :destroy
+  has_many :oauth_authorization_requests,  dependent: :destroy
+  # Audit events are kept after user deletion for the OAuth client they
+  # belonged to (the client may still be reviewed). Just null the FK.
+  has_many :oauth_audit_events, dependent: :nullify
 
   validates :email, presence: true, uniqueness: true,
             format: { with: URI::MailTo::EMAIL_REGEXP }

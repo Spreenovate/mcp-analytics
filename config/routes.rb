@@ -23,6 +23,7 @@ Rails.application.routes.draw do
   get  "/oauth/consent/:request_token" => "oauth/authorizations#show", as: :oauth_consent
   post "/oauth/consent/:request_token" => "oauth/authorizations#decide", as: :oauth_consent_decide
   post "/oauth/token" => "oauth/tokens#create",            as: :oauth_token
+  post "/oauth/revoke" => "oauth/revocations#create",      as: :oauth_revoke
 
   # Legal pages.
   get "/terms"   => "pages#terms",   as: :terms

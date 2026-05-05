@@ -29,6 +29,12 @@ module Oauth
       client.redirect_uri_list = redirect_uris
 
       if client.save
+        Oauth::Audit.log("client_registered",
+          oauth_client: client,
+          request: request,
+          metadata: { client_name: client.client_name,
+                       redirect_uris: client.redirect_uri_list,
+                       scope: client.scope })
         render json: client_metadata(client), status: :created
       else
         render_error("invalid_client_metadata", client.errors.full_messages.join("; "), :bad_request)

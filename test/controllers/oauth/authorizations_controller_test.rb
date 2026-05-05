@@ -235,5 +235,70 @@ module Oauth
            params: { decision: "allow" }
       assert_response :gone
     end
+
+    # --- Rate-limiting + audit-log ----------------------------------------
+
+    test "rate-limit kicks in after 60 GET /oauth/authorize per IP per hour" do
+      61.times { get oauth_authorize_path, params: authorize_params }
+      assert_response :bad_request
+      assert_match(/temporarily_unavailable/, response.body)
+    end
+
+    test "consent allow emits consent_granted audit event" do
+      get oauth_authorize_path, params: authorize_params
+      auth_request = OauthAuthorizationRequest.last
+      user = User.create!(email: "audit_allow@example.com", email_verified_at: Time.current)
+      auth_request.update!(user: user)
+      grant = AuthorizationsController.mint_grant(auth_request, user)
+
+      assert_difference -> { OauthAuditEvent.where(event: "consent_granted").count }, 1 do
+        post oauth_consent_decide_path(request_token: auth_request.request_token),
+             params: { decision: "allow", grant: grant }
+      end
+      logged = OauthAuditEvent.where(event: "consent_granted").last
+      assert_equal user.id, logged.user_id
+      assert_equal @client.id, logged.oauth_client_id
+    end
+
+    test "consent deny emits consent_denied audit event" do
+      get oauth_authorize_path, params: authorize_params
+      auth_request = OauthAuthorizationRequest.last
+      user = User.create!(email: "audit_deny@example.com", email_verified_at: Time.current)
+      auth_request.update!(user: user)
+      grant = AuthorizationsController.mint_grant(auth_request, user)
+
+      assert_difference -> { OauthAuditEvent.where(event: "consent_denied").count }, 1 do
+        post oauth_consent_decide_path(request_token: auth_request.request_token),
+             params: { decision: "deny", grant: grant }
+      end
+    end
+
+    # --- Client logo on consent screen ------------------------------------
+
+    test "consent screen renders client logo when logo_uri is set" do
+      @client.update!(logo_uri: "https://app.example/logo.png")
+      get oauth_authorize_path, params: authorize_params
+      auth_request = OauthAuthorizationRequest.last
+      user = User.create!(email: "logo@example.com", email_verified_at: Time.current)
+      auth_request.update!(user: user)
+      grant = AuthorizationsController.mint_grant(auth_request, user)
+
+      get oauth_consent_path(request_token: auth_request.request_token, grant: grant)
+      assert_response :success
+      assert_includes response.body, %(src="https://app.example/logo.png")
+      assert_includes response.body, %(referrerpolicy="no-referrer")
+    end
+
+    test "consent screen omits logo when logo_uri is blank" do
+      get oauth_authorize_path, params: authorize_params
+      auth_request = OauthAuthorizationRequest.last
+      user = User.create!(email: "nologo@example.com", email_verified_at: Time.current)
+      auth_request.update!(user: user)
+      grant = AuthorizationsController.mint_grant(auth_request, user)
+
+      get oauth_consent_path(request_token: auth_request.request_token, grant: grant)
+      assert_response :success
+      assert_no_match %r{class="client-logo"}, response.body
+    end
   end
 end

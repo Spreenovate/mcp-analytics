@@ -41,5 +41,17 @@ module Oauth
       post "/oauth/register", params: "not-json", headers: { "Content-Type" => "application/json" }
       assert_response :bad_request
     end
+
+    test "successful registration emits client_registered audit event" do
+      body = { client_name: "AuditMe",
+                redirect_uris: [ "https://app.example.com/callback" ] }.to_json
+
+      assert_difference -> { OauthAuditEvent.where(event: "client_registered").count }, 1 do
+        post "/oauth/register", params: body, headers: { "Content-Type" => "application/json" }
+      end
+      logged = OauthAuditEvent.where(event: "client_registered").last
+      assert_equal OauthClient.last.id, logged.oauth_client_id
+      assert_equal "AuditMe", logged.metadata_hash["client_name"]
+    end
   end
 end

@@ -2,6 +2,18 @@
 <%= render "shared_styles" %>
 
 <div class="wrap">
+  <% if @client.logo_uri.present? %>
+    <%# logo_uri is validated https-only at registration (OauthClient#info_uris_https_only). %>
+    <%# referrerpolicy=no-referrer + crossorigin=anonymous keep us out of cookie/referer leaks. %>
+    <img src="<%= @client.logo_uri %>"
+         alt="<%= @client.client_name %> logo"
+         class="client-logo"
+         referrerpolicy="no-referrer"
+         crossorigin="anonymous"
+         loading="lazy"
+         decoding="async">
+  <% end %>
+
   <h1><%= @client.client_name %> wants <span class="accent">access</span>.</h1>
 
   <% if @client.dynamically_registered? %>

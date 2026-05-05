@@ -6,6 +6,10 @@ module Oauth
 
     # POST /oauth/token
     def create
+      unless RateLimit.allow?(key: "oauth-token:#{request.remote_ip}", limit: 30, window: 3600)
+        return render_error("temporarily_unavailable", "Too many token requests, try again later.", :too_many_requests)
+      end
+
       grant_type = params[:grant_type].to_s
       return render_error("unsupported_grant_type", "Only authorization_code is supported") unless grant_type == "authorization_code"
 
@@ -66,6 +70,13 @@ module Oauth
       when :resource_mismatch  then return render_error("invalid_target", "resource does not match the value used at /authorize")
       end
 
+      Oauth::Audit.log("token_issued",
+        user: access_token.user,
+        oauth_client: client,
+        oauth_access_token: access_token,
+        request: request,
+        metadata: { scope: access_token.scope, resource: access_token.resource })
+
       response.set_header("Cache-Control", "no-store")
       response.set_header("Pragma", "no-cache")
       render json: {
@@ -79,14 +90,14 @@ module Oauth
     private
 
     def canonical_resource
-      "#{Oauth::BaseUrl.value}/mcp"
+      Oauth::BaseUrl.canonical_resource
     end
 
-    def render_error(code, description)
+    def render_error(code, description, status = :bad_request)
       # Per RFC 6749 §5.2, errors are 400 with cache-control: no-store.
       response.set_header("Cache-Control", "no-store")
       response.set_header("Pragma", "no-cache")
-      render json: { error: code, error_description: description }, status: :bad_request
+      render json: { error: code, error_description: description }, status: status
     end
   end
 end

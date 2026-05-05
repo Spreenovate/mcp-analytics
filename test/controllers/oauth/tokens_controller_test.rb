@@ -3,6 +3,8 @@ require "test_helper"
 module Oauth
   class TokensControllerTest < ActionDispatch::IntegrationTest
     setup do
+      @prev_cache = Rails.cache
+      Rails.cache = ActiveSupport::Cache::MemoryStore.new
       @client = OauthClient.create!(client_name: "TestApp",
                                      redirect_uri_list: ["https://app.example/cb"])
       @user   = User.create!(email: "tk@example.com", email_verified_at: Time.current)
@@ -16,6 +18,8 @@ module Oauth
         code_challenge_method: "S256"
       )
     end
+
+    teardown { Rails.cache = @prev_cache }
 
     def post_token(**overrides)
       params = {
@@ -149,6 +153,39 @@ module Oauth
     test "missing resource parameter still works when code had none either" do
       post_token # no resource arg
       assert_response :success
+    end
+
+    # --- Rate-limiting + audit-log ----------------------------------------
+
+    test "rate-limit kicks in after 30 POST /oauth/token per IP per hour" do
+      Rails.cache.clear
+      31.times do
+        @code = OauthAuthorizationCode.create!(
+          user: @user, oauth_client: @client,
+          redirect_uri: "https://app.example/cb",
+          scope: "analytics:read",
+          code_challenge: @challenge, code_challenge_method: "S256"
+        )
+        post_token
+      end
+      assert_response :too_many_requests
+      assert_equal "temporarily_unavailable", JSON.parse(response.body)["error"]
+    end
+
+    test "successful token exchange emits token_issued audit event" do
+      assert_difference -> { OauthAuditEvent.where(event: "token_issued").count }, 1 do
+        post_token
+      end
+      logged = OauthAuditEvent.where(event: "token_issued").last
+      assert_equal @user.id, logged.user_id
+      assert_equal @client.id, logged.oauth_client_id
+      assert_equal "analytics:read", logged.metadata_hash["scope"]
+    end
+
+    test "failed token exchange does NOT emit token_issued event" do
+      assert_no_difference -> { OauthAuditEvent.where(event: "token_issued").count } do
+        post_token(code_verifier: SecureRandom.urlsafe_base64(32)) # wrong verifier
+      end
     end
   end
 end

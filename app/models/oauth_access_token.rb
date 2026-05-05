@@ -4,6 +4,7 @@ class OauthAccessToken < ApplicationRecord
 
   belongs_to :user
   belongs_to :oauth_client
+  has_many :oauth_audit_events, dependent: :nullify
 
   validates :token, presence: true, uniqueness: true
   validates :scope, presence: true

@@ -35,5 +35,24 @@ module Oauth
       assert_includes JSON.parse(response.body)["scopes_supported"], "analytics:read"
       assert_includes JSON.parse(response.body)["scopes_supported"], "analytics:manage"
     end
+
+    test "advertises the revocation endpoint (RFC 7009)" do
+      get "/.well-known/oauth-authorization-server"
+      body = JSON.parse(response.body)
+      assert_match %r{/oauth/revoke\z}, body["revocation_endpoint"]
+      assert_includes body["revocation_endpoint_auth_methods_supported"], "none"
+    end
+
+    test "advertises resource_parameter_supported (RFC 8707)" do
+      get "/.well-known/oauth-authorization-server"
+      assert_equal true, JSON.parse(response.body)["resource_parameter_supported"]
+    end
+
+    test "advertises op_policy_uri and op_tos_uri pointing at our legal pages" do
+      get "/.well-known/oauth-authorization-server"
+      body = JSON.parse(response.body)
+      assert_match %r{/privacy\z}, body["op_policy_uri"]
+      assert_match %r{/terms\z}, body["op_tos_uri"]
+    end
   end
 end

@@ -57,4 +57,31 @@ class OauthClientTest < ActiveSupport::TestCase
     c.redirect_uri_list = ["https://x.example/cb"]
     assert_not c.valid?
   end
+
+  # --- DCR abuse caps -----------------------------------------------------
+
+  test "rejects more than MAX_REDIRECT_URIS redirect URIs" do
+    c = OauthClient.new(client_name: "Spammy")
+    c.redirect_uri_list = (1..6).map { |i| "https://app#{i}.example/cb" }
+    assert_not c.valid?
+    assert_match(/at most/, c.errors[:redirect_uris].join)
+  end
+
+  test "rejects redirect URI longer than MAX_REDIRECT_URI_LENGTH" do
+    c = OauthClient.new(client_name: "Long")
+    c.redirect_uri_list = [ "https://example.com/" + ("a" * 600) ]
+    assert_not c.valid?
+  end
+
+  test "rejects logo_uri longer than 500 chars" do
+    c = OauthClient.new(client_name: "X", logo_uri: "https://x.example/" + ("a" * 600))
+    c.redirect_uri_list = [ "https://x.example/cb" ]
+    assert_not c.valid?
+  end
+
+  test "rejects client_uri longer than 500 chars" do
+    c = OauthClient.new(client_name: "X", client_uri: "https://x.example/" + ("a" * 600))
+    c.redirect_uri_list = [ "https://x.example/cb" ]
+    assert_not c.valid?
+  end
 end
