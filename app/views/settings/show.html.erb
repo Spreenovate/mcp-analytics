@@ -1,0 +1,163 @@
+<% content_for(:title, "Account | mcp-analytics") %>
+<% content_for(:body_class, "home") %>
+
+<% content_for :head do %>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+  <style>
+    body.home {
+      --bg: #ffffff; --fg: #0a0a0a; --accent: #00FF88; --border: 3px;
+      background: var(--bg); color: var(--fg);
+      font-family: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+      font-size: 16px; line-height: 1.55;
+    }
+    body.home main { max-width: none; padding: 0; margin: 0; }
+    body.home .wrap { max-width: 760px; margin: 0 auto; padding: 64px 28px 120px; }
+    body.home h1 {
+      font-family: "Space Grotesk", sans-serif; font-weight: 900;
+      font-size: clamp(40px, 7vw, 72px); line-height: 0.95;
+      letter-spacing: -0.03em; margin: 0 0 24px;
+      text-transform: uppercase;
+    }
+    body.home h1 .accent { position: relative; color: var(--fg); }
+    body.home h1 .accent::before {
+      content: ""; position: absolute; z-index: -1;
+      top: -0.05em; bottom: -0.05em; left: -0.15em; right: -0.05em;
+      background: var(--accent);
+    }
+    body.home .lead { font-size: 18px; margin: 0 0 48px; }
+    body.home h2.section {
+      font-family: "JetBrains Mono", monospace; font-size: 13px;
+      font-weight: 700; text-transform: uppercase; letter-spacing: 0.2em;
+      margin: 56px 0 24px; padding-bottom: 12px;
+      border-bottom: var(--border) solid var(--fg);
+    }
+    body.home h2.section::before {
+      content: attr(data-num) " / "; color: var(--accent);
+      background: var(--fg); padding: 2px 8px; margin-right: 12px;
+    }
+    body.home .row {
+      display: flex; justify-content: space-between; align-items: baseline;
+      padding: 14px 0; border-bottom: 1.5px solid var(--fg);
+      font-size: 14px;
+    }
+    body.home .row:last-child { border-bottom: 0; }
+    body.home .row .key { color: #666; text-transform: uppercase; letter-spacing: 0.08em; font-size: 12px; }
+    body.home .row .val { font-weight: 700; word-break: break-all; text-align: right; }
+    body.home .connector {
+      border: var(--border) solid var(--fg);
+      padding: 18px 20px; margin: 0 0 16px;
+      display: flex; gap: 16px; align-items: center; justify-content: space-between;
+    }
+    body.home .connector .meta { flex: 1; min-width: 0; }
+    body.home .connector .name {
+      font-family: "Space Grotesk", sans-serif; font-weight: 700; font-size: 18px;
+      text-transform: uppercase; margin: 0 0 4px;
+    }
+    body.home .connector .sub { font-size: 12px; color: #666; }
+    body.home .connector form { margin: 0; }
+    body.home .btn {
+      font: inherit; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+      background: var(--bg); color: var(--fg); border: var(--border) solid var(--fg);
+      padding: 10px 16px; cursor: pointer;
+    }
+    body.home .btn:hover { background: var(--accent); }
+    body.home .btn.danger:hover { background: #ffd0d0; }
+    body.home .empty {
+      border: 1.5px dashed var(--fg); padding: 24px; text-align: center;
+      color: #666; font-size: 14px;
+    }
+    body.home .flash {
+      padding: 14px 16px; margin: 0 0 24px; font-weight: 700;
+      border: var(--border) solid var(--fg);
+    }
+    body.home .flash.notice { background: var(--accent); }
+    body.home .flash.alert  { background: #ffd0d0; }
+    body.home footer.lp {
+      margin-top: 64px;
+      border-top: var(--border) solid var(--fg);
+      padding-top: 16px; font-size: 12px; color: #666;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    body.home footer.lp form { margin: 0; }
+    body.home footer.lp .btn { padding: 6px 12px; font-size: 11px; }
+    @media (max-width: 720px) {
+      body.home .wrap { padding: 32px 18px 80px; }
+      body.home h1 { font-size: clamp(32px, 9vw, 48px); }
+      body.home .connector { flex-direction: column; align-items: stretch; }
+      body.home .connector form { display: flex; }
+      body.home .connector .btn { width: 100%; }
+    }
+  </style>
+<% end %>
+
+<div class="wrap">
+  <h1>Your <span class="accent">account</span>.</h1>
+
+  <% if flash[:notice] %>
+    <div class="flash notice"><%= flash[:notice] %></div>
+  <% end %>
+  <% if flash[:alert] %>
+    <div class="flash alert"><%= flash[:alert] %></div>
+  <% end %>
+
+  <h2 class="section" data-num="01">Identity</h2>
+  <div class="row"><span class="key">Email</span><span class="val"><%= @user.email %></span></div>
+  <div class="row"><span class="key">Plan</span><span class="val"><%= @user.plan.upcase %> · <%= number_with_delimiter(@user.plan_limit) %> hits/mo</span></div>
+  <div class="row"><span class="key">Hits this month</span><span class="val"><%= number_with_delimiter(@user.hits_this_month) %></span></div>
+  <div class="row"><span class="key">Active sites</span><span class="val"><%= @user.active_sites.count %></span></div>
+
+  <h2 class="section" data-num="02">Connectors</h2>
+  <p class="lead" style="font-size:14px;color:#666;margin:-12px 0 24px">
+    Apps that have OAuth access to your account. Revoke any that you no longer use.
+  </p>
+
+  <% if @connectors.empty? %>
+    <div class="empty">
+      No active OAuth connectors yet. Once you connect mcp-analytics
+      from Claude or another MCP client, it'll show up here with a
+      Disconnect button.
+    </div>
+  <% else %>
+    <% @connectors.each do |token| %>
+      <div class="connector">
+        <div class="meta">
+          <p class="name"><%= token.oauth_client.client_name %></p>
+          <p class="sub">
+            Connected <%= token.created_at.strftime("%b %-d, %Y") %>
+            · Scope <code><%= token.scope %></code>
+            <% if token.last_used_at %>
+              · Last used <%= time_ago_in_words(token.last_used_at) %> ago
+            <% else %>
+              · Not yet used
+            <% end %>
+          </p>
+        </div>
+        <%= form_with url: revoke_connector_path(id: token.id), method: :post, local: true do |f| %>
+          <button type="submit" class="btn danger"
+                  data-confirm="Disconnect <%= token.oauth_client.client_name %>? You'll need to re-authorize from the client to use it again.">
+            Disconnect
+          </button>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+
+  <footer class="lp">
+    <span><%= link_to "← Back home", root_path %></span>
+    <%= form_with url: settings_sign_out_path, method: :post, local: true do |f| %>
+      <button type="submit" class="btn">Sign out</button>
+    <% end %>
+  </footer>
+</div>
+
+<script>
+  document.querySelectorAll('button[data-confirm]').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+      if (!window.confirm(btn.getAttribute('data-confirm'))) e.preventDefault();
+    });
+  });
+</script>

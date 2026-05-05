@@ -992,6 +992,24 @@ Auch mit allen 4 Phasen können wir niemals sagen:
 
 ## CHANGELOG (Working Doc)
 
+- **2026-05-05** — OAuth-Hardening Block 2: `/settings` als enge,
+  Session-basierte UI für OAuth-Connector-Management wieder eingeführt
+  (anders als die 2026-04-25 entfernte Variante: nur Cookie-Session,
+  nur für die Settings-Seite, NICHT für die MCP-API). Sliding 30-min
+  Idle, Sign-In via Verify-Link-Klick, Sign-Out bumpt
+  `users.session_version` um Cookie-Replay zu blocken. Pinned
+  Cookie-Flags (`secure`, `httponly`, `same_site: :lax`).
+- **2026-05-05** — OAuth-Hardening Block 1: Revocation-Endpoint
+  (RFC 7009), Audit-Log (append-only), Rate-Limits auf alle OAuth-
+  Endpoints, `trusted_proxies` gegen XFF-Spoofing, User-Deletion-
+  Cascade, DCR-Field-Caps. Discovery advertiset jetzt
+  `revocation_endpoint`, `resource_parameter_supported` (RFC 8707),
+  `op_policy_uri` + `op_tos_uri`.
+- **2026-05-02** — OAuth Phase 2 Foundation: Authorization-Code-Flow
+  mit PKCE, Dynamic Client Registration, RFC 8707 Resource Indicators,
+  Two-Scope-Modell (`analytics:read` + `analytics:manage`) mit
+  Tool-Level-Enforcement, `regenerate_api_token` für OAuth-Sessions
+  versteckt.
 - **2026-04-23** — Initial scaffold (Week 1–4 Output) eingecheckt.
   CI vorerst deaktiviert (keine Tests). Dieses Working Doc angelegt.
 - **2026-04-27** — Bot- und AI-Agent-Klassifikation Phase 1 deployed:

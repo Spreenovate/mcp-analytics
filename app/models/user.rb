@@ -43,6 +43,13 @@ class User < ApplicationRecord
     update!(api_token: self.class.generate_api_token)
   end
 
+  # Bumped to invalidate every Settings-session cookie issued before now.
+  # Called on sign-out so a stolen cookie value can't be replayed within
+  # the idle-timeout window. Also a hook for "log me out everywhere".
+  def bump_session_version!
+    update!(session_version: session_version + 1)
+  end
+
   def self.generate_api_token
     "mcpa_#{SecureRandom.urlsafe_base64(32)}"
   end

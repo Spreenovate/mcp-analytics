@@ -25,6 +25,12 @@ Rails.application.routes.draw do
   post "/oauth/token" => "oauth/tokens#create",            as: :oauth_token
   post "/oauth/revoke" => "oauth/revocations#create",      as: :oauth_revoke
 
+  # Self-service settings (web UI). Session is established by clicking
+  # the verify-link from a fresh signup-form submission.
+  get  "/settings"                            => "settings#show",             as: :settings
+  post "/settings/connectors/:id/revoke"      => "settings#revoke_connector", as: :revoke_connector
+  post "/settings/sign_out"                   => "settings#sign_out",         as: :settings_sign_out
+
   # Legal pages.
   get "/terms"   => "pages#terms",   as: :terms
   get "/privacy" => "pages#privacy", as: :privacy
