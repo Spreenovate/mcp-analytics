@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_05_100003) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_07_100001) do
   create_table "abuse_events", force: :cascade do |t|
     t.datetime "blocked_until", null: false
     t.datetime "created_at", null: false
@@ -57,7 +57,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_05_100003) do
     t.string "refresh_token"
     t.datetime "refresh_token_expires_at"
     t.datetime "refresh_token_used_at"
-    t.string "resource"
+    t.string "resource", null: false
     t.datetime "revoked_at"
     t.string "scope", null: false
     t.string "token", null: false

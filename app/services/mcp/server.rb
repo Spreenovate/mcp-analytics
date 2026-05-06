@@ -10,7 +10,14 @@ module Mcp
     def initialize(auth: nil, request: nil, user: nil)
       # `user:` kept for tests/callers that still pass a User; treated as
       # legacy auth so the full scope vocabulary is granted.
-      @auth = auth || (user ? AuthContext.legacy(user) : AuthContext.anonymous)
+      @auth = auth || (user ? AuthContext.legacy(user) : nil)
+
+      # The MCP controller 401s unauthenticated requests before reaching
+      # the server. Constructing a Server without an authenticated context
+      # is a programming error — bail loudly rather than silently fall
+      # through to a dispatcher that'd serve every tool to no-one.
+      raise ArgumentError, "Mcp::Server requires authenticated AuthContext" if @auth.nil? || !@auth.authenticated?
+
       @tools = Tools.new(user: @auth.user, request: request)
     end
 
@@ -42,18 +49,17 @@ module Mcp
         protocolVersion: PROTOCOL_VERSION,
         serverInfo: SERVER_INFO,
         capabilities: { tools: { listChanged: false } },
-        instructions: @auth.authenticated? ? authed_instructions : unauthed_instructions
+        instructions: authed_instructions
       }
     end
 
-    # Tools the caller is allowed to see in their current auth state.
-    # Filters by:
-    #   - authenticated vs not (the schema list itself)
+    # Tools the caller is allowed to see. The controller 401s unauthenticated
+    # callers before dispatch, so we always start from AUTHENTICATED here.
+    # Further filters:
     #   - oauth_forbidden tools hidden from OAuth-issued tokens
     #   - tools whose required scope is not granted
     def visible_tools
-      base = @auth.authenticated? ? ToolSchemas::AUTHENTICATED : ToolSchemas::UNAUTHENTICATED
-      base.select { |schema| tool_allowed?(schema) }
+      ToolSchemas::AUTHENTICATED.select { |schema| tool_allowed?(schema) }
     end
 
     def visible_tools_for_wire
@@ -100,9 +106,8 @@ module Mcp
     def reason_for_unavailable(name, schema)
       return "Tool '#{name}' is not available. Call tools/list for the full list." if schema.nil?
 
-      if !@auth.authenticated?
-        return "Tool '#{name}' requires authentication. Provide your API token or complete the OAuth flow."
-      end
+      # Note: the controller 401s unauthenticated requests before dispatch,
+      # so @auth.authenticated? is always true here.
 
       if @auth.oauth? && schema[ToolSchemas::OAUTH_FORBIDDEN_KEY]
         return "Tool '#{name}' is not available to OAuth-issued tokens. " \
@@ -152,13 +157,6 @@ module Mcp
       "which one, ASK before querying. Every analytics response includes " \
       "site_id and domain — always echo the domain in your answer so the " \
       "user can confirm you queried the right site."
-    end
-
-    def unauthed_instructions
-      "You are connected to mcp-analytics without authentication. Call " \
-      "register_account with the user's email to start signup. After the " \
-      "user verifies, they'll update the MCP URL with their token to unlock " \
-      "analytics tools."
     end
   end
 end

@@ -10,15 +10,20 @@ class McpController < ApplicationController
   def dispatch_rpc
     auth = authenticate_from_request
 
-    # If a token WAS presented but didn't authenticate, return 401 with an
-    # error code so OAuth-aware clients trigger their re-auth flow.
-    if auth.user.nil? && bearer_token_presented?
+    # MCP spec 2025-06-18 + RFC 9728: every unauthenticated request to a
+    # protected resource returns 401 + WWW-Authenticate so that OAuth-aware
+    # clients (claude.ai, etc.) auto-discover the authorization server and
+    # start the flow. Tagging with `error="invalid_token"` only when a
+    # token WAS presented gives clients useful feedback ("retry vs reauth").
+    if auth.user.nil?
+      error_tag = bearer_token_presented? ? %(error="invalid_token", ) : ""
       response.set_header(
         "WWW-Authenticate",
-        %(Bearer error="invalid_token", resource_metadata="#{Oauth::BaseUrl.value}/.well-known/oauth-protected-resource")
+        %(Bearer #{error_tag}resource_metadata="#{Oauth::BaseUrl.value}/.well-known/oauth-protected-resource")
       )
+      message = bearer_token_presented? ? "Invalid or expired bearer token" : "Authentication required"
       return render(json: { jsonrpc: "2.0", id: nil,
-                            error: { code: -32001, message: "Invalid or expired bearer token" } },
+                            error: { code: -32001, message: message } },
                     status: :unauthorized)
     end
 
@@ -44,7 +49,7 @@ class McpController < ApplicationController
       name: "mcp-analytics",
       description: "Web analytics over MCP.",
       transport: "streamable-http (JSON-RPC over POST)",
-      auth: "OAuth 2.1 (PKCE) preferred. Discovery: /.well-known/oauth-protected-resource. Legacy: 'Authorization: Bearer <token>' or ?token=<token>. Without a token, only signup tools are exposed."
+      auth: "OAuth 2.1 + PKCE. Discovery: /.well-known/oauth-protected-resource. All POST /mcp requests without a valid bearer token return 401."
     }
   end
 
@@ -82,7 +87,10 @@ class McpController < ApplicationController
   end
 
   def resource_acceptable?(token_resource)
-    token_resource.nil? || token_resource == Oauth::BaseUrl.canonical_resource
+    # RFC 8707: tokens carry the resource (audience) they were bound to.
+    # Strict equality — the pre-Block-3 nil grandfather was closed by the
+    # 20260507100001 migration + model `validates :resource, presence`.
+    token_resource == Oauth::BaseUrl.canonical_resource
   end
 
   def bearer_token

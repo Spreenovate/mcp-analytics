@@ -1,6 +1,8 @@
 class SignupsController < ApplicationController
-  # POST /signup — landing-page email form. Mirrors the register_account MCP
-  # tool: validates, applies anti-abuse rate limits, sends a verification mail.
+  # POST /signup — landing-page email form. Validates, applies anti-abuse
+  # rate limits, sends a verification mail. Same Signup.start path the OAuth
+  # authorize flow uses, so a user signing up here can later authorize a
+  # client without a second account-creation step.
   def create
     result = Signup.start(email: params[:email].to_s, ip: request.remote_ip)
 

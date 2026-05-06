@@ -29,19 +29,21 @@ class SignupsControllerTest < ActionDispatch::IntegrationTest
     assert flash[:alert].present?
   end
 
-  test "POST /signup with disposable email is rejected" do
+  test "POST /signup with disposable email is rejected with generic message (no enumeration)" do
     post signup_path, params: { email: "spam@mailinator.com" }
     assert_redirected_to root_path(anchor: "signup-form")
-    assert_match(/disposable/i, flash[:alert])
+    assert_match(/couldn't send/i, flash[:alert])
+    assert_no_match(/disposable|mailinator/i, flash[:alert])
   end
 
-  test "POST /signup is rate-limited (3/IP/hour)" do
+  test "POST /signup is rate-limited (3/IP/hour) with generic message" do
     3.times do |i|
       post signup_path, params: { email: "u#{i}@example.com" }
     end
     post signup_path, params: { email: "u4@example.com" }
     assert_redirected_to root_path(anchor: "signup-form")
-    assert_match(/network/i, flash[:alert])
+    assert_match(/couldn't send/i, flash[:alert])
+    assert_no_match(/network|ip/i, flash[:alert])
   end
 
   test "GET /signup/check renders when session has email" do

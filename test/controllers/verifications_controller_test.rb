@@ -51,7 +51,7 @@ class VerificationsControllerTest < ActionDispatch::IntegrationTest
 
   # --- POST /verify/:token (does the work) ------------------------------
 
-  test "POST /verify/:token creates user, marks verification used, shows token" do
+  test "POST /verify/:token creates user, marks verification used, shows connector URL" do
     v = EmailVerification.create!(email: "verify@example.com")
 
     assert_difference -> { User.count }, 1 do
@@ -61,7 +61,7 @@ class VerificationsControllerTest < ActionDispatch::IntegrationTest
 
     user = User.find_by(email: "verify@example.com")
     assert user.email_verified?
-    assert_includes response.body, user.api_token
+    assert_includes response.body, "/mcp"
     assert v.reload.used_at.present?
   end
 

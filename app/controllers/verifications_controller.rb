@@ -63,7 +63,6 @@ class VerificationsController < ApplicationController
     sign_in_for_settings(@user)
 
     @base_url = ENV.fetch("PUBLIC_BASE_URL", "https://mcp-analytics.com")
-    @mcp_url_with_token = "#{@base_url}/mcp?token=#{@user.api_token}"
     render :verified
   end
 

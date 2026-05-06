@@ -18,29 +18,25 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     body = JSON.parse(response.body)
     assert_equal "mcp-analytics", body["name"]
-    assert_includes body["auth"], "Bearer"
+    assert_includes body["auth"], "OAuth"
+    assert_includes body["auth"], "401"
   end
 
   # --- JSON-RPC dispatch -------------------------------------------------
 
-  test "initialize returns protocol version and instructions for anon user" do
+  test "initialize without auth returns 401 with WWW-Authenticate" do
     rpc("initialize")
+    assert_response :unauthorized
+    assert_match %r{Bearer resource_metadata=}, response.headers["WWW-Authenticate"]
+    assert_no_match %r{error="invalid_token"}, response.headers["WWW-Authenticate"]
+  end
+
+  test "initialize returns protocol version and authed instructions with valid token" do
+    rpc("initialize", token: @user.api_token)
     assert_response :success
     result = json_body["result"]
     assert_equal "2025-06-18", result["protocolVersion"]
-    assert_includes result["instructions"], "register_account"
-  end
-
-  test "initialize returns authed instructions when valid Bearer token sent" do
-    rpc("initialize", token: @user.api_token)
-    result = json_body["result"]
     assert_includes result["instructions"], "list_sites"
-  end
-
-  test "tools/list shows only unauthenticated tools without token" do
-    rpc("tools/list")
-    names = json_body["result"]["tools"].map { |t| t["name"] }
-    assert_equal %w[register_account get_started_guide].sort, names.sort
   end
 
   test "tools/list shows analytics tools with valid token" do
@@ -48,16 +44,17 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     names = json_body["result"]["tools"].map { |t| t["name"] }
     assert_includes names, "list_sites"
     assert_includes names, "get_overview"
+    assert_includes names, "get_started_guide"
     assert_not_includes names, "register_account"
   end
 
-  test "ping returns empty result" do
-    rpc("ping")
+  test "ping with valid token returns empty result" do
+    rpc("ping", token: @user.api_token)
     assert_equal({}, json_body["result"])
   end
 
-  test "unknown method returns JSON-RPC error -32601" do
-    rpc("does_not_exist")
+  test "unknown method with valid token returns JSON-RPC error -32601" do
+    rpc("does_not_exist", token: @user.api_token)
     assert_equal(-32601, json_body["error"]["code"])
   end
 
@@ -82,22 +79,29 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     assert_match %r{resource_metadata=}, response.headers["WWW-Authenticate"]
   end
 
-  test "no token returns anonymous tools list (not 401)" do
+  test "no token returns 401 + WWW-Authenticate (triggers OAuth discovery)" do
     rpc_call("tools/list", headers: {})
-    assert_response :success
-    names = json_body["result"]["tools"].map { |t| t["name"] }
-    assert_not_includes names, "list_sites"
-    assert_includes names, "register_account"
+    assert_response :unauthorized
+    assert_match %r{Bearer resource_metadata="[^"]+/\.well-known/oauth-protected-resource"},
+                 response.headers["WWW-Authenticate"]
+    assert_no_match %r{error="invalid_token"}, response.headers["WWW-Authenticate"]
+  end
+
+  test "tools/call without auth returns 401 (no anonymous dispatch)" do
+    rpc_call("tools/call",
+             params: { "name" => "list_sites", "arguments" => {} },
+             headers: {})
+    assert_response :unauthorized
+    assert_match %r{Bearer resource_metadata=}, response.headers["WWW-Authenticate"]
+  end
+
+  test "invalid ?token= query param returns 401 with error=invalid_token" do
+    rpc_call("tools/list", query: { token: "mcpa_garbage" })
+    assert_response :unauthorized
+    assert_match %r{Bearer error="invalid_token"}, response.headers["WWW-Authenticate"]
   end
 
   # --- tools/call dispatch -------------------------------------------------
-
-  test "calling an authed tool without auth returns tool_error" do
-    rpc("tools/call", params: { name: "list_sites", arguments: {} })
-    result = json_body["result"]
-    assert_equal true, result["isError"]
-    assert_includes result["content"].first["text"], "requires authentication"
-  end
 
   test "calling list_sites with auth returns the user's sites" do
     @user.sites.create!(domain: "example.com", privacy_mode: "strict")
@@ -132,14 +136,16 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       { "jsonrpc" => "2.0", "id" => 1, "method" => "ping" },
       { "jsonrpc" => "2.0", "id" => 2, "method" => "ping" }
     ].to_json
-    post "/mcp", params: body, headers: { "Content-Type" => "application/json" }
+    post "/mcp?token=#{@user.api_token}", params: body,
+         headers: { "Content-Type" => "application/json" }
     arr = JSON.parse(response.body)
     assert_equal 2, arr.length
     assert_equal [1, 2], arr.map { |r| r["id"] }
   end
 
-  test "empty body returns 400" do
-    post "/mcp", params: "", headers: { "Content-Type" => "application/json" }
+  test "empty body with auth returns 400" do
+    post "/mcp?token=#{@user.api_token}", params: "",
+         headers: { "Content-Type" => "application/json" }
     assert_response :bad_request
   end
 
@@ -237,13 +243,17 @@ class McpControllerTest < ActionDispatch::IntegrationTest
 
   # --- RFC 8707 resource binding at the gate ------------------------------
 
-  test "OAuth token with no resource is accepted (legacy / pre-Block-3 grandfather)" do
+  test "OAuth token defaults resource to canonical (no nil grandfather)" do
     client = OauthClient.create!(client_name: "X", redirect_uri_list: [ "https://x.example/cb" ])
     token  = OauthAccessToken.create!(user: @user, oauth_client: client,
-                                       scope: "analytics:read", resource: nil)
+                                       scope: "analytics:read")
+    assert_equal Oauth::BaseUrl.canonical_resource, token.resource
 
-    rpc_call("tools/list", headers: { "Authorization" => "Bearer #{token.token}" })
-    assert_response :success
+    # Hard enforcement: DB-level NOT NULL catches anything that bypasses
+    # callbacks (e.g. update_column, raw SQL, future code paths).
+    assert_raises(ActiveRecord::NotNullViolation) do
+      token.update_column(:resource, nil)
+    end
   end
 
   test "OAuth token bound to canonical resource is accepted" do

@@ -21,57 +21,10 @@ module Mcp
       Tools.new(user: @user, request: @request)
     end
 
-    def anon_tools
-      Tools.new(user: nil, request: @request)
-    end
-
-    # --- register_account ---------------------------------------------------
-
-    test "register_account creates EmailVerification and returns placeholder" do
-      assert_difference -> { EmailVerification.count }, 1 do
-        result = anon_tools.register_account("email" => "new@example.com")
-        assert_match(/\Apu_/, result["pending_user_id"])
-        assert_equal "DUMMY_SITE_ID_REPLACE_AFTER_VERIFY", result["placeholder_site_id"]
-      end
-    end
-
-    test "register_account rejects invalid email" do
-      assert_raises(ArgumentError) { anon_tools.register_account("email" => "nope") }
-    end
-
-    test "register_account rejects disposable domain" do
-      assert_raises(ArgumentError) do
-        anon_tools.register_account("email" => "x@mailinator.com")
-      end
-    end
-
-    test "register_account enforces 3/IP/hour limit" do
-      3.times do |i|
-        anon_tools.register_account("email" => "u#{i}@example.com")
-      end
-      err = assert_raises(Tools::RateLimitedError) do
-        anon_tools.register_account("email" => "u4@example.com")
-      end
-      assert_match(/network/i, err.message)
-    end
-
-    test "register_account enforces 5/email-domain/day limit" do
-      # Use distinct IPs to bypass IP limits.
-      5.times do |i|
-        req = Struct.new(:remote_ip).new("10.0.0.#{i}")
-        Tools.new(user: nil, request: req).register_account("email" => "x#{i}@onedomain.com")
-      end
-      req6 = Struct.new(:remote_ip).new("10.0.0.99")
-      err = assert_raises(Tools::RateLimitedError) do
-        Tools.new(user: nil, request: req6).register_account("email" => "x6@onedomain.com")
-      end
-      assert_match(/email domain/, err.message)
-    end
-
     # --- get_started_guide --------------------------------------------------
 
     test "get_started_guide returns markdown content" do
-      result = anon_tools.get_started_guide({})
+      result = auth_tools.get_started_guide({})
       assert result["markdown"].present?
     end
 

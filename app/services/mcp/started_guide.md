@@ -1,65 +1,51 @@
-# mcp-analytics Getting Started
+# mcp-analytics — Quick Reference for Connected Agents
 
-Welcome. mcp-analytics is a web-analytics service you drive through MCP — no dashboard, no tabs. This guide walks through the end-to-end setup.
+You're authenticated. mcp-analytics is a web-analytics service the user drives entirely through their MCP client (you) — there's no dashboard. This guide is a working-context cheat sheet.
 
-## 1. Signup (via MCP, no web form)
+## How the user got here
 
-Call `register_account` with the user's email. The response contains:
+The MCP server is OAuth-protected (RFC 6749 + 8707, PKCE). When the client added the connector URL, an OAuth flow ran: the user entered their email, clicked the verification link we mailed them, granted consent, and the client received an access token bound to this resource. That's the only setup ceremony. No URL pasting, no token shuffling.
 
-- `pending_user_id` — a handle we can reference before verification.
-- `placeholder_site_id` — a string you can drop into the tracking snippet *right now*, while the user heads to their inbox.
-- `message` — short human-readable status.
+## 1. Add a site
 
-We email the user a verification link that opens `/verify/<token>`. That page shows their API token and the new MCP URL (with token). The user updates their MCP connector URL and returns to chat.
+Most accounts start with zero sites. Call `add_site` with the user's domain and a privacy mode:
 
-## 2. Pre-verify tracking
+- **strict** (recommended default) — no cookies, daily-rotating salt, `visitor_id` is always 0. EU-safe, no banner needed.
+- **balanced** — no cookies, daily-rotating hash, same-day visitor dedup.
+- **all** — persistent cookie, cross-session tracking. The site owner handles GDPR.
 
-You can install the tracking snippet immediately, using the placeholder:
+Privacy mode **cannot be changed after creation** — historical data integrity matters.
 
-```html
-<script defer
-        data-site="DUMMY_SITE_ID_REPLACE_AFTER_VERIFY"
-        src="https://t.mcp-analytics.com/script.js"></script>
-```
+The response contains the real `site_id`. Hold onto it for the snippet step.
 
-Events that arrive for an unknown `data-site` are silently ignored server-side (the endpoint returns 204). This keeps your deploy green while the user is still verifying.
+## 2. Install the tracking snippet
 
-## 3. Post-verify: add a site
+Call `get_tracking_snippet` with the `site_id`. You get a one-line `<script>` tag. Find the right place in the user's codebase (root layout, base template) and drop it in. After deploy, the first pageview lands within seconds.
 
-Once the user has updated the MCP URL with their token, call `add_site` with their domain and a privacy mode (default `strict` — EU-safe, no cookies, daily salt rotation).
+## 3. Query analytics
 
-The response contains the real `site_id`. Ask the user to search-replace `DUMMY_SITE_ID_REPLACE_AFTER_VERIFY` with that `site_id` in their codebase and redeploy.
+All read tools take `site_id` and (optionally) `period`. Period accepts `today`, `yesterday`, `last_7_days`, `last_30_days`, `last_90_days`, `last_12_months`, or an explicit `YYYY-MM-DD..YYYY-MM-DD`.
 
-## 4. Query analytics
+Common tools:
 
-All authenticated tools are scoped to the current user's sites. Pick one by `site_id` and ask. Common tools:
-
-- `get_overview(site_id, period)` — pageviews, visitors, sessions, bounce rate.
-- `get_timeseries(site_id, metric, period, granularity)` — charts.
+- `get_overview` — TL;DR for the period: pageviews, visitors, sessions, bounce rate, top page/source, bot share, top events.
+- `get_timeseries` — bucketed metrics for charts.
 - `top_pages` / `top_referrers` / `top_sources` / `breakdown`.
 - `list_events` + `event_details` for custom events.
-- `compare_periods` for growth checks.
+- `compare_periods` for growth deltas.
 
-Period strings: `today`, `yesterday`, `last_7_days`, `last_30_days`, `last_90_days`, `last_12_months`, or an explicit `YYYY-MM-DD..YYYY-MM-DD`.
+If the account has more than one site and the user didn't specify which, **ask before querying**. Every analytics response includes `site_id` and `domain` — echo the domain in your answer so the user can confirm.
 
-## 5. Custom events
+## 4. Custom events
 
-Fire anything from the tracker with:
+The tracker exposes a queue stub:
 
 ```js
 window.mcpa('track', 'signup', { plan: 'pro' });
 ```
 
-Properties are limited to 20 keys and 10kb per event, primitives only (string/number/bool). Keep them non-PII — the backend doesn't filter them.
+Properties: 20 keys max, 10kb per event, primitives only (string/number/bool). Keep them non-PII — the backend doesn't filter.
 
-## 6. Privacy modes
+## 5. Limits
 
-Chosen once when the site is added; not changeable afterwards.
-
-- **strict** — daily salt, no visitor_id, no cookies, no GDPR banner needed. Default.
-- **default** — site-salt-based visitor tracking (~1 year), still cookie-free.
-- **all** — persistent cookie, cross-subdomain, full retention. Site owner handles GDPR.
-
-## 7. Limits
-
-Free tier: 100,000 hits/month per account across all sites. Over that, events keep ingesting but MCP responses include a usage warning.
+Free tier: 100,000 hits/month per account across all sites. Over that, events keep ingesting; MCP responses include a usage warning.

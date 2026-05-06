@@ -19,6 +19,10 @@ class OauthAccessToken < ApplicationRecord
   validates :refresh_token, uniqueness: true, allow_nil: true
   validates :scope, presence: true
   validates :expires_at, presence: true
+  # RFC 8707 audience binding: every access token MUST be bound to a
+  # resource. The pre-Block-3 nil-resource grandfather slot is removed by
+  # the 20260507100001 backfill migration; the validation keeps it closed.
+  validates :resource, presence: true
 
   before_validation :assign_defaults, on: :create
 
@@ -86,5 +90,9 @@ class OauthAccessToken < ApplicationRecord
     self.expires_at               ||= VALID_FOR.from_now
     self.refresh_token            ||= self.class.generate_refresh_token
     self.refresh_token_expires_at ||= REFRESH_VALID_FOR.from_now
+    # RFC 8707: every token must carry a resource. Default to canonical
+    # so console / test creators don't trip the validation, but keep the
+    # validation so an explicit `resource: nil` still fails loudly.
+    self.resource                 ||= Oauth::BaseUrl.canonical_resource
   end
 end

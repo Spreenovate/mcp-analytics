@@ -9,33 +9,23 @@ module Mcp
   # from the wire response in `Mcp::Server#visible_tools` since it's an
   # internal enforcement signal, not part of the MCP schema.
   module ToolSchemas
-    UNAUTHENTICATED = [
-      {
-        name: "register_account",
-        description: "Start signup by emailing a verification link. Returns a pending user id and a placeholder site id you can use in code before the user has clicked the verification link.",
-        inputSchema: {
-          type: "object",
-          properties: { email: { type: "string", description: "User's email address." } },
-          required: [ "email" ]
-        }
-      },
-      {
-        name: "get_started_guide",
-        description: "Markdown explanation of the full mcp-analytics signup and tracking flow, including the pre-verify placeholder workflow.",
-        inputSchema: { type: "object", properties: {} }
-      }
-    ].freeze
+    # MCP server is a protected resource: every /mcp request requires OAuth
+    # auth (or a legacy bearer token). The controller returns 401 +
+    # WWW-Authenticate before dispatch ever runs. UNAUTHENTICATED is kept
+    # as an empty constant so call sites that referenced it still compile.
+    UNAUTHENTICATED = [].freeze
 
     SCOPE_KEY = :scope
     OAUTH_FORBIDDEN_KEY = :oauth_forbidden
     INTERNAL_KEYS = [ SCOPE_KEY, OAUTH_FORBIDDEN_KEY ].freeze
 
-    # The 'get_started_guide' is also useful for authed users who want a
-    # refresher on tools and conventions, so it appears in both lists.
-    GET_STARTED_GUIDE = UNAUTHENTICATED.last
-
     AUTHENTICATED = [
-      GET_STARTED_GUIDE,
+      {
+        name: "get_started_guide",
+        description: "Markdown walkthrough of the mcp-analytics workflow: adding sites, installing the tracker, querying analytics, custom events.",
+        inputSchema: { type: "object", properties: {} },
+        scope: Oauth::Scopes::READ
+      },
       {
         name: "list_sites",
         description: "List all sites on the authenticated account.",

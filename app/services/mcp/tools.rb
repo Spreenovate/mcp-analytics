@@ -12,22 +12,7 @@ module Mcp
       @request = request
     end
 
-    # --- Unauthenticated ----------------------------------------------------
-
-    def register_account(args)
-      result = Signup.start(email: args["email"].to_s, ip: @request&.remote_ip)
-      raise ArgumentError, result.error_message if result.invalid?
-      raise RateLimitedError, result.error_message if result.rate_limited?
-
-      {
-        "pending_user_id" => result.verification.pending_user_id,
-        "placeholder_site_id" => PLACEHOLDER_SITE_ID,
-        "message" => "Bestätigungsmail an #{result.verification.email} gesendet. " \
-          "Du kannst jetzt schon den Tracking-Code mit dem Platzhalter " \
-          "#{PLACEHOLDER_SITE_ID} einbauen. Nach Verifizierung tauschst du " \
-          "den Platzhalter gegen die echte Site-ID aus."
-      }
-    end
+    # --- Onboarding (auth required, OAuth flow handles signup) -------------
 
     def get_started_guide(_args)
       { "markdown" => File.read(Rails.root.join("app/services/mcp/started_guide.md")) }
