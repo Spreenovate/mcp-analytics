@@ -68,4 +68,41 @@ class UserTest < ActiveSupport::TestCase
     user.update!(email_verified_at: Time.current)
     assert user.email_verified?
   end
+
+  # --- OAuth cascade -------------------------------------------------------
+
+  test "destroying a user revokes/destroys all their OAuth grants" do
+    user   = User.create!(email: "destroy@example.com", email_verified_at: Time.current)
+    client = OauthClient.create!(client_name: "X",
+                                  redirect_uri_list: [ "https://x.example/cb" ])
+    OauthAccessToken.create!(user: user, oauth_client: client, scope: "analytics:read")
+    OauthAuthorizationCode.create!(user: user, oauth_client: client,
+                                    redirect_uri: "https://x.example/cb",
+                                    scope: "analytics:read",
+                                    code_challenge: "x", code_challenge_method: "S256")
+    OauthAuthorizationRequest.create!(user: user, oauth_client: client,
+                                       redirect_uri: "https://x.example/cb",
+                                       code_challenge: "x", code_challenge_method: "S256",
+                                       scope: "analytics:read")
+
+    assert_difference -> { OauthAccessToken.count }, -1 do
+      assert_difference -> { OauthAuthorizationCode.count }, -1 do
+        assert_difference -> { OauthAuthorizationRequest.count }, -1 do
+          user.destroy!
+        end
+      end
+    end
+  end
+
+  test "destroying a user keeps their OAuth audit trail (FK nulled)" do
+    user   = User.create!(email: "audit_keeper@example.com", email_verified_at: Time.current)
+    client = OauthClient.create!(client_name: "X",
+                                  redirect_uri_list: [ "https://x.example/cb" ])
+    Oauth::Audit.log("consent_granted", user: user, oauth_client: client)
+
+    assert_no_difference -> { OauthAuditEvent.count } do
+      user.destroy!
+    end
+    assert_nil OauthAuditEvent.last.user_id
+  end
 end

@@ -75,10 +75,19 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     assert_includes names, "list_sites"
   end
 
-  test "invalid token falls back to unauthenticated tools" do
+  test "invalid token returns 401 + WWW-Authenticate with error=invalid_token" do
     rpc_call("tools/list", headers: { "Authorization" => "Bearer mcpa_garbage" })
+    assert_response :unauthorized
+    assert_match %r{Bearer error="invalid_token"}, response.headers["WWW-Authenticate"]
+    assert_match %r{resource_metadata=}, response.headers["WWW-Authenticate"]
+  end
+
+  test "no token returns anonymous tools list (not 401)" do
+    rpc_call("tools/list", headers: {})
+    assert_response :success
     names = json_body["result"]["tools"].map { |t| t["name"] }
     assert_not_includes names, "list_sites"
+    assert_includes names, "register_account"
   end
 
   # --- tools/call dispatch -------------------------------------------------
@@ -87,7 +96,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     rpc("tools/call", params: { name: "list_sites", arguments: {} })
     result = json_body["result"]
     assert_equal true, result["isError"]
-    assert_includes result["content"].first["text"], "not available"
+    assert_includes result["content"].first["text"], "requires authentication"
   end
 
   test "calling list_sites with auth returns the user's sites" do
@@ -132,6 +141,140 @@ class McpControllerTest < ActionDispatch::IntegrationTest
   test "empty body returns 400" do
     post "/mcp", params: "", headers: { "Content-Type" => "application/json" }
     assert_response :bad_request
+  end
+
+  # --- OAuth integration --------------------------------------------------
+
+  test "WWW-Authenticate header points at protected-resource metadata" do
+    get "/mcp"
+    assert_match %r{Bearer resource_metadata="[^"]+/\.well-known/oauth-protected-resource"},
+                 response.headers["WWW-Authenticate"]
+  end
+
+  test "valid OAuth access token authenticates and unlocks tools" do
+    client = OauthClient.create!(client_name: "X", redirect_uri_list: ["https://x.example/cb"])
+    token  = OauthAccessToken.create!(user: @user, oauth_client: client, scope: "analytics:read")
+
+    rpc_call("tools/list", headers: { "Authorization" => "Bearer #{token.token}" })
+    assert_response :success
+    names = json_body["result"]["tools"].map { |t| t["name"] }
+    assert_includes names, "list_sites"
+    assert token.reload.last_used_at.present?, "should touch last_used_at"
+  end
+
+  # --- Scope enforcement (OAuth tokens) ----------------------------------
+
+  test "OAuth token with only analytics:read hides write tools from tools/list" do
+    client = OauthClient.create!(client_name: "X", redirect_uri_list: [ "https://x.example/cb" ])
+    token  = OauthAccessToken.create!(user: @user, oauth_client: client, scope: "analytics:read")
+
+    rpc_call("tools/list", headers: { "Authorization" => "Bearer #{token.token}" })
+    names = json_body["result"]["tools"].map { |t| t["name"] }
+    assert_includes names, "list_sites"
+    assert_includes names, "get_overview"
+    assert_not_includes names, "add_site"
+    assert_not_includes names, "remove_site"
+    assert_not_includes names, "regenerate_api_token"
+  end
+
+  test "OAuth token with analytics:read+manage exposes write tools but never regenerate_api_token" do
+    client = OauthClient.create!(client_name: "X", redirect_uri_list: [ "https://x.example/cb" ])
+    token  = OauthAccessToken.create!(user: @user, oauth_client: client,
+                                       scope: "analytics:read analytics:manage")
+
+    rpc_call("tools/list", headers: { "Authorization" => "Bearer #{token.token}" })
+    names = json_body["result"]["tools"].map { |t| t["name"] }
+    assert_includes names, "add_site"
+    assert_includes names, "remove_site"
+    # Even with full scopes, OAuth-issued tokens can never extract the
+    # legacy master api_token through this tool.
+    assert_not_includes names, "regenerate_api_token"
+  end
+
+  test "OAuth token cannot call regenerate_api_token even when name guessed" do
+    client = OauthClient.create!(client_name: "X", redirect_uri_list: [ "https://x.example/cb" ])
+    token  = OauthAccessToken.create!(user: @user, oauth_client: client,
+                                       scope: "analytics:read analytics:manage")
+    original = @user.api_token
+
+    rpc_call("tools/call",
+             params: { "name" => "regenerate_api_token", "arguments" => {} },
+             headers: { "Authorization" => "Bearer #{token.token}" })
+    result = json_body["result"]
+    assert_equal true, result["isError"]
+    assert_match(/not available to OAuth/, result["content"].first["text"])
+    assert_equal original, @user.reload.api_token
+  end
+
+  test "OAuth token without analytics:manage scope cannot call add_site" do
+    client = OauthClient.create!(client_name: "X", redirect_uri_list: [ "https://x.example/cb" ])
+    token  = OauthAccessToken.create!(user: @user, oauth_client: client, scope: "analytics:read")
+
+    rpc_call("tools/call",
+             params: { "name" => "add_site", "arguments" => { "domain" => "x.com" } },
+             headers: { "Authorization" => "Bearer #{token.token}" })
+    result = json_body["result"]
+    assert_equal true, result["isError"]
+    assert_match(/analytics:manage/, result["content"].first["text"])
+    assert_equal 0, @user.sites.count
+  end
+
+  test "legacy api_token can call regenerate_api_token" do
+    rpc("tools/list", token: @user.api_token)
+    names = json_body["result"]["tools"].map { |t| t["name"] }
+    assert_includes names, "regenerate_api_token", "legacy callers must still see the rotate tool"
+  end
+
+  test "revoked OAuth access token returns 401" do
+    client = OauthClient.create!(client_name: "X", redirect_uri_list: [ "https://x.example/cb" ])
+    token  = OauthAccessToken.create!(user: @user, oauth_client: client, scope: "analytics:read")
+    token.revoke!
+
+    rpc_call("tools/list", headers: { "Authorization" => "Bearer #{token.token}" })
+    assert_response :unauthorized
+    assert_match %r{Bearer error="invalid_token"}, response.headers["WWW-Authenticate"]
+  end
+
+  # --- RFC 8707 resource binding at the gate ------------------------------
+
+  test "OAuth token with no resource is accepted (legacy / pre-Block-3 grandfather)" do
+    client = OauthClient.create!(client_name: "X", redirect_uri_list: [ "https://x.example/cb" ])
+    token  = OauthAccessToken.create!(user: @user, oauth_client: client,
+                                       scope: "analytics:read", resource: nil)
+
+    rpc_call("tools/list", headers: { "Authorization" => "Bearer #{token.token}" })
+    assert_response :success
+  end
+
+  test "OAuth token bound to canonical resource is accepted" do
+    client = OauthClient.create!(client_name: "X", redirect_uri_list: [ "https://x.example/cb" ])
+    token  = OauthAccessToken.create!(user: @user, oauth_client: client,
+                                       scope: "analytics:read",
+                                       resource: "#{Oauth::BaseUrl.value}/mcp")
+
+    rpc_call("tools/list", headers: { "Authorization" => "Bearer #{token.token}" })
+    assert_response :success
+  end
+
+  test "OAuth token bound to a foreign resource is rejected at the MCP gate (RFC 8707)" do
+    client = OauthClient.create!(client_name: "X", redirect_uri_list: [ "https://x.example/cb" ])
+    token  = OauthAccessToken.create!(user: @user, oauth_client: client,
+                                       scope: "analytics:read",
+                                       resource: "https://other-mcp.example/mcp")
+
+    rpc_call("tools/list", headers: { "Authorization" => "Bearer #{token.token}" })
+    assert_response :unauthorized
+    assert_match %r{Bearer error="invalid_token"}, response.headers["WWW-Authenticate"]
+  end
+
+  test "expired OAuth access token returns 401" do
+    client = OauthClient.create!(client_name: "X", redirect_uri_list: [ "https://x.example/cb" ])
+    token  = OauthAccessToken.create!(user: @user, oauth_client: client, scope: "analytics:read",
+                                       expires_at: 1.minute.ago)
+
+    rpc_call("tools/list", headers: { "Authorization" => "Bearer #{token.token}" })
+    assert_response :unauthorized
+    assert_match %r{Bearer error="invalid_token"}, response.headers["WWW-Authenticate"]
   end
 
   private

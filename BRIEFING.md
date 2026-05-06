@@ -719,7 +719,8 @@ in einem Rutsch):
      &state=<csrf-token>
      &code_challenge=<pkce-challenge>
      &code_challenge_method=S256
-     &scope=read:analytics
+     &scope=analytics:read%20analytics:manage
+     &resource=https%3A%2F%2Fmcp-analytics.com%2Fmcp
         ↓
 6. Server prüft Session:
    - eingeloggt? → direkt zu Schritt 9 (Consent-Screen)
@@ -804,8 +805,13 @@ Neue Bausteine:
   das eigentlich, aber wir starten mit hartkodierten Clients (Claude,
   Cursor). DCR kann nachgezogen werden, wenn ChatGPT-Listing tatsächlich
   ansteht.
-- **Ein Scope reicht**: `read:analytics`. Granulare Scopes (nur lesen vs.
-  Sites verwalten) erst wenn Use-Case dafür da ist.
+- **Zwei Scopes mit Enforcement**: `analytics:read` (Analytics-Queries
+  + list_sites) und `analytics:manage` (zusätzlich add_site/remove_site).
+  Tools/list filtert nach gewährten Scopes; tools/call verweigert mit
+  klarer Fehlermeldung wenn Scope fehlt. `regenerate_api_token` ist
+  zusätzlich für OAuth-Sessions komplett unsichtbar (sonst könnte ein
+  OAuth-Client den Master-Token extrahieren und damit den OAuth-Lifecycle
+  umgehen).
 - **Refresh-Tokens optional**. Access-Token mit langer Gültigkeit (z.B.
   1 Jahr) reicht für MVP-Niveau, Settings-Revoke ist die Notbremse.
 - **PKCE Pflicht**, kein Secret-basierter Flow für public Clients.
@@ -986,6 +992,24 @@ Auch mit allen 4 Phasen können wir niemals sagen:
 
 ## CHANGELOG (Working Doc)
 
+- **2026-05-05** — OAuth-Hardening Block 2: `/settings` als enge,
+  Session-basierte UI für OAuth-Connector-Management wieder eingeführt
+  (anders als die 2026-04-25 entfernte Variante: nur Cookie-Session,
+  nur für die Settings-Seite, NICHT für die MCP-API). Sliding 30-min
+  Idle, Sign-In via Verify-Link-Klick, Sign-Out bumpt
+  `users.session_version` um Cookie-Replay zu blocken. Pinned
+  Cookie-Flags (`secure`, `httponly`, `same_site: :lax`).
+- **2026-05-05** — OAuth-Hardening Block 1: Revocation-Endpoint
+  (RFC 7009), Audit-Log (append-only), Rate-Limits auf alle OAuth-
+  Endpoints, `trusted_proxies` gegen XFF-Spoofing, User-Deletion-
+  Cascade, DCR-Field-Caps. Discovery advertiset jetzt
+  `revocation_endpoint`, `resource_parameter_supported` (RFC 8707),
+  `op_policy_uri` + `op_tos_uri`.
+- **2026-05-02** — OAuth Phase 2 Foundation: Authorization-Code-Flow
+  mit PKCE, Dynamic Client Registration, RFC 8707 Resource Indicators,
+  Two-Scope-Modell (`analytics:read` + `analytics:manage`) mit
+  Tool-Level-Enforcement, `regenerate_api_token` für OAuth-Sessions
+  versteckt.
 - **2026-04-23** — Initial scaffold (Week 1–4 Output) eingecheckt.
   CI vorerst deaktiviert (keine Tests). Dieses Working Doc angelegt.
 - **2026-04-27** — Bot- und AI-Agent-Klassifikation Phase 1 deployed:

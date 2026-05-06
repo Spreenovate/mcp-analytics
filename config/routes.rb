@@ -11,8 +11,28 @@ Rails.application.routes.draw do
   post "/signup"       => "signups#create", as: :signup
   get  "/signup/check" => "signups#check",  as: :signup_check
 
-  # Verification link from signup email.
-  get "/verify/:token" => "verifications#show", as: :verify
+  # Verification link from signup email. GET shows a confirmation page
+  # (no state change — defends against `<img src=>` style auth-CSRF);
+  # POST does the actual user-creation / sign-in / consent-redirect.
+  get  "/verify/:token" => "verifications#show",    as: :verify
+  post "/verify/:token" => "verifications#confirm", as: :verify_confirm
+
+  # OAuth 2.1 (RFC 6749 + RFC 7636 + RFC 7591 + RFC 9728)
+  get  "/.well-known/oauth-authorization-server" => "oauth/discovery#authorization_server"
+  get  "/.well-known/oauth-protected-resource"   => "oauth/discovery#protected_resource"
+  post "/oauth/register" => "oauth/clients#create",        as: :oauth_register
+  get  "/oauth/authorize" => "oauth/authorizations#new",   as: :oauth_authorize
+  post "/oauth/authorize/start" => "oauth/authorizations#start", as: :oauth_authorize_start
+  get  "/oauth/consent/:request_token" => "oauth/authorizations#show", as: :oauth_consent
+  post "/oauth/consent/:request_token" => "oauth/authorizations#decide", as: :oauth_consent_decide
+  post "/oauth/token" => "oauth/tokens#create",            as: :oauth_token
+  post "/oauth/revoke" => "oauth/revocations#create",      as: :oauth_revoke
+
+  # Self-service settings (web UI). Session is established by clicking
+  # the verify-link from a fresh signup-form submission.
+  get  "/settings"                            => "settings#show",             as: :settings
+  post "/settings/connectors/:id/revoke"      => "settings#revoke_connector", as: :revoke_connector
+  post "/settings/sign_out"                   => "settings#sign_out",         as: :settings_sign_out
 
   # Legal pages.
   get "/terms"   => "pages#terms",   as: :terms

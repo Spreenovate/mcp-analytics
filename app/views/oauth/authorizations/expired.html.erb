@@ -1,0 +1,13 @@
+<% content_for(:title, "Authorization expired | mcp-analytics") %>
+<%= render "shared_styles" %>
+
+<div class="wrap">
+  <h1>Link <span class="accent">expired</span>.</h1>
+  <p class="lead">
+    This authorization request has expired or was already used. Go back to your
+    MCP client and start the connection again — it'll send a fresh link.
+  </p>
+  <div class="footer-link">
+    <%= link_to "← Back home", root_path %>
+  </div>
+</div>

@@ -2,6 +2,12 @@ module Mcp
   # Schemas the MCP client sees in tools/list.
   # Kept as a module-level constant so both the schema response and the
   # dispatch layer share a single source of truth for tool names.
+  #
+  # Each authenticated tool declares the OAuth scope required to call it
+  # (`scope:` key) and whether it should be hidden from OAuth-issued
+  # tokens entirely (`oauth_forbidden: true`). The `scope` key is dropped
+  # from the wire response in `Mcp::Server#visible_tools` since it's an
+  # internal enforcement signal, not part of the MCP schema.
   module ToolSchemas
     UNAUTHENTICATED = [
       {
@@ -10,7 +16,7 @@ module Mcp
         inputSchema: {
           type: "object",
           properties: { email: { type: "string", description: "User's email address." } },
-          required: ["email"]
+          required: [ "email" ]
         }
       },
       {
@@ -19,6 +25,10 @@ module Mcp
         inputSchema: { type: "object", properties: {} }
       }
     ].freeze
+
+    SCOPE_KEY = :scope
+    OAUTH_FORBIDDEN_KEY = :oauth_forbidden
+    INTERNAL_KEYS = [ SCOPE_KEY, OAUTH_FORBIDDEN_KEY ].freeze
 
     # The 'get_started_guide' is also useful for authed users who want a
     # refresher on tools and conventions, so it appears in both lists.
@@ -29,7 +39,8 @@ module Mcp
       {
         name: "list_sites",
         description: "List all sites on the authenticated account.",
-        inputSchema: { type: "object", properties: {} }
+        inputSchema: { type: "object", properties: {} },
+        scope: Oauth::Scopes::READ
       },
       {
         name: "add_site",
@@ -40,8 +51,9 @@ module Mcp
             domain: { type: "string" },
             privacy_mode: { type: "string", enum: %w[strict default all], default: "strict" }
           },
-          required: ["domain"]
-        }
+          required: [ "domain" ]
+        },
+        scope: Oauth::Scopes::MANAGE
       },
       {
         name: "get_tracking_snippet",
@@ -49,8 +61,9 @@ module Mcp
         inputSchema: {
           type: "object",
           properties: { site_id: { type: "string" } },
-          required: ["site_id"]
-        }
+          required: [ "site_id" ]
+        },
+        scope: Oauth::Scopes::READ
       },
       {
         name: "remove_site",
@@ -58,8 +71,9 @@ module Mcp
         inputSchema: {
           type: "object",
           properties: { site_id: { type: "string" } },
-          required: ["site_id"]
-        }
+          required: [ "site_id" ]
+        },
+        scope: Oauth::Scopes::MANAGE
       },
       {
         name: "get_overview",
@@ -70,8 +84,9 @@ module Mcp
             site_id: { type: "string" },
             period: { type: "string", default: "last_7_days" }
           },
-          required: ["site_id"]
-        }
+          required: [ "site_id" ]
+        },
+        scope: Oauth::Scopes::READ
       },
       {
         name: "get_timeseries",
@@ -84,8 +99,9 @@ module Mcp
             period: { type: "string", default: "last_7_days" },
             granularity: { type: "string", enum: %w[hour day week], default: "day" }
           },
-          required: ["site_id", "metric"]
-        }
+          required: [ "site_id", "metric" ]
+        },
+        scope: Oauth::Scopes::READ
       },
       {
         name: "top_pages",
@@ -97,8 +113,9 @@ module Mcp
             period: { type: "string", default: "last_7_days" },
             limit: { type: "integer", default: 10 }
           },
-          required: ["site_id"]
-        }
+          required: [ "site_id" ]
+        },
+        scope: Oauth::Scopes::READ
       },
       {
         name: "top_referrers",
@@ -110,8 +127,9 @@ module Mcp
             period: { type: "string", default: "last_7_days" },
             limit: { type: "integer", default: 10 }
           },
-          required: ["site_id"]
-        }
+          required: [ "site_id" ]
+        },
+        scope: Oauth::Scopes::READ
       },
       {
         name: "top_sources",
@@ -123,8 +141,9 @@ module Mcp
             period: { type: "string", default: "last_7_days" },
             limit: { type: "integer", default: 10 }
           },
-          required: ["site_id"]
-        }
+          required: [ "site_id" ]
+        },
+        scope: Oauth::Scopes::READ
       },
       {
         name: "breakdown",
@@ -137,8 +156,9 @@ module Mcp
             period: { type: "string", default: "last_7_days" },
             limit: { type: "integer", default: 10 }
           },
-          required: ["site_id", "dimension"]
-        }
+          required: [ "site_id", "dimension" ]
+        },
+        scope: Oauth::Scopes::READ
       },
       {
         name: "list_events",
@@ -149,8 +169,9 @@ module Mcp
             site_id: { type: "string" },
             period: { type: "string", default: "last_7_days" }
           },
-          required: ["site_id"]
-        }
+          required: [ "site_id" ]
+        },
+        scope: Oauth::Scopes::READ
       },
       {
         name: "event_details",
@@ -163,8 +184,9 @@ module Mcp
             period: { type: "string", default: "last_7_days" },
             group_by_property: { type: "string" }
           },
-          required: ["site_id", "event_name"]
-        }
+          required: [ "site_id", "event_name" ]
+        },
+        scope: Oauth::Scopes::READ
       },
       {
         name: "compare_periods",
@@ -177,8 +199,9 @@ module Mcp
             period_a: { type: "string" },
             period_b: { type: "string" }
           },
-          required: ["site_id", "metric", "period_a", "period_b"]
-        }
+          required: [ "site_id", "metric", "period_a", "period_b" ]
+        },
+        scope: Oauth::Scopes::READ
       },
       {
         name: "top_user_agents",
@@ -191,8 +214,9 @@ module Mcp
             limit: { type: "integer", default: 25 },
             traffic_class: { type: "string", enum: %w[user bot] }
           },
-          required: ["site_id"]
-        }
+          required: [ "site_id" ]
+        },
+        scope: Oauth::Scopes::READ
       },
       {
         name: "traffic_class_breakdown",
@@ -203,18 +227,27 @@ module Mcp
             site_id: { type: "string" },
             period: { type: "string", default: "last_7_days" }
           },
-          required: ["site_id"]
-        }
+          required: [ "site_id" ]
+        },
+        scope: Oauth::Scopes::READ
       },
       {
         name: "get_account",
         description: "Account info — email, plan, usage.",
-        inputSchema: { type: "object", properties: {} }
+        inputSchema: { type: "object", properties: {} },
+        scope: Oauth::Scopes::READ
       },
       {
+        # Hidden from OAuth-issued sessions: an OAuth client could call this
+        # to extract the legacy account-wide api_token, escaping the OAuth
+        # grant lifecycle (revocation, expiry, audit). Available to legacy
+        # api_token sessions, where the caller already has the master token
+        # and can rotate it.
         name: "regenerate_api_token",
         description: "Invalidate the current API token and issue a new one. Returns the new MCP URL.",
-        inputSchema: { type: "object", properties: {} }
+        inputSchema: { type: "object", properties: {} },
+        scope: Oauth::Scopes::MANAGE,
+        oauth_forbidden: true
       }
     ].freeze
   end

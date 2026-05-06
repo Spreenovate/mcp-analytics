@@ -1,0 +1,16 @@
+<% content_for(:title, "OAuth error | mcp-analytics") %>
+<%= render "shared_styles" %>
+
+<div class="wrap">
+  <h1>Bad <span class="accent">request</span>.</h1>
+  <div class="alert">
+    <strong><%= @code %>:</strong> <%= @description %>
+  </div>
+  <p class="lead">
+    Your MCP client sent invalid OAuth parameters. There's nothing for you to do
+    here — go back to the client and try again.
+  </p>
+  <div class="footer-link">
+    <%= link_to "← Back home", root_path %>
+  </div>
+</div>

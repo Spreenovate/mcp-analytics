@@ -235,7 +235,7 @@ module Mcp
     def clamped_limit(value)
       n = (value || 10).to_i
       return 10 if n <= 0
-      [n, 1000].min
+      [ n, 1000 ].min
     end
 
     # Builds the tracking snippet for a given Site, baking in mode-specific
@@ -249,7 +249,7 @@ module Mcp
     #            data-respect-dnt="false"  -> ignore DNT by default (spec: "max retention")
     def tracking_snippet(site)
       tracker_base = ENV.fetch("TRACKER_BASE_URL", "https://t.mcp-analytics.com")
-      attrs = [%Q(data-site="#{site.site_id}")]
+      attrs = [ %Q(data-site="#{site.site_id}") ]
       if site.privacy_mode == "all"
         attrs << %q(data-persistent="true")
         attrs << %q(data-respect-dnt="false")

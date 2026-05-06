@@ -1,10 +1,16 @@
 class EmailVerification < ApplicationRecord
   VALID_FOR = 24.hours
 
+  belongs_to :oauth_authorization_request, optional: true
+
   validates :email, presence: true, format: { with: URI::MailTo::EMAIL_REGEXP }
   validates :verify_token, presence: true, uniqueness: true
   validates :pending_user_id, presence: true, uniqueness: true
   validates :expires_at, presence: true
+
+  def oauth_flow?
+    oauth_authorization_request_id.present?
+  end
 
   before_validation :assign_tokens, on: :create
 

@@ -1,0 +1,62 @@
+<% content_for(:title, "Authorize #{@client.client_name} | mcp-analytics") %>
+<%= render "shared_styles" %>
+
+<div class="wrap">
+  <%# Render logo only for clients we (the operator) registered ourselves —
+      not for self-registered DCR clients. A hostile DCR registrant could
+      otherwise point logo_uri at a tracking pixel and harvest user IP +
+      User-Agent + a time-correlation with the consent screen on every
+      view. logo_uri is still https-validated at registration (defence
+      in depth) but suppressing the render closes the tracking vector
+      entirely for unverified third-party clients. %>
+  <% if @client.logo_uri.present? && !@client.dynamically_registered? %>
+    <img src="<%= @client.logo_uri %>"
+         alt="<%= @client.client_name %> logo"
+         class="client-logo"
+         referrerpolicy="no-referrer"
+         crossorigin="anonymous"
+         loading="lazy"
+         decoding="async">
+  <% end %>
+
+  <h1><%= @client.client_name %> wants <span class="accent">access</span>.</h1>
+
+  <% if @client.dynamically_registered? %>
+    <div class="alert">
+      ⚠ <strong>Unverified third-party app.</strong> This client registered
+      itself with mcp-analytics — we have not reviewed it. Only proceed if
+      you trust the source that sent you here.
+    </div>
+  <% end %>
+
+  <div class="panel">
+    <span class="label">Logged in as</span>
+    <div class="row"><%= @user.email %></div>
+  </div>
+
+  <div class="panel">
+    <span class="label">Permissions requested</span>
+    <ul class="scopes">
+      <% granted = Oauth::Scopes.parse(@auth_request.scope) %>
+      <% if granted.include?(Oauth::Scopes::READ) %>
+        <li><strong>Read</strong> your sites and analytics data</li>
+      <% end %>
+      <% if granted.include?(Oauth::Scopes::MANAGE) %>
+        <li><strong>Manage</strong> sites: add new sites and remove existing ones</li>
+      <% end %>
+    </ul>
+  </div>
+
+  <%= form_with url: oauth_consent_decide_path(request_token: @auth_request.request_token), method: :post, local: true, class: "oauth-form" do |f| %>
+    <%= hidden_field_tag :grant, @grant %>
+    <div class="actions">
+      <button type="submit" name="decision" value="allow" class="btn">Allow</button>
+      <button type="submit" name="decision" value="deny" class="btn secondary">Deny</button>
+    </div>
+  <% end %>
+
+  <div class="footer-link">
+    Allowing creates a long-lived access token for <%= @client.client_name %>.
+    Revoke any time by deleting the connector in your client.
+  </div>
+</div>
