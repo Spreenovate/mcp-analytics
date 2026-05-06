@@ -131,7 +131,10 @@ module Oauth
           oauth_client: @auth_request.oauth_client,
           request: request,
           metadata: { scope: @auth_request.scope, resource: @auth_request.resource })
-        redirect_to(client_redirect_with(code: code.code, state: @auth_request.state),
+        # RFC 9207: include `iss` so strict clients can pin the issuer.
+        redirect_to(client_redirect_with(code: code.code,
+                                          state: @auth_request.state,
+                                          iss: Oauth::BaseUrl.value),
                     allow_other_host: true)
       else
         Oauth::Audit.log("consent_denied",
@@ -140,7 +143,8 @@ module Oauth
           request: request)
         redirect_to(client_redirect_with(error: "access_denied",
                                           error_description: "User denied access",
-                                          state: @auth_request.state),
+                                          state: @auth_request.state,
+                                          iss: Oauth::BaseUrl.value),
                     allow_other_host: true)
       end
     end

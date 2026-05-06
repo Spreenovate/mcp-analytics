@@ -26,6 +26,12 @@ module Oauth
         # RFC 8707: signal explicit support so strict MCP clients send
         # the `resource` parameter instead of skipping it.
         resource_parameter_supported: true,
+        # RFC 9207: we always include `iss` in the auth response so strict
+        # clients (claude.ai's MCP connector flow appears to require it —
+        # without it, the redirect with code is silently dropped and
+        # /oauth/token is never called) can validate the issuer to defend
+        # against mix-up attacks.
+        authorization_response_iss_parameter_supported: true,
         service_documentation: "#{base_url}/",
         op_policy_uri: "#{base_url}/privacy",
         op_tos_uri: "#{base_url}/terms"
