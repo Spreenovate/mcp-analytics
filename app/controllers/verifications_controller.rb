@@ -73,12 +73,18 @@ class VerificationsController < ApplicationController
     @verification = (found && found.usable?) ? found : nil
   end
 
-  # The verify URL is a credential and the verified page renders the
-  # api_token in plaintext. Don't let either leak via Referer when the
-  # user clicks an outbound link, and don't let intermediate caches keep
-  # the response.
+  # The verify URL is a credential — don't let it leak via Referer when
+  # the user clicks an outbound link, and don't let intermediate caches
+  # keep the response.
+  #
+  # Use `same-origin` (not `no-referrer`): modern Chromium under
+  # `no-referrer` sends `Origin: null` on form POSTs, which breaks
+  # Rails' origin-based CSRF check on our own POST /verify/:token.
+  # `same-origin` keeps the Referer empty for cross-origin nav (so the
+  # token doesn't leak to claude.ai/google/etc.) while letting our own
+  # POST carry a proper Origin header.
   def no_referrer_or_store
-    response.set_header("Referrer-Policy", "no-referrer")
+    response.set_header("Referrer-Policy", "same-origin")
     response.set_header("Cache-Control", "no-store")
   end
 end

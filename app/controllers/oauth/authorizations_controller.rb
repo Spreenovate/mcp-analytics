@@ -207,10 +207,16 @@ module Oauth
 
     # Consent + authorize pages carry the signed grant in their URL — keep
     # them out of intermediary caches and outbound Referer headers.
+    # `same-origin` (not `no-referrer`): Chromium under `no-referrer` sends
+    # `Origin: null` on same-origin form POSTs, which breaks Rails' CSRF
+    # origin check on POST /oauth/authorize/start and /oauth/consent/:token.
+    # `same-origin` still strips the Referer when navigating to the client's
+    # redirect_uri (the actual leak risk), while letting our own POSTs
+    # carry a proper Origin.
     def no_store_no_referrer
       response.set_header("Cache-Control", "no-store")
       response.set_header("Pragma", "no-cache")
-      response.set_header("Referrer-Policy", "no-referrer")
+      response.set_header("Referrer-Policy", "same-origin")
     end
   end
 end

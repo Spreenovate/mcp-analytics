@@ -14,6 +14,18 @@ class VerificationsControllerTest < ActionDispatch::IntegrationTest
     assert_nil v.reload.used_at, "GET must be a no-op state-wise (defends against <img src=> CSRF)"
   end
 
+  # Regression: Chromium under `Referrer-Policy: no-referrer` sends
+  # `Origin: null` on form POSTs, which trips Rails' origin-based CSRF
+  # check. We use `same-origin` instead — strips Referer for cross-origin
+  # nav (still protects the verify token from leaking to claude.ai/etc.)
+  # but lets our own POST carry a proper Origin.
+  test "GET /verify/:token sets Referrer-Policy: same-origin (not no-referrer)" do
+    v = EmailVerification.create!(email: "rp@example.com")
+    get verify_path(token: v.verify_token)
+    assert_equal "same-origin", response.headers["Referrer-Policy"]
+    assert_match %r{name="referrer"\s+content="same-origin"}, response.body
+  end
+
   test "GET /verify/:token with OAuth context advertises the client name" do
     client = OauthClient.create!(client_name: "ClaudeForReview",
                                   redirect_uri_list: [ "https://claude.ai/cb" ])
@@ -41,11 +53,11 @@ class VerificationsControllerTest < ActionDispatch::IntegrationTest
     assert_response :gone
   end
 
-  test "GET /verify sets Referrer-Policy: no-referrer + Cache-Control: no-store" do
+  test "GET /verify sets Referrer-Policy: same-origin + Cache-Control: no-store" do
     v = EmailVerification.create!(email: "referrer@example.com")
     get verify_path(token: v.verify_token)
     assert_response :success
-    assert_equal "no-referrer", response.headers["Referrer-Policy"]
+    assert_equal "same-origin", response.headers["Referrer-Policy"]
     assert_equal "no-store",    response.headers["Cache-Control"]
   end
 
@@ -149,11 +161,11 @@ class VerificationsControllerTest < ActionDispatch::IntegrationTest
       "expired OAuth verify must not silently sign the user into Settings"
   end
 
-  test "POST verify page sets Referrer-Policy: no-referrer + Cache-Control: no-store" do
+  test "POST verify page sets Referrer-Policy: same-origin + Cache-Control: no-store" do
     v = EmailVerification.create!(email: "referrer_post@example.com")
     post verify_confirm_path(token: v.verify_token)
     assert_response :success
-    assert_equal "no-referrer", response.headers["Referrer-Policy"]
+    assert_equal "same-origin", response.headers["Referrer-Policy"]
     assert_equal "no-store",    response.headers["Cache-Control"]
   end
 end
