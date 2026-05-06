@@ -20,6 +20,10 @@ class OauthClient < ApplicationRecord
   MAX_REDIRECT_URIS = 5
   MAX_REDIRECT_URI_LENGTH = 500
 
+  # Exact-match list of native schemes we recognise. NOT a prefix list:
+  # `cursorevil://` and similar lookalikes must not pass.
+  NATIVE_SCHEMES = %w[claude cursor].freeze
+
   before_validation :assign_client_id, on: :create
 
   SUPPORTED_AUTH_METHODS = %w[none].freeze
@@ -68,7 +72,7 @@ class OauthClient < ApplicationRecord
 
     list.each do |uri|
       parsed = URI.parse(uri.to_s)
-      unless %w[http https].include?(parsed.scheme) || parsed.scheme == "claude" || parsed.scheme&.start_with?("cursor")
+      unless %w[http https].include?(parsed.scheme) || NATIVE_SCHEMES.include?(parsed.scheme)
         errors.add(:redirect_uris, "must be http(s) or a known native scheme; got #{uri.inspect}")
         return
       end

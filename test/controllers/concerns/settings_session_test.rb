@@ -104,4 +104,21 @@ class SettingsSessionTest < ActiveSupport::TestCase
     assert_nil c.session[:fingerprint], "reset_session must drop pre-existing keys"
     assert_equal @user.id, c.session[:settings_user_id]
   end
+
+  test "sign_out clears local session even if version-bump fails (Block 3 ordering)" do
+    c = FakeController.new
+    c.session[:settings_user_id]      = @user.id
+    c.session[:settings_user_version] = @user.session_version
+    c.session[:settings_seen_at]      = Time.current.to_i
+
+    # Override current_settings_user to return a user whose bump raises.
+    doctored = @user
+    doctored.define_singleton_method(:bump_session_version!) do
+      raise ActiveRecord::ConnectionNotEstablished, "simulated db outage"
+    end
+    c.define_singleton_method(:current_settings_user) { doctored }
+
+    assert_nothing_raised { c.sign_out_of_settings }
+    assert_empty c.session, "local session must be reset before bump runs"
+  end
 end

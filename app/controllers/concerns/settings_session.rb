@@ -34,11 +34,23 @@ module SettingsSession
   end
 
   def sign_out_of_settings
-    # Invalidate every cookie issued for this user before now: the bumped
-    # session_version no longer matches the value baked into outstanding
-    # cookies. Stops cookie-store replay after explicit sign-out.
-    current_settings_user&.bump_session_version!
+    # Reset the cookie FIRST so the user's local session is gone even if
+    # the version-bump fails for any reason (DB lock, connection drop).
+    # The bump matters for *other* browsers that may have a copy of the
+    # same cookie value — those are invalidated when session_version no
+    # longer matches what's baked into their cookies.
+    user = current_settings_user
     reset_session
+    return if user.nil?
+
+    begin
+      user.bump_session_version!
+    rescue StandardError => e
+      # Local cookie is already cleared; the failure here only affects
+      # other browsers that might still have the stale cookie. Log
+      # loudly; never bubble to the user.
+      Rails.logger.error("session_version bump failed for user=#{user.id}: #{e.class}: #{e.message}")
+    end
   end
 
   def current_settings_user

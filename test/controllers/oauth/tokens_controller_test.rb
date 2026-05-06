@@ -155,6 +155,24 @@ module Oauth
       assert_response :success
     end
 
+    test "downgrade attempt: code has nil resource but request claims canonical -> invalid_target" do
+      # auth_code created with no resource (legacy / pre-Block-3 fixture).
+      assert_nil @code.resource
+      post_token(resource: "#{Oauth::BaseUrl.value}/mcp")
+      assert_response :bad_request
+      assert_equal "invalid_target", JSON.parse(response.body)["error"]
+      assert_nil @code.reload.used_at
+    end
+
+    test "code with canonical resource + matching request resource binds the access_token" do
+      canonical = "#{Oauth::BaseUrl.value}/mcp"
+      @code.update!(resource: canonical)
+      post_token(resource: canonical)
+      assert_response :success
+      token = OauthAccessToken.find_by(token: JSON.parse(response.body)["access_token"])
+      assert_equal canonical, token.resource
+    end
+
     # --- Rate-limiting + audit-log ----------------------------------------
 
     test "rate-limit kicks in after 30 POST /oauth/token per IP per hour" do

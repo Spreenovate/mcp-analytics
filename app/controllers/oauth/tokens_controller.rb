@@ -29,8 +29,10 @@ module Oauth
         return render_error("invalid_request", "code_verifier must be 43-128 chars from the unreserved set")
       end
 
-      # RFC 8707: if the client sent a resource at /authorize, it MUST send
-      # the same value here, and the value MUST be our canonical MCP URI.
+      # RFC 8707: if the client sent a resource at /token, it MUST equal
+      # our canonical MCP URI. (Authorize defaults missing/blank to
+      # canonical, so auth_code.resource is always canonical post-Block-3.
+      # Pre-Block-3 codes may have nil resource and must still redeem.)
       if resource && resource != canonical_resource
         return render_error("invalid_target", "resource must equal #{canonical_resource}")
       end
@@ -48,7 +50,18 @@ module Oauth
         next [ :expired ] unless auth_code.usable?
         next [ :redirect_mismatch ] unless auth_code.redirect_uri == redirect_uri
         next [ :pkce_fail ] unless auth_code.verify_pkce!(code_verifier)
-        next [ :resource_mismatch ] if auth_code.resource.present? && resource.present? && auth_code.resource != resource
+
+        # RFC 8707 binding: every code minted through Block-3 has
+        # resource = canonical. If the client sends `resource` here it
+        # must match what was bound at /authorize. Missing here is fine —
+        # we carry the binding through. Reject downgrade attempts where
+        # the code had no binding but the request now claims one.
+        if resource.present? && auth_code.resource.present? && auth_code.resource != resource
+          next [ :resource_mismatch ]
+        end
+        if resource.present? && auth_code.resource.nil?
+          next [ :resource_mismatch ]
+        end
 
         auth_code.mark_used!
         access_token = OauthAccessToken.create!(

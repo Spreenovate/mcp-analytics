@@ -43,9 +43,14 @@ class User < ApplicationRecord
     update!(api_token: self.class.generate_api_token)
   end
 
-  # Bumped to invalidate every Settings-session cookie issued before now.
+  # Bumped to invalidate every Settings-session COOKIE issued before now.
   # Called on sign-out so a stolen cookie value can't be replayed within
-  # the idle-timeout window. Also a hook for "log me out everywhere".
+  # the idle-timeout window.
+  #
+  # NOTE: this only invalidates the web Settings session. OAuth access
+  # tokens (and the legacy api_token) are intentionally NOT touched by
+  # this — connectors are revoked separately from /settings or via
+  # POST /oauth/revoke. "Sign out" is a browser-cookie concept here.
   def bump_session_version!
     update!(session_version: session_version + 1)
   end

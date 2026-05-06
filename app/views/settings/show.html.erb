@@ -149,7 +149,10 @@
   <footer class="lp">
     <span><%= link_to "← Back home", root_path %></span>
     <%= form_with url: settings_sign_out_path, method: :post, local: true do |f| %>
-      <button type="submit" class="btn">Sign out</button>
+      <button type="submit" class="btn"
+              title="Clears the cookie session in this browser. To revoke a connector, use the Disconnect button above.">
+        Sign out of this browser
+      </button>
     <% end %>
   </footer>
 </div>

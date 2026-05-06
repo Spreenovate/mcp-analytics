@@ -81,4 +81,34 @@ class VerificationsControllerTest < ActionDispatch::IntegrationTest
     assert_response :redirect
     assert_equal existing.id, auth_request.reload.user_id
   end
+
+  test "expired OAuth auth_request renders :expired (no fallthrough to settings session)" do
+    client = OauthClient.create!(client_name: "TestApp",
+                                  redirect_uri_list: ["https://app.example/cb"])
+    auth_request = OauthAuthorizationRequest.create!(
+      oauth_client: client,
+      redirect_uri: "https://app.example/cb",
+      code_challenge: "x", code_challenge_method: "S256",
+      scope: "analytics:read",
+      expires_at: 1.minute.ago
+    )
+    v = EmailVerification.create!(email: "expired_oauth@example.com",
+                                   oauth_authorization_request: auth_request)
+
+    get verify_path(token: v.verify_token)
+    assert_response :gone
+
+    # Critical: must NOT have established a settings session as fallback.
+    get settings_path
+    assert_redirected_to root_path,
+      "expired OAuth verify must not silently sign the user into Settings"
+  end
+
+  test "verify page sets Referrer-Policy: no-referrer + Cache-Control: no-store" do
+    v = EmailVerification.create!(email: "referrer@example.com")
+    get verify_path(token: v.verify_token)
+    assert_response :success
+    assert_equal "no-referrer", response.headers["Referrer-Policy"]
+    assert_equal "no-store",    response.headers["Cache-Control"]
+  end
 end

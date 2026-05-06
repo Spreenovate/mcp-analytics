@@ -98,10 +98,10 @@ module Oauth
       assert_match(/error=invalid_target/, response.location)
     end
 
-    test "GET /oauth/authorize without resource still works (backward compat)" do
+    test "GET /oauth/authorize without resource defaults to canonical (RFC 8707 binding)" do
       get oauth_authorize_path, params: authorize_params
       assert_response :success
-      assert_nil OauthAuthorizationRequest.last.resource
+      assert_equal "#{Oauth::BaseUrl.value}/mcp", OauthAuthorizationRequest.last.resource
     end
 
     # --- POST /oauth/authorize/start ---------------------------------------
@@ -287,6 +287,23 @@ module Oauth
       assert_response :success
       assert_includes response.body, %(src="https://app.example/logo.png")
       assert_includes response.body, %(referrerpolicy="no-referrer")
+    end
+
+    test "consent screen does NOT render logo for dynamically-registered (DCR) clients" do
+      # DCR client with a logo — could be a tracking pixel from a hostile
+      # registrant, so we suppress regardless of content.
+      @client.update!(dynamically_registered: true,
+                      logo_uri: "https://attacker.example/pixel.png")
+      get oauth_authorize_path, params: authorize_params
+      auth_request = OauthAuthorizationRequest.last
+      user = User.create!(email: "dcr_logo@example.com", email_verified_at: Time.current)
+      auth_request.update!(user: user)
+      grant = AuthorizationsController.mint_grant(auth_request, user)
+
+      get oauth_consent_path(request_token: auth_request.request_token, grant: grant)
+      assert_response :success
+      assert_no_match %r{attacker\.example/pixel\.png}, response.body
+      assert_no_match %r{class="client-logo"}, response.body
     end
 
     test "consent screen omits logo when logo_uri is blank" do

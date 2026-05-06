@@ -60,6 +60,12 @@ class McpController < ApplicationController
   def authenticate_from_request
     if (header_token = bearer_token).present?
       if (oauth_token = OauthAccessToken.active.find_by(token: header_token))
+        # RFC 8707: tokens carry the resource (audience) they were bound
+        # to. Reject anything not bound to this MCP server. nil is
+        # accepted for backward compat with tokens issued before Block 3
+        # (defaulting at /authorize started then; pre-existing tokens
+        # have nil and are still valid for THIS resource only).
+        return Mcp::AuthContext.anonymous unless resource_acceptable?(oauth_token.resource)
         oauth_token.touch_used!
         return Mcp::AuthContext.oauth(oauth_token)
       end
@@ -73,6 +79,10 @@ class McpController < ApplicationController
     end
 
     Mcp::AuthContext.anonymous
+  end
+
+  def resource_acceptable?(token_resource)
+    token_resource.nil? || token_resource == Oauth::BaseUrl.canonical_resource
   end
 
   def bearer_token

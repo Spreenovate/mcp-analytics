@@ -235,6 +235,38 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     assert_match %r{Bearer error="invalid_token"}, response.headers["WWW-Authenticate"]
   end
 
+  # --- RFC 8707 resource binding at the gate ------------------------------
+
+  test "OAuth token with no resource is accepted (legacy / pre-Block-3 grandfather)" do
+    client = OauthClient.create!(client_name: "X", redirect_uri_list: [ "https://x.example/cb" ])
+    token  = OauthAccessToken.create!(user: @user, oauth_client: client,
+                                       scope: "analytics:read", resource: nil)
+
+    rpc_call("tools/list", headers: { "Authorization" => "Bearer #{token.token}" })
+    assert_response :success
+  end
+
+  test "OAuth token bound to canonical resource is accepted" do
+    client = OauthClient.create!(client_name: "X", redirect_uri_list: [ "https://x.example/cb" ])
+    token  = OauthAccessToken.create!(user: @user, oauth_client: client,
+                                       scope: "analytics:read",
+                                       resource: "#{Oauth::BaseUrl.value}/mcp")
+
+    rpc_call("tools/list", headers: { "Authorization" => "Bearer #{token.token}" })
+    assert_response :success
+  end
+
+  test "OAuth token bound to a foreign resource is rejected at the MCP gate (RFC 8707)" do
+    client = OauthClient.create!(client_name: "X", redirect_uri_list: [ "https://x.example/cb" ])
+    token  = OauthAccessToken.create!(user: @user, oauth_client: client,
+                                       scope: "analytics:read",
+                                       resource: "https://other-mcp.example/mcp")
+
+    rpc_call("tools/list", headers: { "Authorization" => "Bearer #{token.token}" })
+    assert_response :unauthorized
+    assert_match %r{Bearer error="invalid_token"}, response.headers["WWW-Authenticate"]
+  end
+
   test "expired OAuth access token returns 401" do
     client = OauthClient.create!(client_name: "X", redirect_uri_list: [ "https://x.example/cb" ])
     token  = OauthAccessToken.create!(user: @user, oauth_client: client, scope: "analytics:read",

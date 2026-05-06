@@ -37,6 +37,19 @@ class OauthClientTest < ActiveSupport::TestCase
     assert c.valid?, c.errors.full_messages.join("; ")
   end
 
+  test "rejects lookalike schemes (cursor-prefix only would have allowed cursorevil://)" do
+    c = OauthClient.new(client_name: "X")
+    c.redirect_uri_list = [ "cursorevil://oauth/cb" ]
+    assert_not c.valid?
+    assert_match(/native scheme/, c.errors.full_messages.join)
+  end
+
+  test "rejects claudelike scheme (claude is exact, not prefix)" do
+    c = OauthClient.new(client_name: "X")
+    c.redirect_uri_list = [ "claudefake://oauth/cb" ]
+    assert_not c.valid?
+  end
+
   test "rejects redirect_uri with fragment" do
     c = OauthClient.new(client_name: "X")
     c.redirect_uri_list = ["https://example.com/cb#frag"]

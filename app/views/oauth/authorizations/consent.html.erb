@@ -2,9 +2,14 @@
 <%= render "shared_styles" %>
 
 <div class="wrap">
-  <% if @client.logo_uri.present? %>
-    <%# logo_uri is validated https-only at registration (OauthClient#info_uris_https_only). %>
-    <%# referrerpolicy=no-referrer + crossorigin=anonymous keep us out of cookie/referer leaks. %>
+  <%# Render logo only for clients we (the operator) registered ourselves —
+      not for self-registered DCR clients. A hostile DCR registrant could
+      otherwise point logo_uri at a tracking pixel and harvest user IP +
+      User-Agent + a time-correlation with the consent screen on every
+      view. logo_uri is still https-validated at registration (defence
+      in depth) but suppressing the render closes the tracking vector
+      entirely for unverified third-party clients. %>
+  <% if @client.logo_uri.present? && !@client.dynamically_registered? %>
     <img src="<%= @client.logo_uri %>"
          alt="<%= @client.client_name %> logo"
          class="client-logo"

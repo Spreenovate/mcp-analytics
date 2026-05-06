@@ -45,11 +45,12 @@ module Oauth
 
       # RFC 8707 (Resource Indicators for OAuth 2.0). The MCP spec mandates
       # that clients send `resource` and that we bind tokens to the
-      # specific MCP server they're meant for. Optional on the wire today
-      # (clients in the wild are inconsistent), required to match canonical
-      # if present.
-      requested_resource = params[:resource].presence
-      if requested_resource && requested_resource != canonical_resource
+      # specific MCP server they're meant for. Many clients in the wild
+      # still don't send it, so default to canonical when missing — that
+      # way every token issued through this server is bound, and the
+      # check at the resource server (mcp_controller) can be strict.
+      requested_resource = params[:resource].presence || canonical_resource
+      if requested_resource != canonical_resource
         return redirect_with_error(redirect_uri, "invalid_target",
           "resource must equal #{canonical_resource}")
       end
