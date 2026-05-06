@@ -130,27 +130,21 @@
 
 <div class="wrap">
 
-  <h1>Email <span class="accent">verified</span>.</h1>
-  <p class="lead">Account ready. Keep this page open while you wire up your MCP client.</p>
+  <h1>You're <span class="accent">signed in</span>.</h1>
+  <p class="lead">One step left: add this URL to Claude (or your MCP client) as a custom connector.</p>
 
   <div class="panel">
-    <span class="label">Your API token</span>
+    <span class="label">MCP connector URL</span>
     <span class="hint">click to copy</span>
-    <span class="copyable" data-copy="<%= @user.api_token %>" role="button" tabindex="0"><%= @user.api_token %></span>
-  </div>
-
-  <div class="panel">
-    <span class="label">Your MCP URL</span>
-    <span class="hint">click to copy, then paste into Claude</span>
-    <span class="copyable" data-copy="<%= @mcp_url_with_token %>" role="button" tabindex="0"><%= @mcp_url_with_token %></span>
+    <span class="copyable" data-copy="<%= "#{@base_url}/mcp" %>" role="button" tabindex="0"><%= "#{@base_url}/mcp" %></span>
   </div>
 
   <h2 class="section" data-num="01">What to do next</h2>
   <ol class="steps">
-    <li>Click the MCP URL above to copy it.</li>
+    <li>Copy the URL above.</li>
     <li>
-      In Claude (or your MCP client), add a custom connector with this URL.
-      <em>Note: claude.ai doesn't let you edit a connector URL after the fact — if you already added an empty mcp-analytics connector, remove it and add a fresh one with the URL above. One-time annoyance.</em>
+      In Claude, add a custom connector with this URL. Claude will open a tab back to mcp-analytics to ask for your consent — you're already signed in, so it's just one click.
+      <em>Note: claude.ai doesn't let you edit a connector URL after the fact — if you already added an empty mcp-analytics connector, remove it and add a fresh one. One-time annoyance.</em>
     </li>
     <li>Back in chat, say “done”. Claude will call <code>list_sites</code> and <code>add_site</code> to finish setup.</li>
     <li>Once you have a real <code>site_id</code>, replace any <code>DUMMY_SITE_ID_REPLACE_AFTER_VERIFY</code> in your codebase.</li>

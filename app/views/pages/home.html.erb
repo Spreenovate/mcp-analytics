@@ -99,6 +99,39 @@
       padding: 10px 14px; margin-bottom: 16px; font-size: 13px;
       border-left: var(--border) solid var(--accent);
     }
+    body.home .signup .panel {
+      border: var(--border) solid var(--fg); padding: 18px;
+      margin-bottom: 16px; position: relative;
+    }
+    body.home .signup .panel .hint {
+      float: right; font-size: 11px; color: #888;
+      text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px;
+    }
+    body.home .signup .panel .copyable {
+      display: block; clear: both;
+      font-family: "JetBrains Mono", monospace; font-weight: 700;
+      font-size: 14px; word-break: break-all;
+      background: #f5f5f5; padding: 14px 16px;
+      border: 1.5px solid var(--fg);
+      cursor: pointer; user-select: all;
+      transition: background .12s ease;
+    }
+    body.home .signup .panel .copyable:hover { background: var(--accent); }
+    body.home .signup .panel .copyable:focus-visible {
+      outline: var(--border) solid var(--accent); outline-offset: 2px;
+    }
+    body.home .toast {
+      position: fixed; bottom: 24px; left: 50%;
+      transform: translateX(-50%) translateY(8px);
+      background: var(--fg); color: var(--accent);
+      padding: 10px 18px;
+      font-family: "JetBrains Mono", monospace; font-size: 13px;
+      font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+      opacity: 0; transition: opacity .15s ease, transform .15s ease;
+      pointer-events: none; z-index: 100;
+      border: 2px solid var(--accent);
+    }
+    body.home .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
     body.home h2.section {
       font-family: "JetBrains Mono", monospace; font-size: 13px;
@@ -237,9 +270,17 @@
   </section>
 
   <section class="signup" id="signup-form">
-    <span class="label">Start tracking</span>
-    <h2>Get your MCP URL</h2>
-    <p class="help">Enter your email. We'll send a verification link and your personal MCP connector URL. Paste it into Claude once. Done forever.</p>
+    <span class="label">Add to Claude</span>
+    <h2>One URL. That's it.</h2>
+    <p class="help">Paste this into Claude (or any MCP client) as a custom connector. It'll open a tab here to confirm — one click on a link in your email, and you're connected.</p>
+
+    <div class="panel">
+      <span class="hint">click to copy</span>
+      <span class="copyable" data-copy="<%= "#{ENV.fetch('PUBLIC_BASE_URL', 'https://mcp-analytics.com')}/mcp" %>" role="button" tabindex="0"><%= "#{ENV.fetch('PUBLIC_BASE_URL', 'https://mcp-analytics.com')}/mcp" %></span>
+    </div>
+    <div id="copy-toast" class="toast" hidden>Copied ✓</div>
+
+    <p class="help" style="margin-top:32px;">Or sign up first — we'll email you the connection link:</p>
     <% if flash[:alert].present? %>
       <div class="alert"><%= flash[:alert] %></div>
       <% content_for(:track_event, "signup_failed") %>
@@ -247,7 +288,7 @@
     <% end %>
     <%= form_with url: signup_path, method: :post, local: true, html: { id: "signup-form-tag" } do |f| %>
       <%= f.email_field :email, placeholder: "you@example.com", required: true, value: flash[:email], id: "signup-email", data: { "track-input-once": "signup_form_started" } %>
-      <%= f.submit "Get URL →" %>
+      <%= f.submit "Send me the link →" %>
     <% end %>
     <small>Free forever up to 100,000 hits/month. Unlimited sites. No credit card.</small>
   </section>
@@ -258,7 +299,7 @@
       <div class="step">
         <div class="num">1</div>
         <h3>Add connector</h3>
-        <p>Paste your MCP URL into Claude, Cursor, ChatGPT, or Windsurf. Once. That's it.</p>
+        <p>Paste <code>mcp-analytics.com/mcp</code> into Claude as a custom connector. Claude opens a tab to authorize — confirm via the link we email you. Done forever.</p>
       </div>
       <div class="step">
         <div class="num">2</div>

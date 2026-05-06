@@ -271,13 +271,13 @@
     <span class="meta-label">Heads up. For humans.</span>
     <h2>These docs are for <em>you</em>, not your agent.</h2>
     <p>
-      Your AI assistant doesn't need to read this. Just paste your MCP connector URL into
-      Claude / Cursor / ChatGPT once, and it'll figure out the rest by calling
-      <code>list_sites</code>, <code>get_started_guide</code>, and friends. The docs
-      below are here as trust signal, so you, the human, can see what the thing does
+      Your AI assistant doesn't need to read this. Just paste <code>mcp-analytics.com/mcp</code>
+      into Claude as a custom connector — Claude handles the auth handshake, then figures out
+      the rest by calling <code>list_sites</code>, <code>get_started_guide</code>, and friends.
+      The docs below are here as trust signal, so you, the human, can see what the thing does
       before you wire it up.
     </p>
-    <a class="cta" data-track-click="docs_cta_clicked" data-prop-location="top" href="<%= root_path(anchor: "signup-form") %>">Get your URL now →</a>
+    <a class="cta" data-track-click="docs_cta_clicked" data-prop-location="top" href="<%= root_path(anchor: "signup-form") %>">Connect now →</a>
     <span class="agent-aside">// agents: skip this page, call <code>get_started_guide</code> instead.</span>
   </aside>
 
@@ -305,13 +305,13 @@
   <div class="quickstart">
     <div class="step">
       <span class="num">1</span>
-      <h4>Get your MCP URL</h4>
-      <p>Drop your email <a href="<%= root_path(anchor: "signup-form") %>">here</a>, click the verify link in the mail, copy your personal MCP connector URL.</p>
+      <h4>Add the connector</h4>
+      <p>In Claude, add a custom MCP connector with URL <code>mcp-analytics.com/mcp</code>. Claude opens a browser tab to authorize.</p>
     </div>
     <div class="step">
       <span class="num">2</span>
-      <h4>Paste into your client</h4>
-      <p>In Claude / Cursor / ChatGPT, add a custom MCP connector with that URL. One-time. Done forever.</p>
+      <h4>Confirm via email</h4>
+      <p>Enter your email on that tab. We send a verify link — click it, consent, you're connected. One time per client.</p>
     </div>
     <div class="step">
       <span class="num">3</span>
@@ -337,8 +337,8 @@
   <%# ---------- INSTALLATION ---------- %>
   <h2 id="install">Installation</h2>
   <p>
-    The signup itself is the hardest part, and it's still pretty easy. Once your MCP URL is in
-    your client, <strong>you stop doing things and your agent takes over</strong>.
+    The signup itself is the hardest part, and it's still pretty easy. Once the connector is
+    authorized in your client, <strong>you stop doing things and your agent takes over</strong>.
   </p>
   <p>
     Tell Claude (or whoever): <em>"Add mcp-analytics to this project."</em> That single
@@ -524,7 +524,7 @@
       <dt><code>get_account</code></dt>
       <dd>Email, plan, total usage this month.</dd>
       <dt><code>regenerate_api_token</code></dt>
-      <dd>Burn the current MCP URL, get a new one. Use if leaked.</dd>
+      <dd>Rotate the legacy API token. Day-to-day, prefer revoking specific connectors via <%= link_to "Settings", settings_path %>; this is the nuclear option.</dd>
     </dl>
   </div>
 
@@ -662,9 +662,11 @@ window.mcpa('track', 'video_played', { duration_seconds: 42 });</code></pre>
   <details>
     <summary>OAuth?</summary>
     <p>
-      Coming. Right now you paste a token-bearing MCP URL into your client.
-      We'll replace this with proper OAuth 2.1 + PKCE. Existing tokens stay valid
-      after the switch.
+      Yes. Add <code>mcp-analytics.com/mcp</code> as a custom connector — your client
+      discovers our authorization server, registers itself dynamically (RFC 7591), and
+      runs the OAuth 2.1 + PKCE flow. We never see a long-lived bearer token in your
+      client; refresh-tokens rotate. Revoke any connected client any time from
+      <%= link_to "Settings", settings_path %>.
     </p>
   </details>
 
@@ -682,7 +684,7 @@ window.mcpa('track', 'video_played', { duration_seconds: 42 });</code></pre>
   <%# ---------- FINAL CTA ---------- %>
   <div class="end-cta">
     <h3>Stop reading. Start asking.</h3>
-    <a data-track-click="docs_cta_clicked" data-prop-location="bottom" href="<%= root_path(anchor: "signup-form") %>">Get your MCP URL →</a>
+    <a data-track-click="docs_cta_clicked" data-prop-location="bottom" href="<%= root_path(anchor: "signup-form") %>">Connect now →</a>
   </div>
 
     </div><%# end .docs-content %>
