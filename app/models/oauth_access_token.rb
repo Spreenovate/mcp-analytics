@@ -58,8 +58,17 @@ class OauthAccessToken < ApplicationRecord
             refresh_token_used_at: refresh_token_used_at || now)
   end
 
-  def touch_used!
-    update_column(:last_used_at, Time.current)
+  # Stamps `last_used_at` no more than once per `threshold` seconds, so a
+  # high-rate MCP client (Claude polling tools/list, batch-RPC, etc.)
+  # doesn't write a row per call. The exact-time precision was never
+  # needed — Settings UI shows "Last used 5 minutes ago" granularity
+  # anyway, and the audit log carries per-request precision when we need
+  # it.
+  TOUCH_USED_THROTTLE = 60.seconds
+
+  def touch_used!(now: Time.current)
+    return if last_used_at && now - last_used_at < TOUCH_USED_THROTTLE
+    update_column(:last_used_at, now)
   end
 
   def self.generate_token

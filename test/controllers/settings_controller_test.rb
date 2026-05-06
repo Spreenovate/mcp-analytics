@@ -25,15 +25,25 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
 
   # --- Verify-flow integration --------------------------------------------
 
-  test "verifying establishes a settings session" do
+  test "verifying (POST) establishes a settings session" do
     v = EmailVerification.create!(email: "verify-then-settings@example.com")
-    get verify_path(token: v.verify_token)
+    post verify_confirm_path(token: v.verify_token)
     assert_response :success
 
     # session was set; now /settings should work
     get settings_path
     assert_response :success
     assert_includes response.body, "verify-then-settings@example.com"
+  end
+
+  test "GET verify alone does NOT establish a session (only POST does — CSRF-style defence)" do
+    v = EmailVerification.create!(email: "no-session-yet@example.com")
+    get verify_path(token: v.verify_token)
+    assert_response :success
+
+    get settings_path
+    assert_redirected_to root_path,
+      "GET /verify must be a no-op — only the POST confirmation should sign the user in"
   end
 
   test "OAuth-flow verify does NOT establish a settings session (different intent)" do
@@ -44,7 +54,7 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
     )
     v = EmailVerification.create!(email: "oauth@example.com",
                                    oauth_authorization_request: auth_request)
-    get verify_path(token: v.verify_token)
+    post verify_confirm_path(token: v.verify_token)
     assert_response :redirect # → /oauth/consent
 
     get settings_path

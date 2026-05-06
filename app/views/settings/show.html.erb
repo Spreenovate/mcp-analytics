@@ -157,10 +157,4 @@
   </footer>
 </div>
 
-<script>
-  document.querySelectorAll('button[data-confirm]').forEach(function (btn) {
-    btn.addEventListener('click', function (e) {
-      if (!window.confirm(btn.getAttribute('data-confirm'))) e.preventDefault();
-    });
-  });
-</script>
+<%= javascript_include_tag "mcp_ui", defer: true %>

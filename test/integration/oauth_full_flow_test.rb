@@ -43,8 +43,13 @@ class OauthFullFlowTest < ActionDispatch::IntegrationTest
     verification = EmailVerification.last
     assert_equal auth_request.id, verification.oauth_authorization_request_id
 
-    # 5. Email link clicked -> redirected to /oauth/consent
+    # 5. Email link clicked -> confirmation form rendered (Block 5)
     get verify_path(token: verification.verify_token)
+    assert_response :success
+    assert_includes response.body, "ClaudeTest" # client name on confirm page
+
+    # 6. User submits the confirmation form -> redirected to /oauth/consent
+    post verify_confirm_path(token: verification.verify_token)
     assert_response :redirect
     consent_url = response.location
     assert_match(%r{/oauth/consent/}, consent_url)

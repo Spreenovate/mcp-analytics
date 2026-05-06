@@ -1,24 +1,34 @@
 class VerificationsController < ApplicationController
-  before_action :no_referrer_or_store, only: :show
+  before_action :no_referrer_or_store
+  before_action :load_verification
 
+  # GET /verify/:token
+  #
+  # Read-only — renders a confirmation page. NO state change. This is the
+  # main defence against `<img src="https://mcp-analytics.com/verify/X">`
+  # CSRF: a hostile page can trigger this GET in a victim's browser, but
+  # nothing happens server-side beyond rendering. The user has to click
+  # the form button (or POST themselves) to actually redeem the link.
   def show
-    @verification = EmailVerification.find_by(verify_token: params[:token])
+    return render :expired, status: :gone unless @verification
 
-    if @verification.nil? || !@verification.usable?
-      render :expired, status: :gone
-      return
-    end
+    @client_name = @verification.oauth_flow? ? @verification.oauth_authorization_request.oauth_client.client_name : nil
+  end
 
-    # Idempotent: if a user already exists for this email (someone clicked twice),
-    # re-surface their existing token rather than erroring.
-    #
-    # `oauth_flow_expired` is set inside the transaction (where we can
-    # see the auth_request's freshness atomically with the user/verify
-    # work) and consumed below. Without this, an OAuth verify whose
-    # auth_request expired between commit and the post-tx check would
-    # fall through to the plain-verify path and silently sign the user
-    # into Settings while displaying their api_token — surprising and
-    # not what they asked for.
+  # POST /verify/:token
+  #
+  # Does the actual work: marks verification used, creates the user,
+  # establishes a Settings session (plain flow) OR redirects to consent
+  # (OAuth flow). The Rails CSRF token in the form provides the second
+  # layer of defence; the URL token is the credential.
+  def confirm
+    return render :expired, status: :gone unless @verification
+
+    # `oauth_flow_expired` is set inside the transaction so the
+    # auth_request's freshness is read atomically with the user/verify
+    # work — without it, an OAuth flow whose auth_request expired
+    # between commit and post-tx check would silently fall through to
+    # plain-verify and sign the user into Settings.
     oauth_flow_expired = false
 
     ActiveRecord::Base.transaction do
@@ -46,20 +56,28 @@ class VerificationsController < ApplicationController
       return
     end
 
-    # Plain (non-OAuth) verify: clicking the email link counts as a fresh
-    # sign-in. Establishes a 30-min sliding session for the Settings UI so
-    # the user can revoke OAuth connectors without re-emailing themselves.
+    # Plain (non-OAuth) verify: clicking the email link AND clicking the
+    # confirmation button counts as a fresh sign-in. Establishes a 30-min
+    # sliding session for the Settings UI so the user can revoke OAuth
+    # connectors without re-emailing themselves.
     sign_in_for_settings(@user)
 
     @base_url = ENV.fetch("PUBLIC_BASE_URL", "https://mcp-analytics.com")
     @mcp_url_with_token = "#{@base_url}/mcp?token=#{@user.api_token}"
+    render :verified
   end
 
   private
 
-  # The verify URL is a credential and the page renders the api_token in
-  # plaintext. Don't let either leak via Referer when the user clicks
-  # an outbound link, and don't let intermediate caches keep the page.
+  def load_verification
+    found = EmailVerification.find_by(verify_token: params[:token])
+    @verification = (found && found.usable?) ? found : nil
+  end
+
+  # The verify URL is a credential and the verified page renders the
+  # api_token in plaintext. Don't let either leak via Referer when the
+  # user clicks an outbound link, and don't let intermediate caches keep
+  # the response.
   def no_referrer_or_store
     response.set_header("Referrer-Policy", "no-referrer")
     response.set_header("Cache-Control", "no-store")

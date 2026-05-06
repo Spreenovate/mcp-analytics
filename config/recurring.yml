@@ -25,3 +25,8 @@ production:
     class: AbuseAlertJob
     queue: default
     schedule: every 5 minutes
+
+  prune_oauth_audit_events:
+    class: PruneOauthAuditEventsJob
+    queue: default
+    schedule: every day at 03:30 UTC

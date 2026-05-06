@@ -79,9 +79,10 @@
       </script>
     <% end %>
 
-    <%# Dogfooding: mcp-analytics tracking its own site. %>
+    <%# Dogfooding: mcp-analytics tracking its own site. The tracker host
+        is in lockstep with the CSP initializer (script-src allowlist). %>
     <% if Rails.env.production? %>
-      <script defer data-site="wjxayhdd" src="https://t.mcp-analytics.com/script.js"></script>
+      <script defer data-site="wjxayhdd" src="<%= ENV.fetch('TRACKER_BASE_URL', 'https://t.mcp-analytics.com') %>/script.js"></script>
     <% end %>
   </head>
 

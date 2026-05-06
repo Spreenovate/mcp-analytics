@@ -1,7 +1,9 @@
-<% content_for(:title, "Account verified | mcp-analytics") %>
+<% content_for(:title, "Confirm sign-in | mcp-analytics") %>
 <% content_for(:body_class, "home") %>
 
 <% content_for :head do %>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -14,194 +16,67 @@
       font-size: 16px; line-height: 1.55;
     }
     body.home main { max-width: none; padding: 0; margin: 0; }
-    body.home .wrap { max-width: 760px; margin: 0 auto; padding: 64px 28px 120px; }
-
+    body.home .wrap { max-width: 720px; margin: 0 auto; padding: 80px 28px 120px; }
     body.home h1 {
       font-family: "Space Grotesk", sans-serif; font-weight: 900;
-      font-size: clamp(40px, 7vw, 88px); line-height: 0.95;
+      font-size: clamp(40px, 7vw, 72px); line-height: 0.95;
       letter-spacing: -0.03em; margin: 0 0 24px;
       text-transform: uppercase;
     }
-    body.home h1 .accent {
-      position: relative; color: var(--fg);
-    }
+    body.home h1 .accent { position: relative; color: var(--fg); }
     body.home h1 .accent::before {
       content: ""; position: absolute; z-index: -1;
       top: -0.05em; bottom: -0.05em; left: -0.15em; right: -0.05em;
       background: var(--accent);
     }
-    body.home .lead { font-size: 18px; margin: 0 0 48px; }
-
+    body.home .lead { font-size: 18px; margin: 0 0 36px; color: #444; }
     body.home .panel {
       border: var(--border) solid var(--fg);
-      padding: 24px; margin: 0 0 24px;
-      position: relative;
+      padding: 24px; margin: 0 0 32px;
     }
     body.home .panel .label {
       font-size: 11px; font-weight: 700; text-transform: uppercase;
       letter-spacing: 0.12em; background: var(--fg); color: var(--bg);
       padding: 4px 8px; display: inline-block; margin-bottom: 14px;
     }
-    body.home .panel .hint {
-      float: right; font-size: 11px; color: #888;
-      text-transform: uppercase; letter-spacing: 0.08em;
-      margin-top: 6px;
+    body.home .btn {
+      font: inherit; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+      background: var(--fg); color: var(--accent); border: var(--border) solid var(--fg);
+      padding: 16px 28px; cursor: pointer; font-size: 16px;
     }
-    body.home .panel .copyable {
-      display: block;
-      font-family: "JetBrains Mono", monospace; font-weight: 700;
-      font-size: 14px; word-break: break-all;
-      background: #f5f5f5; padding: 14px 16px;
-      border: 1.5px solid var(--fg);
-      cursor: pointer; user-select: all;
-      transition: background .12s ease;
-    }
-    body.home .panel .copyable:hover { background: var(--accent); }
-    body.home .panel .copyable:focus-visible {
-      outline: var(--border) solid var(--accent); outline-offset: 2px;
-    }
-
-    body.home h2.section {
-      font-family: "JetBrains Mono", monospace; font-size: 13px;
-      font-weight: 700; text-transform: uppercase; letter-spacing: 0.2em;
-      margin: 56px 0 24px; padding-bottom: 12px;
-      border-bottom: var(--border) solid var(--fg);
-    }
-    body.home h2.section::before {
-      content: attr(data-num) " / "; color: var(--accent);
-      background: var(--fg); padding: 2px 8px; margin-right: 12px;
-    }
-
-    body.home ol.steps {
-      padding-left: 0; list-style: none; counter-reset: step;
-    }
-    body.home ol.steps li {
-      counter-increment: step;
-      font-size: 15px; padding: 14px 0 14px 56px; position: relative;
-      border-bottom: 1.5px solid var(--fg);
-    }
-    body.home ol.steps li:last-child { border-bottom: 0; }
-    body.home ol.steps li::before {
-      content: counter(step);
-      position: absolute; left: 0; top: 12px;
-      font-family: "Space Grotesk", sans-serif; font-weight: 900;
-      font-size: 22px; color: var(--accent);
-      background: var(--fg); padding: 2px 12px; min-width: 36px; text-align: center;
-    }
-    body.home ol.steps em {
-      font-style: normal; color: #555; font-size: 13px;
-      display: block; margin-top: 4px;
-    }
-    body.home ol.steps code {
-      font-family: "JetBrains Mono", monospace; font-size: 13px;
-      background: #f5f5f5; padding: 2px 6px; border: 1px solid #ddd;
-    }
-
-    body.home .toast {
-      position: fixed; bottom: 24px; left: 50%;
-      transform: translateX(-50%) translateY(8px);
-      background: var(--fg); color: var(--accent);
-      padding: 10px 18px;
-      font-family: "JetBrains Mono", monospace; font-size: 13px;
-      font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
-      opacity: 0; transition: opacity .15s ease, transform .15s ease;
-      pointer-events: none; z-index: 100;
-      border: 2px solid var(--accent);
-    }
-    body.home .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-
-    body.home footer.lp {
-      margin-top: 64px;
-      border-top: var(--border) solid var(--fg);
-      padding-top: 16px;
-      font-size: 12px; color: #666;
-    }
-
-    @media (max-width: 720px) {
-      body.home .wrap { padding: 32px 18px 80px; }
-      body.home h1 { font-size: clamp(36px, 9vw, 56px); }
-      body.home .panel { padding: 18px; }
-      body.home .panel .copyable { font-size: 13px; padding: 12px 14px; }
-      body.home .panel .hint { float: none; display: block; margin: 8px 0 0; }
-    }
+    body.home .btn:hover { background: var(--accent); color: var(--fg); }
+    body.home .footer-link { margin-top: 48px; font-size: 13px; color: #666; }
+    body.home a { color: var(--fg); }
   </style>
 <% end %>
 
 <div class="wrap">
+  <% if @client_name %>
+    <h1>Continue to <span class="accent"><%= @client_name %></span>?</h1>
+    <p class="lead">
+      You're about to authorise <%= @client_name %> to access your
+      mcp-analytics account. Click below to continue to the consent
+      screen.
+    </p>
+  <% else %>
+    <h1>Sign in to <span class="accent">mcp-analytics</span>.</h1>
+    <p class="lead">
+      Click below to confirm and reveal your API token.
+    </p>
+  <% end %>
 
-  <h1>Email <span class="accent">verified</span>.</h1>
-  <p class="lead">Account ready. Keep this page open while you wire up your MCP client.</p>
+  <%= form_with url: verify_confirm_path(token: params[:token]), method: :post, local: true do |f| %>
+    <button type="submit" class="btn">
+      <% if @client_name %>
+        Continue to <%= @client_name %> →
+      <% else %>
+        Sign me in →
+      <% end %>
+    </button>
+  <% end %>
 
-  <div class="panel">
-    <span class="label">Your API token</span>
-    <span class="hint">click to copy</span>
-    <span class="copyable" data-copy="<%= @user.api_token %>" role="button" tabindex="0"><%= @user.api_token %></span>
+  <div class="footer-link">
+    Didn't request this? Just close the tab — clicking nothing keeps the
+    link unused.
   </div>
-
-  <div class="panel">
-    <span class="label">Your MCP URL</span>
-    <span class="hint">click to copy, then paste into Claude</span>
-    <span class="copyable" data-copy="<%= @mcp_url_with_token %>" role="button" tabindex="0"><%= @mcp_url_with_token %></span>
-  </div>
-
-  <h2 class="section" data-num="01">What to do next</h2>
-  <ol class="steps">
-    <li>Click the MCP URL above to copy it.</li>
-    <li>
-      In Claude (or your MCP client), add a custom connector with this URL.
-      <em>Note: claude.ai doesn't let you edit a connector URL after the fact — if you already added an empty mcp-analytics connector, remove it and add a fresh one with the URL above. One-time annoyance.</em>
-    </li>
-    <li>Back in chat, say “done”. Claude will call <code>list_sites</code> and <code>add_site</code> to finish setup.</li>
-    <li>Once you have a real <code>site_id</code>, replace any <code>DUMMY_SITE_ID_REPLACE_AFTER_VERIFY</code> in your codebase.</li>
-  </ol>
-
-  <div id="copy-toast" class="toast" hidden>Copied ✓</div>
-
-  <footer class="lp">
-    <%= link_to "← Back home", root_path %>
-    &nbsp;·&nbsp;
-    <%= link_to "Manage account", settings_path %>
-  </footer>
-
 </div>
-
-<script>
-  (function () {
-    var toast = document.getElementById('copy-toast');
-    var toastTimer;
-    function showToast(text) {
-      toast.textContent = text; toast.hidden = false;
-      toast.classList.add('show');
-      clearTimeout(toastTimer);
-      toastTimer = setTimeout(function () {
-        toast.classList.remove('show');
-        setTimeout(function () { toast.hidden = true; }, 200);
-      }, 1400);
-    }
-    function copy(el) {
-      var text = el.getAttribute('data-copy');
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(
-          function () { showToast('Copied ✓'); },
-          function () { showToast('Copy failed — select manually'); }
-        );
-      } else {
-        var r = document.createRange();
-        r.selectNode(el);
-        window.getSelection().removeAllRanges();
-        window.getSelection().addRange(r);
-        try {
-          document.execCommand('copy');
-          window.getSelection().removeAllRanges();
-          showToast('Copied ✓');
-        } catch (e) { showToast('Copy failed'); }
-      }
-    }
-    document.querySelectorAll('.copyable').forEach(function (el) {
-      el.addEventListener('click', function () { copy(el); });
-      el.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); copy(el); }
-      });
-    });
-  })();
-</script>

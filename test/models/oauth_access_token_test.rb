@@ -25,12 +25,37 @@ class OauthAccessTokenTest < ActiveSupport::TestCase
     assert_not t2.active?
   end
 
-  test "touch_used! updates last_used_at without bumping updated_at" do
+  test "touch_used! updates last_used_at on first call" do
     t = OauthAccessToken.create!(user: @user, oauth_client: @client, scope: "analytics:read")
     assert_nil t.last_used_at
     travel 5.seconds do
       t.touch_used!
     end
     assert t.reload.last_used_at.present?
+  end
+
+  # Block 5: throttle — high-rate clients must not write a row per call.
+  test "touch_used! is a no-op when called inside the throttle window" do
+    t = OauthAccessToken.create!(user: @user, oauth_client: @client, scope: "analytics:read")
+    t.touch_used!
+    first = t.reload.last_used_at
+
+    travel(OauthAccessToken::TOUCH_USED_THROTTLE - 1.second) do
+      assert_no_changes -> { t.reload.last_used_at } do
+        t.touch_used!
+      end
+    end
+    assert_equal first, t.reload.last_used_at
+  end
+
+  test "touch_used! writes again once the throttle window passes" do
+    t = OauthAccessToken.create!(user: @user, oauth_client: @client, scope: "analytics:read")
+    t.touch_used!
+    first = t.reload.last_used_at
+
+    travel(OauthAccessToken::TOUCH_USED_THROTTLE + 1.second) do
+      t.touch_used!
+    end
+    assert_operator t.reload.last_used_at, :>, first
   end
 end
