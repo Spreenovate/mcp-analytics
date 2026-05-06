@@ -8,6 +8,7 @@ module Oauth
       consent_granted
       consent_denied
       token_issued
+      token_refreshed
       token_revoked
     ].freeze
 

@@ -50,12 +50,15 @@ module Oauth
       assert_equal "unknown_token", OauthAuditEvent.where(event: "token_revoked").last.metadata_hash["outcome"]
     end
 
-    test "client_id is optional (RFC 7009 §2.1)" do
-      assert_difference -> { OauthAuditEvent.where(event: "token_revoked").count }, 1 do
-        post oauth_revoke_path, params: { token: @token.token }
-      end
-      assert_response :ok
-      assert @token.reload.revoked_at.present?
+    test "client_id is REQUIRED (Block 4 hardening — closes unauthenticated revoke)" do
+      # RFC 7009 §2.1 marks client_id optional for public clients, but
+      # without it any party with a leaked token value could DoS the
+      # user's connector. Refresh tokens have a 90-day window, so the
+      # gap matters. We require client_id.
+      post oauth_revoke_path, params: { token: @token.token }
+      assert_response :bad_request
+      assert_equal "invalid_request", JSON.parse(response.body)["error"]
+      assert_nil @token.reload.revoked_at, "must not revoke without client_id"
     end
 
     test "revoking a token issued to a different client is a no-op (silent)" do
@@ -97,6 +100,28 @@ module Oauth
              params: { token: "mcpa_oauth_x", client_id: @client.client_id }
       end
       assert_response :too_many_requests
+    end
+
+    test "revoking via the refresh_token value also kills the access_token" do
+      assert @token.refresh_token.present?, "Block 4 tokens have a refresh_token"
+
+      post oauth_revoke_path,
+           params: { token: @token.refresh_token,
+                      client_id: @client.client_id,
+                      token_type_hint: "refresh_token" }
+      assert_response :ok
+      @token.reload
+      assert @token.revoked_at.present?,         "row revoked"
+      assert @token.refresh_token_used_at.present?, "refresh consumed so it can't be redeemed"
+    end
+
+    test "revoking via the access_token value also kills the refresh side" do
+      post oauth_revoke_path,
+           params: { token: @token.token, client_id: @client.client_id }
+      assert_response :ok
+      @token.reload
+      assert @token.revoked_at.present?
+      assert @token.refresh_token_used_at.present?
     end
 
     test "revoked token can no longer authenticate to /mcp" do

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_05_100002) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_05_100003) do
   create_table "abuse_events", force: :cascade do |t|
     t.datetime "blocked_until", null: false
     t.datetime "created_at", null: false
@@ -54,6 +54,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_05_100002) do
     t.datetime "expires_at", null: false
     t.datetime "last_used_at"
     t.integer "oauth_client_id", null: false
+    t.string "refresh_token"
+    t.datetime "refresh_token_expires_at"
+    t.datetime "refresh_token_used_at"
     t.string "resource"
     t.datetime "revoked_at"
     t.string "scope", null: false
@@ -62,6 +65,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_05_100002) do
     t.integer "user_id", null: false
     t.index ["expires_at"], name: "index_oauth_access_tokens_on_expires_at"
     t.index ["oauth_client_id"], name: "index_oauth_access_tokens_on_oauth_client_id"
+    t.index ["refresh_token"], name: "index_oauth_access_tokens_on_refresh_token", unique: true
+    t.index ["refresh_token_expires_at"], name: "index_oauth_access_tokens_on_refresh_token_expires_at"
     t.index ["revoked_at"], name: "index_oauth_access_tokens_on_revoked_at"
     t.index ["token"], name: "index_oauth_access_tokens_on_token", unique: true
     t.index ["user_id"], name: "index_oauth_access_tokens_on_user_id"

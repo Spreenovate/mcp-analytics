@@ -48,6 +48,13 @@ module Oauth
       assert_equal true, JSON.parse(response.body)["resource_parameter_supported"]
     end
 
+    test "advertises refresh_token in grant_types_supported (Block 4)" do
+      get "/.well-known/oauth-authorization-server"
+      grants = JSON.parse(response.body)["grant_types_supported"]
+      assert_includes grants, "authorization_code"
+      assert_includes grants, "refresh_token"
+    end
+
     test "advertises op_policy_uri and op_tos_uri pointing at our legal pages" do
       get "/.well-known/oauth-authorization-server"
       body = JSON.parse(response.body)

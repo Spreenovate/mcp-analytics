@@ -6,11 +6,14 @@ class OauthAccessTokenTest < ActiveSupport::TestCase
     @user   = User.create!(email: "tk@example.com", email_verified_at: Time.current)
   end
 
-  test "auto-generates token with mcpa_oauth_ prefix and 1 year expiry" do
+  test "auto-generates access token (mcpa_oauth_ prefix, 24h expiry) and refresh token (mcpa_refresh_, 90d)" do
     t = OauthAccessToken.create!(user: @user, oauth_client: @client, scope: "analytics:read")
-    assert_match(/\Amcpa_oauth_/, t.token)
-    assert_in_delta 365.days.from_now.to_i, t.expires_at.to_i, 5
+    assert_match(/\Amcpa_oauth_/,   t.token)
+    assert_match(/\Amcpa_refresh_/, t.refresh_token)
+    assert_in_delta 24.hours.from_now.to_i, t.expires_at.to_i, 5
+    assert_in_delta 90.days.from_now.to_i,  t.refresh_token_expires_at.to_i, 5
     assert t.active?
+    assert t.refresh_active?
   end
 
   test "active? false after revoke or expiry" do

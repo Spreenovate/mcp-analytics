@@ -32,7 +32,7 @@ module Oauth
       post oauth_token_path, params: params
     end
 
-    test "happy path: returns Bearer token + marks code used" do
+    test "happy path: returns Bearer token + refresh token + marks code used" do
       assert_difference -> { OauthAccessToken.count }, 1 do
         post_token
       end
@@ -41,8 +41,12 @@ module Oauth
       data = JSON.parse(response.body)
       assert data["access_token"].start_with?("mcpa_oauth_")
       assert_equal "Bearer", data["token_type"]
-      assert data["expires_in"] > 364 * 86_400
+      assert_in_delta 24 * 3600, data["expires_in"], 60, "access token should be ~24h"
       assert_equal "analytics:read", data["scope"]
+
+      # Block 4 — refresh token issued alongside, ~90 days
+      assert data["refresh_token"].start_with?("mcpa_refresh_")
+      assert_in_delta 90 * 86_400, data["refresh_token_expires_in"], 60
 
       assert_equal "no-store", response.headers["Cache-Control"]
       assert @code.reload.used_at.present?
@@ -76,12 +80,6 @@ module Oauth
       post_token(client_id: "mcpa_client_unknown")
       assert_response :bad_request
       assert_equal "invalid_client", JSON.parse(response.body)["error"]
-    end
-
-    test "unsupported grant_type returns unsupported_grant_type" do
-      post_token(grant_type: "client_credentials")
-      assert_response :bad_request
-      assert_equal "unsupported_grant_type", JSON.parse(response.body)["error"]
     end
 
     test "expired code returns invalid_grant" do
@@ -153,6 +151,188 @@ module Oauth
     test "missing resource parameter still works when code had none either" do
       post_token # no resource arg
       assert_response :success
+    end
+
+    # --- refresh_token grant (Block 4) ------------------------------------
+
+    def post_refresh(refresh_token:, client_id: nil, **overrides)
+      params = {
+        grant_type: "refresh_token",
+        refresh_token: refresh_token,
+        client_id: client_id || @client.client_id
+      }.merge(overrides)
+      post oauth_token_path, params: params
+    end
+
+    def issue_initial_token
+      post_token
+      JSON.parse(response.body)
+    end
+
+    test "refresh_token grant: returns new access + new refresh, both rotated" do
+      original = issue_initial_token
+
+      assert_difference -> { OauthAccessToken.count }, 1 do
+        post_refresh(refresh_token: original["refresh_token"])
+      end
+      assert_response :success
+
+      data = JSON.parse(response.body)
+      assert data["access_token"].start_with?("mcpa_oauth_")
+      assert data["refresh_token"].start_with?("mcpa_refresh_")
+      assert_not_equal original["access_token"],  data["access_token"]
+      assert_not_equal original["refresh_token"], data["refresh_token"]
+      assert_equal "Bearer", data["token_type"]
+      assert_equal "analytics:read", data["scope"]
+    end
+
+    test "refresh_token grant: old access token is revoked once refresh is consumed" do
+      original = issue_initial_token
+      old_access = OauthAccessToken.find_by(token: original["access_token"])
+
+      post_refresh(refresh_token: original["refresh_token"])
+      assert_response :success
+
+      assert old_access.reload.revoked_at.present?,
+        "old access_token must be revoked when its refresh is consumed"
+    end
+
+    test "refresh_token grant: replaying a used refresh revokes the entire family" do
+      original = issue_initial_token
+
+      # First refresh — succeeds.
+      post_refresh(refresh_token: original["refresh_token"])
+      assert_response :success
+      latest = JSON.parse(response.body)
+
+      # Second use of the SAME (now-consumed) refresh — replay. We emit
+      # ONE audit row per refresh attempt with `outcome` in metadata
+      # (uniform with all other refresh outcomes — kills the audit-row-
+      # presence side-channel).
+      assert_difference -> {
+        OauthAuditEvent.where(event: "token_refreshed")
+          .where("metadata LIKE ?", "%\"outcome\":\"replay\"%").count
+      }, 1 do
+        post_refresh(refresh_token: original["refresh_token"])
+      end
+      assert_response :bad_request
+      data = JSON.parse(response.body)
+      assert_equal "invalid_grant", data["error"]
+      # Generic message — must not distinguish replay from other failures.
+      assert_equal "Invalid refresh token", data["error_description"]
+
+      # The token issued by the first (legitimate) refresh is also nuked
+      # because we treat the family as compromised.
+      family_token = OauthAccessToken.find_by(token: latest["access_token"])
+      assert family_token.revoked_at.present?,
+        "family revocation must extend to tokens issued by the legitimate refresh"
+      assert family_token.refresh_token_used_at.present?,
+        "family revocation must consume refresh side too (defense in depth)"
+    end
+
+    test "refresh_token grant: unknown refresh -> invalid_grant" do
+      post_refresh(refresh_token: "mcpa_refresh_garbage")
+      assert_response :bad_request
+      assert_equal "invalid_grant", JSON.parse(response.body)["error"]
+    end
+
+    test "refresh_token grant: error_description is identical for unknown / wrong-client / replay / inactive (no oracle)" do
+      # Unknown
+      post_refresh(refresh_token: "mcpa_refresh_unknown_value")
+      unknown_msg = JSON.parse(response.body)["error_description"]
+
+      # Wrong client
+      original = issue_initial_token
+      other = OauthClient.create!(client_name: "Other",
+                                   redirect_uri_list: [ "https://other.example/cb" ])
+      post_refresh(refresh_token: original["refresh_token"], client_id: other.client_id)
+      wrong_client_msg = JSON.parse(response.body)["error_description"]
+
+      # Replay (set up: succeed once, then reuse)
+      post_refresh(refresh_token: original["refresh_token"])
+      assert_response :success
+      post_refresh(refresh_token: original["refresh_token"])
+      replay_msg = JSON.parse(response.body)["error_description"]
+
+      # All three must be byte-identical so an attacker can't enumerate.
+      assert_equal "Invalid refresh token", unknown_msg
+      assert_equal unknown_msg, wrong_client_msg
+      assert_equal unknown_msg, replay_msg
+    end
+
+    test "refresh_token grant: wrong client_id -> invalid_grant (not invalid_client)" do
+      original = issue_initial_token
+      other = OauthClient.create!(client_name: "Other",
+                                   redirect_uri_list: [ "https://other.example/cb" ])
+      post_refresh(refresh_token: original["refresh_token"], client_id: other.client_id)
+      assert_response :bad_request
+      assert_equal "invalid_grant", JSON.parse(response.body)["error"]
+    end
+
+    test "refresh_token grant: revoked token's refresh cannot be used" do
+      original = issue_initial_token
+      OauthAccessToken.find_by(token: original["access_token"]).revoke!
+
+      post_refresh(refresh_token: original["refresh_token"])
+      assert_response :bad_request
+      assert_equal "invalid_grant", JSON.parse(response.body)["error"]
+    end
+
+    test "refresh_token grant: scope narrowing is allowed (subset)" do
+      # Issue with both scopes, narrow on refresh.
+      @code.update!(scope: "analytics:read analytics:manage")
+      original = issue_initial_token
+      assert_equal "analytics:read analytics:manage", original["scope"]
+
+      post_refresh(refresh_token: original["refresh_token"], scope: "analytics:read")
+      assert_response :success
+      assert_equal "analytics:read", JSON.parse(response.body)["scope"]
+    end
+
+    test "refresh_token grant: scope widening is rejected" do
+      original = issue_initial_token
+      assert_equal "analytics:read", original["scope"]
+
+      post_refresh(refresh_token: original["refresh_token"],
+                   scope: "analytics:read analytics:manage")
+      assert_response :bad_request
+      assert_equal "invalid_scope", JSON.parse(response.body)["error"]
+    end
+
+    test "refresh_token grant: emits token_refreshed audit event" do
+      original = issue_initial_token
+
+      assert_difference -> { OauthAuditEvent.where(event: "token_refreshed").count }, 1 do
+        post_refresh(refresh_token: original["refresh_token"])
+      end
+    end
+
+    test "refresh_token grant: missing refresh_token returns invalid_request" do
+      post oauth_token_path,
+           params: { grant_type: "refresh_token", client_id: @client.client_id }
+      assert_response :bad_request
+      assert_equal "invalid_request", JSON.parse(response.body)["error"]
+    end
+
+    test "refresh_token grant: refresh inherits resource binding from original token" do
+      canonical = "#{Oauth::BaseUrl.value}/mcp"
+      @code.update!(resource: canonical)
+      original = issue_initial_token
+
+      post_refresh(refresh_token: original["refresh_token"])
+      assert_response :success
+      new_token = OauthAccessToken.find_by(token: JSON.parse(response.body)["access_token"])
+      assert_equal canonical, new_token.resource
+    end
+
+    test "unsupported grant_type returns 400 listing supported" do
+      post oauth_token_path,
+           params: { grant_type: "client_credentials", client_id: @client.client_id }
+      assert_response :bad_request
+      body = JSON.parse(response.body)
+      assert_equal "unsupported_grant_type", body["error"]
+      assert_match(/authorization_code/, body["error_description"])
+      assert_match(/refresh_token/, body["error_description"])
     end
 
     test "downgrade attempt: code has nil resource but request claims canonical -> invalid_target" do

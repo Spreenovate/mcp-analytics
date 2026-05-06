@@ -20,7 +20,7 @@ module Oauth
         scopes_supported: Scopes::ALL,
         response_types_supported: %w[code],
         response_modes_supported: %w[query],
-        grant_types_supported: %w[authorization_code],
+        grant_types_supported: %w[authorization_code refresh_token],
         code_challenge_methods_supported: %w[S256],
         token_endpoint_auth_methods_supported: %w[none],
         # RFC 8707: signal explicit support so strict MCP clients send
