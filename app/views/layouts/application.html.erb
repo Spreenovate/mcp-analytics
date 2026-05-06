@@ -44,8 +44,9 @@
     <meta name="twitter:image:alt" content="mcp-analytics. No dashboard. No charts. Just answers.">
 
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%= javascript_include_tag "mcp_ui", defer: true %>
     <% if content_for?(:track_event) %>
-      <meta name="mcpa-track" content="<%= content_for(:track_event) %>">
+      <meta name="mcpa-track" content="<%= content_for(:track_event) %>"<%= content_for?(:track_props) ? raw(" " + content_for(:track_props)) : "" %>>
     <% end %>
     <%= yield :head %>
 

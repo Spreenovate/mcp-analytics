@@ -1,5 +1,6 @@
 <% content_for(:title, "Link expired | mcp-analytics") %>
 <% content_for(:body_class, "home") %>
+<% content_for(:track_event, "verify_expired") %>
 
 <% content_for :head do %>
   <%= render "layouts/fonts" %>
@@ -43,9 +44,3 @@
     <%= link_to "← Back home", root_path %>
   </footer>
 </div>
-
-<script>
-  // Operational signal: someone clicked an expired verify link. If this fires
-  // a lot, our mail-delivery latency is bad or the 24h TTL is too short.
-  (window.mcpa = window.mcpa || function () { (window.mcpa.q = window.mcpa.q || []).push(arguments); })('track', 'verify_expired');
-</script>

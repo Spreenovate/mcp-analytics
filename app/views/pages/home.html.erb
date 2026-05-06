@@ -242,31 +242,13 @@
     <p class="help">Enter your email. We'll send a verification link and your personal MCP connector URL. Paste it into Claude once. Done forever.</p>
     <% if flash[:alert].present? %>
       <div class="alert"><%= flash[:alert] %></div>
-      <script>
-        // Operational signal: signup form rejected with reason. Lets us spot
-        // if rate-limits or validation are blocking real users.
-        (window.mcpa = window.mcpa || function () { (window.mcpa.q = window.mcpa.q || []).push(arguments); })('track', 'signup_failed', { reason: <%= raw flash[:signup_status].to_s.to_json %> });
-      </script>
+      <% content_for(:track_event, "signup_failed") %>
+      <% content_for(:track_props, "data-prop-reason=\"#{ERB::Util.html_escape(flash[:signup_status])}\"") %>
     <% end %>
     <%= form_with url: signup_path, method: :post, local: true, html: { id: "signup-form-tag" } do |f| %>
-      <%= f.email_field :email, placeholder: "you@example.com", required: true, value: flash[:email], id: "signup-email" %>
+      <%= f.email_field :email, placeholder: "you@example.com", required: true, value: flash[:email], id: "signup-email", data: { "track-input-once": "signup_form_started" } %>
       <%= f.submit "Get URL →" %>
     <% end %>
-    <script>
-      // Form-funnel signal: fires on FIRST keystroke in the email field. Lets us
-      // compute (signup_submitted / signup_form_started) = form-completion rate.
-      (function () {
-        var input = document.getElementById("signup-email");
-        if (!input) return;
-        var fired = false;
-        function once() {
-          if (fired) return;
-          fired = true;
-          (window.mcpa = window.mcpa || function () { (window.mcpa.q = window.mcpa.q || []).push(arguments); })('track', 'signup_form_started');
-        }
-        input.addEventListener("input", once, { once: true });
-      })();
-    </script>
     <small>Free forever up to 100,000 hits/month. Unlimited sites. No credit card.</small>
   </section>
 
