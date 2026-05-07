@@ -10,15 +10,18 @@ module Oauth
   class AuthorizationsController < ApplicationController
     skip_before_action :verify_authenticity_token, raise: false, only: [ :start ]
 
-    # The consent `decide` action POSTs Allow → 302 to the OAuth client's
-    # registered redirect_uri (claude.ai/api/mcp/auth_callback,
-    # cursor://..., etc.). The global CSP `form-action 'self'` would block
-    # this — Safari and Chrome both enforce `form-action` on Location
-    # headers from form-POST responses. Relax to allow https targets so
-    # any spec-valid redirect_uri works. The consent page has zero free-
-    # form input fields and `script-src 'self'` is unchanged, so the
-    # exfiltration risk from a wider form-action is bounded.
-    content_security_policy(only: :decide) do |policy|
+    # The consent flow Allow-button POSTs → 302 to the OAuth client's
+    # registered redirect_uri (claude.ai/api/mcp/auth_callback, cursor,
+    # etc.). Browsers enforce `form-action` AT FORM-SUBMISSION TIME
+    # against the CSP of the PAGE THAT CONTAINS THE FORM — i.e. the GET
+    # /oauth/consent response, not the POST /oauth/consent/decide
+    # response. We must therefore relax form-action on `show` (and
+    # `decide` for safety on intermediate redirect chains). Allow https
+    # so any spec-valid redirect_uri works. The consent page has zero
+    # free-form input fields and `script-src 'self'` is unchanged, so
+    # broadening form-action only widens the redirect destination set,
+    # not any exfiltration vector.
+    content_security_policy(only: [ :show, :decide, :new, :start ]) do |policy|
       policy.form_action :self, :https
     end
 
