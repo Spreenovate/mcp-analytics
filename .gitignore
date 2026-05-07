@@ -36,6 +36,8 @@ yarn-debug.log*
 
 # Claude Code per-user local settings (permissions allowlist etc.)
 .claude/settings.local.json
+# Claude Code agent worktrees (ephemeral isolated copies of the repo)
+.claude/worktrees/
 
 # Go build artifacts
 /ingestion/bin/
