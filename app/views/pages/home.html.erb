@@ -212,29 +212,37 @@
       display: grid; grid-template-columns: 1fr 1fr; gap: 0;
       border: var(--border) solid var(--fg); margin-bottom: 24px;
     }
-    body.home .tier { padding: 32px; min-width: 0; }
+    body.home .tier {
+      min-width: 0; display: flex; flex-direction: column;
+    }
     body.home .tier.free { border-right: var(--border) solid var(--fg); }
     body.home .tier.pro { background: var(--accent); }
+    body.home .tier .head    { padding: 40px 40px 32px; border-bottom: 1.5px solid var(--fg); }
+    body.home .tier .body    { padding: 8px 40px; flex: 1; }
+    body.home .tier .foot    { padding: 32px 40px 40px; border-top: 1.5px solid var(--fg); }
     body.home .tier .name {
       font-family: "JetBrains Mono", monospace; font-size: 12px;
       font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em;
       background: var(--fg); color: var(--bg); padding: 4px 8px;
-      display: inline-block; margin-bottom: 16px;
+      display: inline-block; margin-bottom: 20px;
     }
     body.home .tier .price {
       font-family: "Space Grotesk", sans-serif; font-weight: 900;
-      font-size: 72px; line-height: 0.92; letter-spacing: -0.03em;
-      margin: 0 0 4px;
+      font-size: 80px; line-height: 0.92; letter-spacing: -0.03em;
+      margin: 0 0 10px;
     }
     body.home .tier .price .per {
       font-family: "JetBrains Mono", monospace; font-size: 14px;
       font-weight: 700; letter-spacing: 0.05em; margin-left: 6px;
       text-transform: uppercase;
     }
-    body.home .tier .tagline { font-size: 14px; margin: 0 0 24px; }
-    body.home .tier ul { list-style: none; padding: 0; margin: 0 0 24px; }
+    body.home .tier .tagline {
+      font-size: 14px; line-height: 1.5; margin: 0;
+      min-height: 2.8em;  /* lock to 2 lines so Free + Pro head zones match height */
+    }
+    body.home .tier ul { list-style: none; padding: 0; margin: 0; }
     body.home .tier li {
-      font-size: 14px; padding: 10px 0; line-height: 1.4;
+      font-size: 14px; padding: 14px 0; line-height: 1.4;
       border-bottom: 1.5px solid var(--fg);
     }
     body.home .tier li:last-child { border-bottom: 0; }
@@ -242,7 +250,7 @@
       content: ">"; color: var(--fg); font-weight: 700; margin-right: 10px;
     }
     body.home .tier .cta {
-      display: block; padding: 14px 0; text-align: center;
+      display: block; padding: 16px 0; text-align: center;
       background: var(--fg); color: var(--accent);
       font-family: "JetBrains Mono", monospace; font-size: 13px;
       font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;
@@ -293,7 +301,10 @@
 
       body.home .pricing { grid-template-columns: 1fr; }
       body.home .tier.free { border-right: 0; border-bottom: var(--border) solid var(--fg); }
-      body.home .tier .price { font-size: 56px; }
+      body.home .tier .head { padding: 28px 24px 24px; }
+      body.home .tier .body { padding: 4px 24px; }
+      body.home .tier .foot { padding: 24px 24px 28px; }
+      body.home .tier .price { font-size: 64px; }
 
       body.home .signup { padding: 20px; }
       body.home .signup form { flex-direction: column; }
@@ -425,34 +436,48 @@
     <h2 class="section" data-num="04">Pricing</h2>
     <div class="pricing">
       <div class="tier free">
-        <span class="name">Free</span>
-        <div class="price">€0<span class="per">forever</span></div>
-        <p class="tagline">For your portfolio, side projects, the experiments you'll forget about.</p>
-        <ul>
-          <li>100,000 hits / month</li>
-          <li>Unlimited sites</li>
-          <li>JS tracker</li>
-          <li>All 18 MCP tools</li>
-          <li>1 year retention</li>
-          <li>No credit card</li>
-        </ul>
-        <a class="cta" href="#signup-form">Start free</a>
+        <div class="head">
+          <span class="name">Free</span>
+          <div class="price">€0<span class="per">forever</span></div>
+          <p class="tagline">For your portfolio, side projects, the experiments you'll forget about.</p>
+        </div>
+        <div class="body">
+          <ul>
+            <li>100,000 hits / month</li>
+            <li>Unlimited sites</li>
+            <li>JS tracker</li>
+            <li>All 18 MCP tools</li>
+            <li>3 privacy modes</li>
+            <li>GDPR-clean, no banner</li>
+            <li>1 year retention</li>
+            <li>No credit card</li>
+          </ul>
+        </div>
+        <div class="foot">
+          <a class="cta" href="#signup-form">Start free</a>
+        </div>
       </div>
       <div class="tier pro">
-        <span class="name">Pro</span>
-        <div class="price">€19<span class="per">/ month</span></div>
-        <p class="tagline">For when the side project starts being a thing.</p>
-        <ul>
-          <li>10M hits / month</li>
-          <li>Unlimited sites</li>
-          <li>Bot &amp; AI-agent traffic taxonomy</li>
-          <li>Server-side SDK (Ruby, Node, pixel)</li>
-          <li>Deploy regression GitHub Action</li>
-          <li>3 year retention</li>
-          <li>Priority email support</li>
-          <li>€1 per extra 1M hits</li>
-        </ul>
-        <a class="cta" href="#signup-form">Start free, upgrade later</a>
+        <div class="head">
+          <span class="name">Pro</span>
+          <div class="price">€19<span class="per">/ month</span></div>
+          <p class="tagline">For when the side project actually starts being a thing.</p>
+        </div>
+        <div class="body">
+          <ul>
+            <li>10M hits / month</li>
+            <li>Unlimited sites</li>
+            <li>Bot &amp; AI-agent traffic taxonomy</li>
+            <li>Server-side SDK (Ruby, Node, pixel)</li>
+            <li>Deploy regression GitHub Action</li>
+            <li>3 year retention</li>
+            <li>Priority email support</li>
+            <li>€1 per extra 1M hits</li>
+          </ul>
+        </div>
+        <div class="foot">
+          <a class="cta" href="#signup-form">Start free, upgrade later</a>
+        </div>
       </div>
     </div>
     <p class="enterprise-line">
