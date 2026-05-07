@@ -91,5 +91,14 @@ The query-param path leaks into kamal-proxy access logs (Rails `filter_parameter
 
 ## Followups (acknowledged but not yet fixed)
 
-- **Proxy log token leak** (Sonnet review M1): kamal-proxy access logs the full URL including `?token=mcpa_xxx`. Rails app logs filter it; the Go proxy doesn't. Mitigation path: deprecate `?token=` URLs entirely once nothing legitimate uses them. Today: single-user prod, contained risk.
-- **MCP throttle key change pending** (Sonnet review M2): if [throttle_if_authenticated](app/controllers/mcp_controller.rb) is still bucketing by raw token string when you read this, an attacker who knows a victim's token can DoS the victim's bucket from any IP. Move to per-`user_id` keying after auth resolves.
+These are real issues, parked because we're single-user-prod for now and the cost/benefit doesn't justify a stop-everything fix. Reactivate when we have real users.
+
+- **Proxy log token leak.** kamal-proxy access logs the full URL including `?token=mcpa_xxx`. Rails app logs filter it; the Go proxy doesn't. Mitigation in flight: every `?token=`-authed response now carries `Deprecation: true` + `Sunset` (~6 months) + a `legacy_token_query_used` audit event (rate-limited to 1/h/user) — see [mcp_controller.rb#flag_token_query_deprecation](app/controllers/mcp_controller.rb). Plan: when the audit log shows zero use for ~30 days, delete the query-param branch from `authenticate_from_request` entirely.
+
+- **`regenerate_api_token` MCP tool still hands out a `?token=`-shaped URL.** Same response carries the deprecation header (because the rotation itself was likely called via the deprecated path), so we're handing the user a fresh URL labelled deprecated. Inconsistent — once the query path is gone, the tool's response should change to the bare base URL plus a "use Authorization: Bearer …" hint.
+
+- **TOCTOU in `RateLimit` / `McpRateBucket` bucket-init.** [mcp_rate_bucket.rb](app/services/mcp_rate_bucket.rb) and [rate_limit.rb](app/services/rate_limit.rb) both do `increment` → on `nil` (key not yet present) → `write(1)`. Concurrent first-request-of-window POSTs can both see `nil` and both `write(1)`, resetting the counter. With HTTP/2 multiplexing trivially exploitable for ~2× headroom at the window edge. Per-user 60/min is still soft so it's bounded grief, but worth atomicising (write_unless_exists then increment, or move to Redis/Lua).
+
+- **`OauthAccessToken#touch_used!` runs pre-rate-limit.** [mcp_controller.rb#authenticate_from_request](app/controllers/mcp_controller.rb) calls `touch_used!` before `rate_limit_exceeded?`. Already throttled internally (60s) so a rate-limited attacker can't keep updating it, but a stolen-token attacker can keep the connector's `last_used_at` looking fresh in /settings, masking the theft. Move the touch to after the rate-limit gate when you next pass through.
+
+- **OAuth + legacy share one user-bucket.** Bucket key is `"user:#{user.id}"`, so a misbehaving OAuth client can exhaust the budget that legacy `?token=` traffic also relies on (and vice versa). Intentional today (no cross-user DoS via a stolen-but-still-valid token) but worth a per-credential sub-bucket if a single account starts running multiple loud clients.
