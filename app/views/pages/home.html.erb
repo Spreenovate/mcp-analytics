@@ -251,11 +251,31 @@
       content: ">"; color: var(--fg); font-weight: 700; margin-right: 10px;
     }
     body.home .tier li .soon {
-      margin-left: auto;
+      margin-left: auto; flex-shrink: 0;
       font-family: "JetBrains Mono", monospace; font-size: 10px;
       font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em;
       background: var(--fg); color: var(--bg);
       padding: 3px 7px; white-space: nowrap;
+    }
+    body.home .tier li .qmark {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 18px; height: 18px; margin-left: 8px; flex-shrink: 0;
+      background: var(--bg); color: var(--fg);
+      border: 1.5px solid var(--fg);
+      font-family: "JetBrains Mono", monospace; font-size: 11px;
+      font-weight: 700; cursor: help; position: relative;
+    }
+    body.home .tier li .qmark:hover::after,
+    body.home .tier li .qmark:focus::after {
+      content: attr(data-tip);
+      position: absolute; bottom: calc(100% + 10px); left: 50%;
+      transform: translateX(-50%);
+      background: var(--fg); color: var(--bg);
+      padding: 12px 14px; font-size: 12px; line-height: 1.5;
+      font-family: "JetBrains Mono", monospace; font-weight: 400;
+      text-transform: none; letter-spacing: 0; text-align: left;
+      width: 280px; white-space: normal;
+      border: 1.5px solid var(--fg); z-index: 10; pointer-events: none;
     }
     body.home .tier .cta {
       display: block; padding: 16px 0; text-align: center;
@@ -454,7 +474,7 @@
             <li>100,000 hits / month</li>
             <li>Unlimited sites</li>
             <li>JS tracker</li>
-            <li>All 18 MCP tools</li>
+            <li>Ask Claude anything about your stats</li>
             <li>3 privacy modes</li>
             <li>GDPR-clean, no banner</li>
             <li>1 year retention</li>
@@ -475,9 +495,9 @@
           <ul>
             <li>10M hits / month</li>
             <li>Unlimited sites</li>
-            <li>Bot &amp; AI-agent traffic taxonomy <span class="soon">very soon</span></li>
-            <li>Server-side SDK (Ruby, Node, pixel) <span class="soon">soon</span></li>
-            <li>Deploy regression GitHub Action <span class="soon">soon-ish</span></li>
+            <li>See which AI agents read your site <span class="qmark" tabindex="0" data-tip="Separate ChatGPT, Claude, Perplexity, GPTBot, ClaudeBot and friends from your human visitors. Tells you which AI bots are crawling your content and how often — useful for AIEO and seeing whether your work is getting cited.">?</span><span class="soon">very soon</span></li>
+            <li>Catch the traffic JS pixels miss <span class="qmark" tabindex="0" data-tip="JavaScript trackers can't see bots that don't run JS — most training crawlers, link unfurlers and headless agents. Drop in a server-side middleware (Ruby, Node) or a 1×1 pixel for static sites without a runtime, every HTTP hit gets captured.">?</span><span class="soon">soon</span></li>
+            <li>Spot regressions after every deploy <span class="qmark" tabindex="0" data-tip="Add one step to your GitHub Action. After every deploy we compare the next hour against your usual baseline and flag drops in signups, conversion or key page views. Or just ask Claude 'did the last deploy break anything?'">?</span><span class="soon">soon-ish</span></li>
             <li>3 year retention</li>
             <li>Priority email support</li>
             <li>€1 per extra 1M hits</li>
