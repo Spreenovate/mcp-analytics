@@ -84,6 +84,50 @@
     }
     body.home footer.lp form { margin: 0; }
     body.home footer.lp .btn { padding: 6px 12px; font-size: 11px; }
+    body.home details.legacy summary {
+      cursor: pointer; font-family: "JetBrains Mono", monospace;
+      font-size: 13px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; padding: 12px 14px;
+      background: #f5f5f5; border: 1.5px solid var(--fg);
+      list-style: none;
+    }
+    body.home details.legacy summary::-webkit-details-marker { display: none; }
+    body.home details.legacy summary::before { content: "▸ "; color: var(--fg); }
+    body.home details.legacy[open] summary::before { content: "▾ "; }
+    body.home .panel {
+      border: var(--border) solid var(--fg); padding: 18px;
+      margin-bottom: 16px; position: relative;
+    }
+    body.home .panel .label {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.12em; background: var(--fg); color: var(--bg);
+      padding: 4px 8px; display: inline-block; margin-bottom: 14px;
+    }
+    body.home .panel .hint {
+      float: right; font-size: 11px; color: #888;
+      text-transform: uppercase; letter-spacing: 0.08em; margin-top: 6px;
+    }
+    body.home .panel .copyable {
+      display: block; clear: both;
+      font-family: "JetBrains Mono", monospace; font-weight: 700;
+      font-size: 13px; word-break: break-all;
+      background: #f5f5f5; padding: 12px 14px;
+      border: 1.5px solid var(--fg);
+      cursor: pointer; user-select: all;
+    }
+    body.home .panel .copyable:hover { background: var(--accent); }
+    body.home .toast {
+      position: fixed; bottom: 24px; left: 50%;
+      transform: translateX(-50%) translateY(8px);
+      background: var(--fg); color: var(--accent);
+      padding: 10px 18px;
+      font-family: "JetBrains Mono", monospace; font-size: 13px;
+      font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+      opacity: 0; transition: opacity .15s ease, transform .15s ease;
+      pointer-events: none; z-index: 100;
+      border: 2px solid var(--accent);
+    }
+    body.home .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
     @media (max-width: 720px) {
       body.home .wrap { padding: 32px 18px 80px; }
       body.home h1 { font-size: clamp(32px, 9vw, 48px); }
@@ -145,6 +189,28 @@
       </div>
     <% end %>
   <% end %>
+
+  <h2 class="section" data-num="03">Legacy connector URL</h2>
+  <p class="lead" style="font-size:14px;color:#666;margin:-12px 0 16px">
+    For MCP clients that don't speak OAuth yet (some CLI agents, older versions). Treat this URL like a password — anyone with it can read and manage your sites until you rotate it.
+  </p>
+  <details class="legacy">
+    <summary>Show legacy URL</summary>
+    <div class="panel" style="margin-top:14px">
+      <span class="label">Connector URL</span>
+      <span class="hint">click to copy</span>
+      <span class="copyable"
+            data-copy="<%= "#{ENV.fetch('PUBLIC_BASE_URL', 'https://mcp-analytics.com')}/mcp?token=#{@user.api_token}" %>"
+            role="button" tabindex="0">
+        <%= "#{ENV.fetch('PUBLIC_BASE_URL', 'https://mcp-analytics.com')}/mcp?token=" %><%= @user.api_token[0, 6] %>…<%= @user.api_token[-4, 4] %>
+      </span>
+      <p style="font-size:12px;color:#666;margin:12px 0 0">
+        Display is truncated. Click to copy the full URL.
+        To rotate, ask your MCP client to call <code>regenerate_api_token</code> — invalidates this URL and any client using it.
+      </p>
+    </div>
+  </details>
+  <div id="copy-toast" class="toast" hidden>Copied ✓</div>
 
   <footer class="lp">
     <span><%= link_to "← Back home", root_path %></span>

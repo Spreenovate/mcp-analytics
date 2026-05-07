@@ -1,5 +1,12 @@
 class SettingsController < ApplicationController
   before_action :require_settings_session
+  # The settings page renders the user's legacy api_token in plaintext
+  # (inside an HTML element behind a `<details>` toggle). Don't let the
+  # response sit in any intermediary cache, and don't leak the page URL
+  # via Referer on outbound clicks. `same-origin` (not `no-referrer`) so
+  # the Disconnect form's POST still carries a valid Origin header for
+  # Rails CSRF — same trade-off as VerificationsController.
+  before_action :no_store_same_origin_referrer
 
   # GET /settings
   def show
@@ -43,5 +50,13 @@ class SettingsController < ApplicationController
   def sign_out
     sign_out_of_settings
     redirect_to root_path, notice: "Signed out."
+  end
+
+  private
+
+  def no_store_same_origin_referrer
+    response.set_header("Cache-Control", "no-store")
+    response.set_header("Pragma", "no-cache")
+    response.set_header("Referrer-Policy", "same-origin")
   end
 end

@@ -35,14 +35,14 @@
   </div>
 
   <div class="panel">
-    <span class="label">Permissions requested</span>
+    <span class="label">What you're authorizing</span>
     <ul class="scopes">
       <% granted = Oauth::Scopes.parse(@auth_request.scope) %>
       <% if granted.include?(Oauth::Scopes::READ) %>
-        <li><strong>Read</strong> your sites and analytics data</li>
+        <li><strong>Read</strong> — list your sites and query analytics (pageviews, sources, events, …)</li>
       <% end %>
       <% if granted.include?(Oauth::Scopes::MANAGE) %>
-        <li><strong>Manage</strong> sites: add new sites and remove existing ones</li>
+        <li><strong>Manage</strong> — add new sites and remove existing ones</li>
       <% end %>
     </ul>
   </div>
