@@ -1,17 +1,13 @@
 # PROJEKT: mcp-analytics — Working Document
 
-Stand: 2026-04-23 · Branch: `main` · Tests: 88 Rails + 41 Go = 129, alle grün
+Stand: 2026-05-07 · Branch: `main` · **Live in Production** seit Mai 2026
+auf Hetzner CX32 Falkenstein (`49.13.165.191`).
 
 Dieses Dokument ist der ursprüngliche Briefing-Text, annotiert mit dem
-aktuellen Umsetzungsstand. Originaltext ist unverändert; Status-Blöcke und
-Notizen sind eingefügt.
+aktuellen Umsetzungsstand. Status-Tabelle reflektiert echten Code-Stand.
 
-Legende:
-
-- `[DONE]`     — umgesetzt
-- `[PARTIAL]`  — teilweise, Detail im Hinweis
-- `[TODO]`     — noch offen
-- `[SKIP]`     — bewusst aus MVP ausgeschlossen
+Legende: `[DONE]` umgesetzt · `[PARTIAL]` teilweise · `[TODO]` offen ·
+`[SKIP]` bewusst nicht im MVP.
 
 ---
 
@@ -19,30 +15,34 @@ Legende:
 
 | Bereich                              | Status       | Hinweis                                                          |
 |--------------------------------------|--------------|------------------------------------------------------------------|
-| Infrastruktur / Kamal-Setup          | `[PARTIAL]`  | `config/deploy.yml` + `.kamal/secrets` existieren; Host-IP ist `1.2.3.4`, noch nie deployt |
+| Deployment auf Hetzner CX32          | `[DONE]`     | Live seit Mai 2026, Kamal-Deploys laufen (zsh-wrapper-Trick siehe CLAUDE.md) |
 | Rails-App Gerüst (Rails 8 + SQLite)  | `[DONE]`     | Gemfile, Dockerfile, config, routes, Solid Queue in Puma         |
-| Datenmodell Rails (6 Tabellen)       | `[DONE]`     | Alle Migrations + Models vorhanden                               |
-| Datenmodell ClickHouse               | `[DONE]`     | `events` + `events_hourly` + `referrers_daily` MVs               |
-| Go-Ingestion-Service                 | `[DONE]`     | Bot-Filter, Rate-Limit, Salt-Hashing, Usage-Buffer, Site-Cache   |
+| Datenmodell Rails                    | `[DONE]`     | Alle Migrations + Models inkl. OAuth-Tabellen vorhanden          |
+| Datenmodell ClickHouse               | `[DONE]`     | `events` + `events_hourly` + `referrers_daily` MVs + `engagement_signals` |
+| Go-Ingestion-Service                 | `[DONE]`     | Bot-Filter, Rate-Limit, Salt-Hashing, Usage-Buffer, Site-Cache, IP-Block |
 | Tracking-Script                      | `[DONE]`     | `ingestion/static/script.js` (131 Zeilen)                        |
-| MCP-Server + alle 18 Tools           | `[DONE]`     | JSON-RPC in `app/services/mcp/`                                  |
-| MCP-Auth-Recherche                   | `[DONE]`     | Entschieden: Bearer-Header + `?token=` Fallback, kein OAuth      |
-| Web-UI (Landing, Verify, Settings)   | `[DONE]`     | Alle Views + Controller                                          |
-| Signup-/Verify-Flow inkl. Mails      | `[DONE]`     | VerificationMailer, MagicLinkMailer                              |
-| Recurring Jobs (Salt, Purge, Usage)  | `[DONE]`     | `config/recurring.yml` + 3 Job-Klassen                           |
-| Anti-Abuse (Rate-Limits, komplett)   | `[DONE]`     | /event, MCP 60/min, `register_account` 3/IP/h + 10/IP/d + 5/Dom/d, `magic_link` 5/Email/h |
-| Anti-Abuse (Garbage-Site-IP-Block)   | `[DONE]`     | Go `ipblock` (>100 unique sites/IP/h → 1h block), Rails `AbuseAlertJob` mailt Operator |
-| Concurrency (Atomic UPSERTs)         | `[DONE]`     | `UsageCounter`, `UnknownSiteHit` → `INSERT ... ON CONFLICT`      |
-| Email-Blacklist für Trash-Domains    | `[PARTIAL]`  | Logik in `Tools#disposable_email_domain?` — Liste prüfen/pflegen |
+| MCP-Server + 18 Tools                | `[DONE]`     | JSON-RPC in `app/services/mcp/`                                  |
+| OAuth 2.1 (Phase 2 + Hardening)      | `[DONE]`     | PKCE, DCR, RFC 8707, Two-Scope, Revocation (RFC 7009), Audit-Log, /settings-UI |
+| Bot-Klassifikation Phase 1           | `[DONE]`     | `traffic_class` + `user_agent` Spalten, `top_user_agents` + `traffic_class_breakdown` MCP-Tools |
+| Web-UI (Landing, Verify, Settings, Pricing) | `[DONE]` | Brutalist, Pricing-Section live (siehe `app/views/pages/home.html.erb`) |
+| Signup-/Verify-Flow inkl. Mails      | `[DONE]`     | VerificationMailer, OAuth-Consent-Flow                           |
+| Recurring Jobs (Salt, Purge, Usage)  | `[DONE]`     | `config/recurring.yml` + Job-Klassen inkl. OAuth-Audit-Prune     |
+| Anti-Abuse (Rate-Limits)             | `[DONE]`     | /event, MCP 60/min, `register_account` 3/IP/h + 10/IP/d + 5/Dom/d, `magic_link`, alle OAuth-Endpoints |
+| Anti-Abuse (Garbage-Site-IP-Block)   | `[DONE]`     | Go `ipblock` + Rails `AbuseAlertJob` (5-Min-Digest)              |
+| Concurrency (Atomic UPSERTs)         | `[DONE]`     | `UsageCounter`, `UnknownSiteHit`                                 |
 | Backup-Script                        | `[DONE]`     | `ops/backup.sh` (täglich, SQLite + ClickHouse)                   |
-| Monitoring / Alerts                  | `[PARTIAL]`  | Usage-Alert per Mail; Uptime/Disk/Garbage-Pattern noch offen     |
-| Tests Rails (88)                     | `[DONE]`     | Models, MCP Tools, MCP Controller, Verify, Sessions/Settings     |
-| Tests Go (41 über 9 Pakete)          | `[DONE]`     | bot, session, ratelimit, usage, ua, config, sites, ch, server    |
-| Deployment auf Hetzner               | `[TODO]`     | Server aufsetzen, Secrets, DNS, `kamal setup`                    |
-| Dogfooding retreaturlaub / triageflow| `[TODO]`     | Erst nach Deploy                                                 |
+| Tests (88 Rails + 41 Go)             | `[DONE]`     | Models, MCP Tools/Controller, Verify, Sessions, Settings, OAuth full-flow |
+| Pricing-Strategie + Landing-Section  | `[DONE]`     | 3-Tier-Modell finalisiert in `PRICING.md`, Landing-Page-Section live |
+| Email-Blacklist für Trash-Domains    | `[PARTIAL]`  | Logik in `Tools#disposable_email_domain?` — Liste gegen aktuelle GitHub-Liste pflegen |
+| Monitoring / Alerts                  | `[PARTIAL]`  | Usage-Alert + Garbage-Pattern done; Uptime/Disk-Alert noch offen |
+| CI-Workflow                          | `[TODO]`     | `.github/workflows/` hat nur dependabot.yml; 129 Tests warten auf re-enable |
+| Pricing-Implementation (Stripe etc.) | `[TODO]`     | `subscriptions`-Modell, Tier-Enforcement, Hard-Cap, Stripe/Lemon-Squeezy — siehe PRICING.md §9 |
+| Bot-Phase 2 + Phase 4 (Server-Side)  | `[TODO]`     | Pro-Tier-Features — siehe Bot-Phase-Plan unten                   |
+| Dogfooding (retreaturlaub, triageflow)| `[TODO]`    | Tracker einbauen, eigene Daten via Claude abfragen               |
 
-**Kritischer Pfad bis Launch**: ~~Tests~~ ✅ → ~~Garbage-Pattern-Alert~~ ✅ →
-echter Hetzner-Host + DNS → `kamal setup` + erste Deploy → Dogfooding.
+**Aktuelle Phase**: Production läuft, OAuth komplett, Pricing-Strategie steht.
+Nächster Critical Path: Pricing-Implementation (Tier-Enforcement + Stripe) +
+CI re-enable + Bot-Phase-2/4 als Pro-Tier-Features.
 
 ---
 
@@ -67,32 +67,16 @@ Indie SaaS Founder, Bloggers, Newsletter-Operators, Side-Project-Bauer.
 Leute, die Claude oder vergleichbare AI-Tools täglich nutzen und ihre
 Analytics nicht in einem separaten Tool haben wollen.
 
-## INFRASTRUKTUR  — `[PARTIAL]`
+## INFRASTRUKTUR  — `[DONE]`
 
-- 1 Server: Hetzner CX32 (4 vCPU, 8GB RAM, 80GB SSD), Standort Falkenstein
-- ClickHouse läuft direkt auf der Server-SSD unter /var/lib/clickhouse
-  (kein separates Volume im MVP – kann später ohne Code-Änderung migriert
-  werden)
-- Tägliche automatische Backups
-- Domain: mcp-analytics.com
-- Deployment: Kamal 2, alles als Docker-Container
-- Reverse Proxy / TLS: kamal-proxy (kein nginx separat)
-- Let's Encrypt automatisch via kamal-proxy
-
-> **Status**: `config/deploy.yml` und `.kamal/secrets` sind eingecheckt.
-> Host-IP ist noch Platzhalter `1.2.3.4`, Server nicht bestellt, DNS nicht
-> gesetzt, `kamal setup` nie gelaufen. Backup-Script liegt unter
-> `ops/backup.sh`.
->
-> **TODOs**:
-> - Hetzner CX32 in Falkenstein bestellen, IP in `config/deploy.yml`
->   (Rollen `web` und `ingest`) eintragen
-> - DNS A-Records für `mcp-analytics.com` und `t.mcp-analytics.com`
-> - Secrets in `.kamal/secrets` befüllen (`RAILS_MASTER_KEY`,
->   `KAMAL_REGISTRY_PASSWORD`, `SMTP_USERNAME`/`PASSWORD`,
->   `CLICKHOUSE_PASSWORD`)
-> - `kamal setup` + erste `kamal deploy`
-> - Cronjob für `ops/backup.sh` auf dem Host einrichten
+- 1 Server: Hetzner CX32 (4 vCPU, 8GB RAM, 80GB SSD), Standort Falkenstein,
+  IP `49.13.165.191`
+- ClickHouse direkt auf der Server-SSD unter /var/lib/clickhouse
+- Tägliche automatische Backups via `ops/backup.sh`
+- Domains: `mcp-analytics.com` (web) + `t.mcp-analytics.com` (ingest)
+- Deployment: Kamal 2, alles als Docker-Container, zsh-wrapper-Trick
+  beim Deploy notwendig (siehe CLAUDE.md)
+- Reverse Proxy / TLS: kamal-proxy + Let's Encrypt automatisch
 
 ## STACK  — `[DONE]`
 
@@ -481,7 +465,7 @@ KEINE Analytics-UI. Datenansicht ausschließlich über MCP.
 > **Status**: Controller unter `pages`, `verifications`, `sessions`,
 > `settings`. Views komplett. Routes in `config/routes.rb`.
 
-## ANTI-ABUSE  — `[PARTIAL]`
+## ANTI-ABUSE  — `[DONE]`
 
 Rate-Limits:
 - register_account: 3 pro IP/Stunde, 10 pro IP/Tag, 
@@ -508,18 +492,16 @@ Garbage-Site-ID-Detection:
 - Wenn pro IP/Stunde >100 Garbage-Site-IDs auftauchen: IP-Block 1h
 - Operator-Mail bei wiederholtem Pattern
 
-> **Status**:
-> - `[DONE]`  60/min MCP-Queries (`McpRateBucket`)
-> - `[DONE]`  100 Events/s per site_id (`ingestion/internal/ratelimit`)
-> - `[DONE]`  Free-Tier-Alert via `UsageLimitAlertJob`
-> - `[DONE]`  `unknown_site_hits` werden geschrieben
+> **Status**: alles `[DONE]` außer Email-Blacklist-Refresh.
+> - 60/min MCP-Queries (`McpRateBucket`)
+> - 100 Events/s per site_id (`ingestion/internal/ratelimit`)
+> - Free-Tier-Alert via `UsageLimitAlertJob`
+> - `unknown_site_hits` werden geschrieben + IP-Block bei >100/h via Go `ipblock`
+> - Operator-Digest via `AbuseAlertJob` (5-Min-Bündelung)
+> - Rate-Limits `register_account` (3/IP/h, 10/IP/d, 5/Dom/d), `magic_link`,
+>   `add_site` alle live in Controllern
 > - `[PARTIAL]` Email-Blacklist: `disposable_email_domain?` prüft, Liste
->              sollte mit einer aktuellen GitHub-Liste gegengecheckt werden
-> - `[TODO]`  Rate-Limits `register_account` (3/IP/h, 10/IP/d,
->              5/Domain/d) und `magic_link` (5/Email/h) und `add_site`
->              (10/User/d) — Implementation im Controller prüfen
-> - `[TODO]`  IP-Block (1h) bei >100 Garbage-Site-IDs/IP/h
-> - `[TODO]`  Operator-Mail bei wiederholtem Garbage-Pattern
+>   sollte regelmäßig gegen aktuelle GitHub-Liste abgeglichen werden
 
 ## ENTERPRISE-OFFRAMP  — `[SKIP im MVP]`
 
@@ -551,99 +533,119 @@ Manueller Sales-Prozess, nicht im MVP automatisiert.
 - Conversion-/Revenue-Tracking
 - Ad-blocker-Workaround via Subdomain-Proxy
 
-## ROADMAP NACH MVP (NICHT TEIL DIESES BRIEFINGS)
+## ROADMAP NACH MVP (aktualisiert 2026-05-07)
 
-Phase 2: MaxMind Geo-Lookup, Stripe-Integration, Pricing-Tiers
-Phase 3: Enterprise-Tier mit dedicated Servern, query_sql, SLA
-Phase 4: Team-Accounts, Connector-Directory-Eintrag, Self-Hosted Script,
-         eventuell minimales Dashboard für Power-User
+Original-Briefing hatte hier 4 grobe Phasen. Aktueller Stand nach
+Pricing-Strategie (siehe `PRICING.md`):
+
+- **Pro-Tier-Features** (€19/Mo): Bot-Phase 2 Taxonomie + Phase 4
+  Server-Side-Ingestion (Ruby/Node/Pixel/Edge) + Deploy-Regression
+  GH-Action + `record_event`. Diese existieren noch nicht im Code,
+  stehen aber auf der Pricing-Page als "very soon"/"soon"/"soon-ish".
+- **Enterprise-Tier-Features** (ab €299/Mo): dedicated Host, `query_sql`
+  Power-Tool, MaxMind Geo-Lookup, custom Tracking-Domain, white-label
+  Skript, Web Bot Auth Signature Verification (Bot-Phase 3), DPA/SAML/
+  Audit-Log. Existing `enterprise@`-Funnel ist Lead-Source.
+- **2. Säule (post 50 zahlende Kunden)**: MCP-Server-Analytics
+  (`Plausible für MCP-Server`). Eigene Produktlinie, nicht in Pillar 1
+  Tiers gemixt. Design-Doc weiter unten.
 
 ## ERFOLGSKRITERIEN MVP
 
-Funktional:
-- [ ] Tracking-Snippet einbinden → Events landen in ClickHouse
-- [ ] Über MCP in Claude → Daten kommen zurück
-- [ ] Signup-Flow funktioniert end-to-end inkl. Pre-Verify-Tracking
-- [ ] Mehrere Sites parallel ohne Daten-Leak
-- [ ] 3 Privacy-Modi sauber implementiert
-- [ ] Garbage-Events gegen unbekannte Site-IDs failed silent
+Funktional (alle Code-verifiziert + in Production):
+- [x] Tracking-Snippet einbinden → Events landen in ClickHouse
+- [x] Über MCP in Claude → Daten kommen zurück
+- [x] Signup-Flow E2E inkl. OAuth-Consent-Flow
+- [x] Mehrere Sites parallel ohne Daten-Leak
+- [x] 3 Privacy-Modi sauber implementiert
+- [x] Garbage-Events gegen unbekannte Site-IDs failed silent + IP-Block
 
-Performance:
-- [ ] Ingestion <50ms p99 (Response-Zeit, Storage-Wartezeit async)
+Performance (noch nicht final unter Last gemessen):
+- [ ] Ingestion <50ms p99
 - [ ] MCP-Query <500ms p95 für Standard-Tools
 - [ ] 100 aktive Sites parallel auf einem CX32 ohne Probleme
 
 Operational:
-- [ ] Kamal-Deploy in <2 Min
-- [ ] Backup automatisiert (täglich, mindestens SQLite + ClickHouse-Tables)
-- [ ] Monitoring: Uptime-Check, Disk-Alert, Garbage-Site-Hit-Alert,
-              Free-Tier-Überschreitungs-Alert
+- [x] Kamal-Deploy funktioniert (zsh-wrapper-Trick siehe CLAUDE.md)
+- [x] Backup automatisiert (`ops/backup.sh` täglich)
+- [x] Monitoring: Garbage-Site-Hit-Alert + Free-Tier-Alert via Mail done
+- [ ] Monitoring: Uptime + Disk-Alert (UptimeRobot + `df`-Warning) noch offen
 
-> **Status**: Noch keines dieser Kriterien live verifiziert — erst nach
-> erstem Deploy + Dogfooding messbar. Checkboxen bewusst leer.
+## ZEITLICHE EINORDNUNG
 
-## ZEITSCHÄTZUNG (4–6 Wochen laut Original-Briefing)
+Original-Briefing schätzte 4-6 Wochen für MVP. Tatsächlich:
 
-| Woche | Thema                                                           | Status       |
-|-------|-----------------------------------------------------------------|--------------|
-| 1     | Infrastruktur, Tracking-Script, Ingestion-Endpoint              | `[DONE]`     |
-| 2     | ClickHouse-Schema, Materialized Views, Analytics-Queries        | `[DONE]`     |
-| 3     | MCP-Server (Tools, Auth, Rate-Limits), Site-Management          | `[DONE]`     |
-| 4     | Signup-Flow, Verify-Page, Settings, Landing                     | `[DONE]`     |
-| 5–6   | Dogfooding (retreaturlaub.de + triageflow.com), Bugfixes, Launch| `[TODO]`     |
+| Phase                                                           | Status       | Datum            |
+|-----------------------------------------------------------------|--------------|------------------|
+| Wochen 1-4: Infra + Datenmodell + MCP + UI                      | `[DONE]`     | bis 2026-04-23   |
+| Bot-Klassifikation Phase 1                                      | `[DONE]`     | 2026-04-27       |
+| Landing-Page brutalist                                          | `[DONE]`     | 2026-04-24       |
+| OAuth Phase 2 (Authorization Code + PKCE + DCR + RFC 8707)      | `[DONE]`     | 2026-05-02       |
+| OAuth Hardening (Revocation, Audit-Log, Rate-Limits, Settings)  | `[DONE]`     | 2026-05-05       |
+| Production-Deploy auf Hetzner                                   | `[DONE]`     | Mai 2026         |
+| Pricing-Strategie + Landing-Section                             | `[DONE]`     | 2026-05-07       |
+| **Pricing-Implementation (Stripe + Tier-Enforcement)**          | `[TODO]`     | nächste Phase    |
+| **Bot-Phase 2/4 als Pro-Tier-Features**                         | `[TODO]`     | parallel         |
+| **Dogfooding + Directory-Submissions**                          | `[TODO]`     | nach Pro-Launch  |
 
 ---
 
-## OPEN ACTIONS (priorisiert)
+## OPEN ACTIONS (Stand 2026-05-07)
 
-### P0 — Blocker vor Live-Launch
+P0/P1-Launch-Block ist durch (Hetzner-Deploy + DNS + Backup + Smoke-Test
+alles done; OAuth Phase 2 + Hardening live; Tests grün; Bot-Phase 1
+shipped). Was jetzt noch offen ist:
 
-1. **Hetzner CX32 bestellen** (Falkenstein)
-2. **DNS setzen**: `mcp-analytics.com` + `t.mcp-analytics.com` → Server-IP
-3. **`config/deploy.yml`**: Platzhalter-IPs `1.2.3.4` in `web`/`ingest`
-   ersetzen
-4. **`.kamal/secrets`** befüllen: `RAILS_MASTER_KEY`,
-   `KAMAL_REGISTRY_PASSWORD`, `SMTP_USERNAME`, `SMTP_PASSWORD`,
-   `CLICKHOUSE_PASSWORD`
-5. **`kamal setup`** + erster `kamal deploy`
-6. **Backup-Cron** auf Host (täglich `ops/backup.sh`)
-7. **Smoke-Test End-to-End**: `register_account` → Mail → `/verify`
-   → `add_site` → Tracking-Snippet auf Test-Seite → Event in ClickHouse
-   → `get_overview` via Claude
+### A — Pricing-Implementation (vor Pro-Launch nötig)
 
-### P1 — Vor Dogfooding / Marketing
+Volle Liste mit Aufwand und Begründung in `PRICING.md` §9. Zusammenfassung:
 
-8. ~~**Tests schreiben**~~ ✅ erledigt: 129 Tests (88 Rails + 41 Go), grün.
-9. ~~**Anti-Abuse Rate-Limits** für `register_account`, `magic_link`~~ ✅
-   erledigt (`app/services/rate_limit.rb` + `Tools#enforce_register_rate_limits!`
-   + `SessionsController#create`). `add_site` war schon da.
-10. ~~**Garbage-Site-ID → IP-Block (1h)**~~ ✅ erledigt (`ingestion/internal/ipblock`
-    + `abuse_events` Tabelle + `AbuseAlertJob` läuft alle 5 min)
-11. **Email-Domain-Blacklist** gegen aktuelle GitHub-Liste aktualisieren
-12. **Monitoring**: Uptime-Check (UptimeRobot / simpler Cron), Disk-Alert
-    (`df`-Warnung bei >80%)
+1. **`subscriptions`-Modell + `tier`-Enum** auf User (`hobby`/`pro`/`enterprise`). ~4h.
+2. **Tier-Enforcement im `Mcp::AuthContext`** — Bot-/SDK-/Deploy-Tools nach Tier schalten. ~4h.
+3. **Hits-Cap Hard-Enforcement** für Free — heute Soft-Warning, muss 429 für Free über Cap werden. ~2h.
+4. **Stripe-Checkout + Webhook** (oder Lemon-Squeezy als EU-VAT-Merchant-of-Record). ~1-2 Tage.
+5. **Overage-Cron** — Solid-Queue Monats-Ultimo, summiert Hits über Cap, `Stripe::InvoiceItem`. ~2h.
+6. **Settings-UI für Auto-Overage opt-in** — Toggle + Stripe-Card-Setup. ~3h.
 
-### P2 — Nach erstem Launch
+### B — Pro-Tier-Features die noch nicht im Code sind
 
-13. **Dogfooding** retreaturlaub.de + triageflow.com — Tracker einbauen,
-    eigene Daten per Claude abfragen
-14. **Bot-Heuristik in MVs**: Sessions mit >5 Events/s ausklammern
-    (laut Briefing; derzeit nicht in MVs)
-15. **Landing Copy + Demo-Video** (wenn UI-Ready)
-16. **CI wieder einschalten**, sobald Tests existieren
-    (Workflow `.github/workflows/ci.yml` wurde am 2026-04-23 gelöscht)
-17. **OAuth 2.1 (Variante B)** implementieren — siehe Sektion *OAUTH ROADMAP*
-    weiter unten. Voraussetzung für ChatGPT-Listing und
-    Anthropic-Directory-Aufnahme.
-18. **Cursor-Directory-Submission** (niedrige Hürde, gute Indie-Dev-Reichweite)
-19. **Anthropic + ChatGPT Directory-Submission** (nach OAuth-Rollout)
+Diese stehen auf der Pricing-Page als "very soon"/"soon"/"soon-ish":
 
-### Offene Detail-Fragen (im Code zu klären)
+7. **Bot-Phase 2** Cloudflare-kompatible Taxonomie. Siehe Bot-Phase-Plan unten. ~3-4h.
+8. **Bot-Phase 4B** Ruby-Gem `mcp-analytics-rack`. "Biggest Unlock". ~3h.
+9. **Bot-Phase 4A/C/D** Pixel-Endpoint + Node/Next-Middleware + CF-Worker. ~4h zusammen.
+10. **`record_deploy` + `regression_check` MCP-Tools** + GitHub-Action `mcp-analytics/record-deploy@v1`. ~3-4h.
 
-- Tracking-Script-URL: Briefing sagt `mcp-analytics.com/script.js`, Code
-  liefert unter `t.mcp-analytics.com/script.js`. Marketing/Snippet
-  entsprechend. **Entscheidung dokumentieren** bevor man anfängt nach
-  außen zu kommunizieren.
+### C — Restliche Hygiene
+
+11. **CI-Workflow re-enablen** — `.github/workflows/` hat nur dependabot.yml; 129 grüne Tests warten.
+12. **Email-Domain-Blacklist refresh** gegen aktuelle GitHub-Liste.
+13. **Uptime/Disk-Monitoring** — UptimeRobot + `df`-Warning bei >80%. (Usage-Alert + Garbage-Pattern sind durch.)
+14. **Bot-Heuristik in ClickHouse-MVs** — Sessions mit >5 Events/s ausklammern (im Original-Briefing erwähnt, nie umgesetzt).
+
+### D — Distribution / Marketing
+
+15. **Dogfooding** retreaturlaub.de + triageflow.com.
+16. **Cursor-Directory-Submission** (niedrige Hürde, Indie-Dev-Reichweite).
+17. **Anthropic Connector-Directory-Submission** (OAuth ist live → eligible).
+18. **ChatGPT Connectors-Submission** (OAuth + DCR sind live → eligible).
+19. **Landing Copy + Demo-Video** wenn Pro-Tier-Features sichtbar sind.
+
+Siehe auch `## DIRECTORY-SUBMISSIONS — Status-Tracking` unten für laufende Submissions.
+
+### E — Strategische 2. Säule (geparkt)
+
+20. **MCP-Server-Analytics** als zweite Produktsäule (`Plausible für MCP-Server`).
+    Im PRICING.md bewusst aus Y1-Pricing rausgelassen — startet erst nach
+    50 zahlenden Web-Analytics-Kunden. Design-Doc in dieser BRIEFING.md
+    weiter unten.
+
+### Offene Detail-Frage (im Code geklärt, nur Doku-Aufgabe)
+
+- ✅ Tracking-Script-URL ist im Code konsistent `t.mcp-analytics.com/script.js`
+  (siehe `config/deploy.yml`, `tools.rb`, `home.html.erb`). Briefing-Text
+  weiter unten erwähnt teilweise noch `mcp-analytics.com/script.js` — kann
+  bei Gelegenheit angepasst werden, aber Code ist die Source-of-Truth.
 
 ---
 
@@ -690,11 +692,21 @@ ohne Reaktion freundlich nachfassen oder erneut einreichen.
 
 ---
 
-## OAUTH ROADMAP (Phase 2, post-MVP) — `[TODO]`
+## OAUTH ROADMAP — `[DONE 2026-05-02 + Hardening 2026-05-05]`
 
-**Warum**: ChatGPT-Connectors erzwingen OAuth 2.1, Anthropic-Directory will
-es, Cursor empfiehlt es. Außerdem deutlich bessere UX: kein Token-Paste,
-kein URL-Editieren, ein Klick-Flow.
+**Live in Production.** Authorization-Code-Flow mit PKCE, Dynamic Client
+Registration, RFC 8707 Resource Indicators, Two-Scope-Modell
+(`analytics:read` + `analytics:manage`), Revocation-Endpoint (RFC 7009),
+Audit-Log, Settings-UI für Connector-Management. Code in
+`app/controllers/oauth/` + `app/services/oauth/` + `app/views/oauth/`.
+
+Kritische Compat-Quirks die wir gefunden haben (claude.ai-Frontend ist
+strict): siehe **CLAUDE.md** unter "claude.ai's MCP-OAuth integration is
+brittle". Architektur-Rationale unten als Reference belassen.
+
+**Warum überhaupt**: ChatGPT-Connectors erzwingen OAuth 2.1, Anthropic-
+Directory will es, Cursor empfiehlt es. Außerdem deutlich bessere UX:
+kein Token-Paste, kein URL-Editieren, ein Klick-Flow.
 
 ### Zielfluss (Variante B — Consent-Screen nach Magic-Link-Click)
 
@@ -768,53 +780,28 @@ in einem Rutsch):
 Aus User-Sicht: **Add Connector → eine Mail → ein Klick auf Erlauben →
 zurück in Claude/ChatGPT/Cursor, fertig.**
 
-### Implementierung (Schätzung: 1–2 Tage)
+### Implementierung — `[DONE]`
 
-Bestand wiederverwendbar:
-- ✅ Magic-Link-Login (`SessionsController#create`/`#show`)
-- ✅ User-Modell + Email-Verification
-- ✅ Settings-UI (für Token-Revocation später erweitern)
+Alles umgesetzt: Discovery-Endpoints, Authorize/Token-Endpoints,
+McpController-401-Patch, OAuth-Tabellen (`oauth_clients`,
+`oauth_authorization_codes`, `oauth_access_tokens`, `oauth_audit_events`),
+Settings-UI mit Revoke pro Connector. Code in
+`app/controllers/oauth/`, `app/services/oauth/`, `app/views/oauth/`.
+DCR + Refresh-Tokens kamen mit Hardening-Block 1 (2026-05-05) dazu.
 
-Neue Bausteine:
+### Architektur-Entscheidungen (rückblickend, Code-verifiziert)
 
-1. **Discovery-Endpoints** (statisches JSON):
-   - `GET /.well-known/oauth-authorization-server`
-   - `GET /.well-known/oauth-protected-resource`
-2. **Authorize-Endpoint**:
-   - `GET /oauth/authorize` — Consent-Screen rendern, Login erzwingen
-     via `session[:return_to]` Mechanik
-   - `POST /oauth/authorize` — Approve/Deny verarbeiten, Code generieren,
-     redirect zum Client
-3. **Token-Endpoint**:
-   - `POST /oauth/token` — Code-→-Token-Tausch, PKCE verifizieren
-4. **McpController-Patch**:
-   - Bei fehlender/ungültiger Auth: `401` mit `WWW-Authenticate`-Header
-     statt nur Public-Tools zu zeigen
-5. **Neue Tabellen**:
-   - `oauth_clients` — bekannte Clients (Claude, ChatGPT, Cursor) mit
-     erlaubten redirect_uris
-   - `oauth_authorization_codes` — kurzlebig, ~10 min, mit PKCE-Challenge
-   - `oauth_access_tokens` — kann den existierenden `users.api_token`
-     ablösen oder ergänzen (Token-Rotation, Multi-Client-Support)
-6. **Settings-UI erweitern**:
-   - Liste der autorisierten Clients mit „Revoke"-Button pro Eintrag
-
-### Bewusste Vereinfachungen für Phase 2
-
-- **Keine Dynamic Client Registration** im ersten Wurf. ChatGPT verlangt
-  das eigentlich, aber wir starten mit hartkodierten Clients (Claude,
-  Cursor). DCR kann nachgezogen werden, wenn ChatGPT-Listing tatsächlich
-  ansteht.
-- **Zwei Scopes mit Enforcement**: `analytics:read` (Analytics-Queries
-  + list_sites) und `analytics:manage` (zusätzlich add_site/remove_site).
-  Tools/list filtert nach gewährten Scopes; tools/call verweigert mit
-  klarer Fehlermeldung wenn Scope fehlt. `regenerate_api_token` ist
-  zusätzlich für OAuth-Sessions komplett unsichtbar (sonst könnte ein
-  OAuth-Client den Master-Token extrahieren und damit den OAuth-Lifecycle
-  umgehen).
-- **Refresh-Tokens optional**. Access-Token mit langer Gültigkeit (z.B.
-  1 Jahr) reicht für MVP-Niveau, Settings-Revoke ist die Notbremse.
-- **PKCE Pflicht**, kein Secret-basierter Flow für public Clients.
+- **Two-Scope-Modell live**: `analytics:read` (Queries + list_sites)
+  und `analytics:manage` (zusätzlich add_site/remove_site/etc.).
+  Tools/list filtert nach gewährten Scopes; tools/call verweigert
+  mit klarer Fehlermeldung. `regenerate_api_token` ist für OAuth-
+  Sessions komplett unsichtbar (sonst könnte ein OAuth-Client den
+  Master-Token extrahieren und den OAuth-Lifecycle umgehen).
+- **DCR live** (Phase 2 Foundation 2026-05-02). ChatGPT-Listing wird
+  damit eligible.
+- **Refresh-Tokens live** (Hardening-Block 1, 2026-05-05).
+- **PKCE Pflicht**. Kein Secret-basierter Flow.
+- **Audit-Log + Revocation-Endpoint (RFC 7009)** live.
 
 ### Variante A vs. B — warum B
 
@@ -831,14 +818,14 @@ Erlauben. Ein Klick mehr, dafür:
 
 **Entscheidung**: Variante B.
 
-### Offene Fragen für Phase 2
+### Geklärte Fragen (rückblickend)
 
-- Welche Scopes wollen wir später unterscheiden?
-- Token-Lebensdauer Default? (Vorschlag: 1 Jahr Access-Token, Revoke per
-  Settings)
-- Wie verhalten wir uns bei Token-Rotation gegenüber bereits ausgegebenen
-  alten `api_token`s aus MVP-Phase? (Vorschlag: weiterhin akzeptieren,
-  Settings-Page weist auf neue OAuth-Variante hin)
+- Scopes: zwei Stück, `read` + `manage` (siehe oben).
+- Token-Lebensdauer: Access-Token 1 Jahr, Refresh-Token rotierend.
+- Legacy `api_token`s: weiterhin akzeptiert (`mcpa_…`-Prefix), Settings
+  warnt aber auf OAuth-Variante hin. Query-Param-Form (`?token=`) trägt
+  Deprecation-Header — Plan ist Sunset wenn Audit-Log 30 Tage zero use
+  zeigt (siehe CLAUDE.md "Followups").
 
 ---
 
@@ -1044,7 +1031,13 @@ hat erstmal nichts davon.
 
 ---
 
-## "PLAUSIBLE FÜR MCP-SERVER" (2. Produktsäule, post-MVP) — `[STRATEGIC, TODO]`
+## "PLAUSIBLE FÜR MCP-SERVER" (2. Produktsäule) — `[GEPARKT bis 50 Paid-Kunden]`
+
+> **Update 2026-05-07**: Bewusst aus dem Y1-Pricing rausgelassen (siehe
+> PRICING.md). Bleibt als eigenständige zweite Produktlinie für später,
+> nicht in Web-Analytics-Tiers gemixt. Trigger zum Reaktivieren: 50
+> zahlende Web-Analytics-Kunden, dann eigene Pricing-Ladder. Design-Doc
+> bleibt unten erhalten.
 
 **Konzept:** Web-Analytics-Style Tracking, aber für MCP-Server selbst. Wer
 einen MCP-Server baut und shipped (Anthropic-Directory-Submitter, Cursor-Plugin
@@ -1130,6 +1123,20 @@ Auch mit allen 4 Phasen können wir niemals sagen:
 
 ## CHANGELOG (Working Doc)
 
+- **2026-05-07** — BRIEFING.md aufgeräumt: Status-Dashboard auf
+  tatsächlichen Code-Stand gebracht (Deployment + OAuth + Bot-Phase 1
+  + Pricing-Strategie alles `[DONE]`), P0-Section komplett entfernt
+  (alles done), P1 auf 3 echte Reste reduziert (CI, Email-Blacklist,
+  Uptime-Monitoring), Erfolgskriterien-Checkboxen ehrlich abgehakt,
+  ZEITSCHÄTZUNG-Tabelle durch tatsächliche Phasen-Timeline ersetzt.
+- **2026-05-07** — Pricing-Strategie finalisiert + Landing-Page-Section
+  live: 3-Tier-Modell (Free 100k / Pro €19 / Enterprise ab €299) mit
+  €1/1M Hits Overage, kein Annual, keine Team-Seats, MCP-Server-Pillar
+  als 2. Säule für später geparkt. Recherche von 3 Subagent-Pässen +
+  kritischer Bewertung in `PRICING.md` (300+ Zeilen mit Konkurrenzmatrix,
+  COGS-Rechnung, Roadmap-Mapping, Adoption-Estimate). Pricing-Section
+  auf Landing-Page brutalist mit 3-Zonen-Layout, hover-Tooltips für
+  unshipped Pro-Features ("very soon"/"soon"/"soon-ish").
 - **2026-05-05** — OAuth-Hardening Block 2: `/settings` als enge,
   Session-basierte UI für OAuth-Connector-Management wieder eingeführt
   (anders als die 2026-04-25 entfernte Variante: nur Cookie-Session,
