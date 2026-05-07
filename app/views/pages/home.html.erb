@@ -208,6 +208,61 @@
       content: ">"; color: var(--accent); font-weight: 700; margin-right: 10px;
     }
 
+    body.home .pricing {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+      border: var(--border) solid var(--fg); margin-bottom: 24px;
+    }
+    body.home .tier { padding: 32px; min-width: 0; }
+    body.home .tier.free { border-right: var(--border) solid var(--fg); }
+    body.home .tier.pro { background: var(--accent); }
+    body.home .tier .name {
+      font-family: "JetBrains Mono", monospace; font-size: 12px;
+      font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em;
+      background: var(--fg); color: var(--bg); padding: 4px 8px;
+      display: inline-block; margin-bottom: 16px;
+    }
+    body.home .tier .price {
+      font-family: "Space Grotesk", sans-serif; font-weight: 900;
+      font-size: 72px; line-height: 0.92; letter-spacing: -0.03em;
+      margin: 0 0 4px;
+    }
+    body.home .tier .price .per {
+      font-family: "JetBrains Mono", monospace; font-size: 14px;
+      font-weight: 700; letter-spacing: 0.05em; margin-left: 6px;
+      text-transform: uppercase;
+    }
+    body.home .tier .tagline { font-size: 14px; margin: 0 0 24px; }
+    body.home .tier ul { list-style: none; padding: 0; margin: 0 0 24px; }
+    body.home .tier li {
+      font-size: 14px; padding: 10px 0; line-height: 1.4;
+      border-bottom: 1.5px solid var(--fg);
+    }
+    body.home .tier li:last-child { border-bottom: 0; }
+    body.home .tier li::before {
+      content: ">"; color: var(--fg); font-weight: 700; margin-right: 10px;
+    }
+    body.home .tier .cta {
+      display: block; padding: 14px 0; text-align: center;
+      background: var(--fg); color: var(--accent);
+      font-family: "JetBrains Mono", monospace; font-size: 13px;
+      font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;
+      text-decoration: none; border: var(--border) solid var(--fg);
+    }
+    body.home .tier .cta:hover { background: var(--bg); color: var(--fg); }
+    body.home .enterprise-line {
+      border: var(--border) solid var(--fg); padding: 20px 24px;
+      font-size: 14px; line-height: 1.55; margin-bottom: 96px;
+    }
+    body.home .enterprise-line strong {
+      text-transform: uppercase; letter-spacing: 0.08em; margin-right: 4px;
+    }
+    body.home .enterprise-line code {
+      font-family: "JetBrains Mono", monospace; font-size: 13px;
+      background: #f5f5f5; padding: 1px 6px; border: 1.5px solid var(--fg);
+    }
+    body.home .enterprise-line a { color: var(--fg); }
+    body.home .enterprise-line a:hover { background: var(--accent); }
+
     body.home footer.lp {
       border-top: var(--border) solid var(--fg); padding-top: 24px;
       font-size: 12px; display: flex; justify-content: space-between; color: #666;
@@ -236,6 +291,10 @@
 
       body.home .why { grid-template-columns: 1fr; gap: 40px; }
 
+      body.home .pricing { grid-template-columns: 1fr; }
+      body.home .tier.free { border-right: 0; border-bottom: var(--border) solid var(--fg); }
+      body.home .tier .price { font-size: 56px; }
+
       body.home .signup { padding: 20px; }
       body.home .signup form { flex-direction: column; }
       body.home .signup input[type=email] { border-right: 0; border-bottom: var(--border) solid var(--fg); }
@@ -256,6 +315,7 @@
       <a href="#signup-form">Get started</a>
       <a href="#how">How</a>
       <a href="#demo">Demo</a>
+      <a href="#pricing">Pricing</a>
       <a href="<%= docs_path %>">Docs</a>
     </nav>
   </header>
@@ -359,6 +419,45 @@
         </ul>
       </div>
     </div>
+  </section>
+
+  <section id="pricing">
+    <h2 class="section" data-num="04">Pricing</h2>
+    <div class="pricing">
+      <div class="tier free">
+        <span class="name">Free</span>
+        <div class="price">€0<span class="per">forever</span></div>
+        <p class="tagline">For your portfolio, side projects, the experiments you'll forget about.</p>
+        <ul>
+          <li>100,000 hits / month</li>
+          <li>Unlimited sites</li>
+          <li>JS tracker</li>
+          <li>All 18 MCP tools</li>
+          <li>1 year retention</li>
+          <li>No credit card</li>
+        </ul>
+        <a class="cta" href="#signup-form">Start free</a>
+      </div>
+      <div class="tier pro">
+        <span class="name">Pro</span>
+        <div class="price">€19<span class="per">/ month</span></div>
+        <p class="tagline">For when the side project starts being a thing.</p>
+        <ul>
+          <li>10M hits / month</li>
+          <li>Unlimited sites</li>
+          <li>Bot &amp; AI-agent traffic taxonomy</li>
+          <li>Server-side SDK (Ruby, Node, pixel)</li>
+          <li>Deploy regression GitHub Action</li>
+          <li>3 year retention</li>
+          <li>Priority email support</li>
+          <li>€1 per extra 1M hits</li>
+        </ul>
+        <a class="cta" href="#signup-form">Start free, upgrade later</a>
+      </div>
+    </div>
+    <p class="enterprise-line">
+      <strong>Enterprise</strong> from €299 / month. Dedicated server, <code>query_sql</code> power tool, 99.9% SLA, custom retention, white-label tracking domain, DPA. <%= mail_to "enterprise@mcp-analytics.com", "Contact sales" %>.
+    </p>
   </section>
 
   <footer class="lp">
