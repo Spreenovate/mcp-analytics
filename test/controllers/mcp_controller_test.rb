@@ -129,6 +129,38 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     assert_equal(-32029, json_body["error"]["code"])
   end
 
+  test "rate-limit bucket is keyed by user_id, not token (resists cross-token DoS)" do
+    # An attacker who knows @user's api_token can NOT exhaust the bucket
+    # of a *different* user by spamming with their own token.
+    other = User.create!(email: "victim@example.com", email_verified_at: Time.current)
+    60.times { rpc("ping", token: @user.api_token) }
+    rpc("ping", token: other.api_token)
+    assert_response :success, "Other user must not be rate-limited just because @user was"
+  end
+
+  test "rate-limit bucket spans OAuth + legacy tokens for the same user" do
+    client = OauthClient.create!(client_name: "X", redirect_uri_list: [ "https://x.example/cb" ])
+    oauth_token = OauthAccessToken.create!(user: @user, oauth_client: client,
+                                            scope: "analytics:read")
+    60.times { rpc_call("ping", headers: { "Authorization" => "Bearer #{oauth_token.token}" }) }
+    rpc("ping", token: @user.api_token)
+    assert_response :too_many_requests, "OAuth + legacy must share the same bucket (same user)"
+  end
+
+  test "?token= query auth sets Deprecation + Sunset response headers" do
+    rpc_call("tools/list", query: { token: @user.api_token })
+    assert_response :success
+    assert_equal "true", response.headers["Deprecation"]
+    assert response.headers["Sunset"].present?, "Sunset header must be set"
+    assert_match %r{rel="deprecation"}, response.headers["Link"]
+  end
+
+  test "Bearer header auth does NOT set deprecation headers" do
+    rpc_call("tools/list", headers: { "Authorization" => "Bearer #{@user.api_token}" })
+    assert_response :success
+    assert_nil response.headers["Deprecation"]
+  end
+
   # --- batch & malformed --------------------------------------------------
 
   test "batch request returns array of responses" do

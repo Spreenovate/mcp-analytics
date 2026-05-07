@@ -6,8 +6,7 @@ class McpController < ApplicationController
   # session-less by definition.
   skip_before_action :verify_authenticity_token, raise: false, only: [ :dispatch_rpc, :preflight ]
 
-  before_action :throttle_if_authenticated, only: [ :dispatch_rpc ]
-  after_action  :advertise_oauth_resource, only: [ :dispatch_rpc, :info ]
+  after_action :advertise_oauth_resource, only: [ :dispatch_rpc, :info ]
 
   def preflight
     head :no_content
@@ -33,6 +32,13 @@ class McpController < ApplicationController
                             error: { code: -32001, message: message } },
                     status: :unauthorized)
     end
+
+    # Rate-limit AFTER auth, keyed by user_id (not by raw token string).
+    # Pre-auth keying let an attacker who knew a victim's token DoS the
+    # victim's bucket from any IP. Post-auth keying ties consumption to
+    # the actual account; a leaked-but-still-valid token can only burn
+    # the same bucket the legitimate user shares, no cross-victim grief.
+    return if rate_limit_exceeded?(auth.user)
 
     body = read_json_body
     return head(:bad_request) if body.nil?
@@ -87,10 +93,31 @@ class McpController < ApplicationController
     end
 
     if (query_token = params[:token].presence) && (legacy = User.find_by(api_token: query_token))
+      flag_token_query_deprecation(legacy)
       return Mcp::AuthContext.legacy(legacy)
     end
 
     Mcp::AuthContext.anonymous
+  end
+
+  # `?token=` in the URL leaks into kamal-proxy access logs (the Rails
+  # `filter_parameters` redaction only applies to Rails app logs, not the
+  # Go reverse-proxy). The Authorization header is the safe equivalent.
+  # Mark every query-param-authed response as deprecated so clients
+  # migrate, and rate-limited audit so we can see when the last
+  # legitimate caller stops using it.
+  def flag_token_query_deprecation(user)
+    response.set_header("Deprecation", "true")
+    response.set_header("Sunset", 6.months.from_now.httpdate)
+    response.set_header("Link",
+      '</docs>; rel="deprecation", </docs>; rel="sunset"')
+
+    if RateLimit.allow?(key: "mcp-token-query-audit:user:#{user.id}", limit: 1, window: 3600)
+      Oauth::Audit.log("legacy_token_query_used",
+        user: user,
+        request: request,
+        metadata: { reminder: "?token= leaks into proxy logs; clients should send Authorization: Bearer instead" })
+    end
   end
 
   def resource_acceptable?(token_resource)
@@ -131,18 +158,17 @@ class McpController < ApplicationController
     nil
   end
 
-  def throttle_if_authenticated
-    # Simple in-process throttling (60 req/min per user token).
-    # Replaced with a proper rack-attack config in production if needed.
-    token = bearer_token || params[:token].presence
-    return if token.blank?
+  # Returns true (and renders the 429) if this user is over budget for
+  # the current minute. 60 req/min per authenticated user — across all
+  # their tokens (OAuth + legacy), since the bucket key is the user_id.
+  def rate_limit_exceeded?(user)
+    bucket = McpRateBucket.acquire("user:#{user.id}")
+    return false if bucket.allow!
 
-    bucket = McpRateBucket.acquire(token)
-    return if bucket.allow!
-
-    render json: {
+    render(json: {
       jsonrpc: "2.0", id: nil,
-      error: { code: -32029, message: "Rate limited: 60 requests/minute per token." }
-    }, status: :too_many_requests
+      error: { code: -32029, message: "Rate limited: 60 requests/minute per account." }
+    }, status: :too_many_requests)
+    true
   end
 end

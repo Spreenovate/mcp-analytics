@@ -10,6 +10,7 @@ module Oauth
       token_issued
       token_refreshed
       token_revoked
+      legacy_token_query_used
     ].freeze
 
     # Cap the JSON-encoded metadata so a hostile DCR registrant can't
