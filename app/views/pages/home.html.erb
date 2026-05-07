@@ -244,10 +244,18 @@
     body.home .tier li {
       font-size: 14px; padding: 14px 0; line-height: 1.4;
       border-bottom: 1.5px solid var(--fg);
+      display: flex; align-items: center;
     }
     body.home .tier li:last-child { border-bottom: 0; }
     body.home .tier li::before {
       content: ">"; color: var(--fg); font-weight: 700; margin-right: 10px;
+    }
+    body.home .tier li .soon {
+      margin-left: auto;
+      font-family: "JetBrains Mono", monospace; font-size: 10px;
+      font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em;
+      background: var(--fg); color: var(--bg);
+      padding: 3px 7px; white-space: nowrap;
     }
     body.home .tier .cta {
       display: block; padding: 16px 0; text-align: center;
@@ -467,9 +475,9 @@
           <ul>
             <li>10M hits / month</li>
             <li>Unlimited sites</li>
-            <li>Bot &amp; AI-agent traffic taxonomy</li>
-            <li>Server-side SDK (Ruby, Node, pixel)</li>
-            <li>Deploy regression GitHub Action</li>
+            <li>Bot &amp; AI-agent traffic taxonomy <span class="soon">very soon</span></li>
+            <li>Server-side SDK (Ruby, Node, pixel) <span class="soon">soon</span></li>
+            <li>Deploy regression GitHub Action <span class="soon">soon-ish</span></li>
             <li>3 year retention</li>
             <li>Priority email support</li>
             <li>€1 per extra 1M hits</li>
