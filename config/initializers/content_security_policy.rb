@@ -29,10 +29,12 @@ Rails.application.configure do
     policy.img_src         :self, :https, :data
     policy.font_src        :self, :https, :data
     policy.connect_src     :self, "https://fonts.googleapis.com", "https://fonts.gstatic.com"
-    # Same-origin only. OAuth redirects to native schemes (claude://,
-    # cursor://) happen via 302 from `redirect_to`, NOT form submission,
-    # so they don't pass through `form-action`. Browsers don't enforce
-    # form-action on Location: headers.
+    # Same-origin by default. The OAuth consent decide action redirects
+    # to the client's registered redirect_uri (claude.ai / cursor / etc.)
+    # — that path overrides this directive at the controller level.
+    # `form-action` IS enforced by browsers on Location headers from
+    # form-POST responses (CSP3 §6.4 — applies to "navigations from
+    # form-submission, INCLUDING redirects").
     policy.form_action     :self
     policy.frame_ancestors :none
     policy.base_uri        :self

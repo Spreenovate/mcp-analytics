@@ -10,6 +10,18 @@ module Oauth
   class AuthorizationsController < ApplicationController
     skip_before_action :verify_authenticity_token, raise: false, only: [ :start ]
 
+    # The consent `decide` action POSTs Allow → 302 to the OAuth client's
+    # registered redirect_uri (claude.ai/api/mcp/auth_callback,
+    # cursor://..., etc.). The global CSP `form-action 'self'` would block
+    # this — Safari and Chrome both enforce `form-action` on Location
+    # headers from form-POST responses. Relax to allow https targets so
+    # any spec-valid redirect_uri works. The consent page has zero free-
+    # form input fields and `script-src 'self'` is unchanged, so the
+    # exfiltration risk from a wider form-action is bounded.
+    content_security_policy(only: :decide) do |policy|
+      policy.form_action :self, :https
+    end
+
     GRANT_VERIFIER_PURPOSE = "oauth_consent_grant".freeze
     GRANT_LIFETIME = 10.minutes
 
