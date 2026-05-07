@@ -2,7 +2,9 @@ class McpController < ApplicationController
   include OauthCors
   # MCP is a JSON-RPC endpoint. Skip CSRF because clients are programmatic and
   # authenticate with a bearer token or URL token param, not a session cookie.
-  skip_before_action :verify_authenticity_token, raise: false, only: [ :dispatch_rpc ]
+  # `:preflight` is the OPTIONS no-op for browser CORS preflight — also
+  # session-less by definition.
+  skip_before_action :verify_authenticity_token, raise: false, only: [ :dispatch_rpc, :preflight ]
 
   before_action :throttle_if_authenticated, only: [ :dispatch_rpc ]
   after_action  :advertise_oauth_resource, only: [ :dispatch_rpc, :info ]
