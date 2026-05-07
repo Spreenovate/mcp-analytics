@@ -37,7 +37,8 @@ Legende: `[DONE]` umgesetzt · `[PARTIAL]` teilweise · `[TODO]` offen ·
 | Monitoring / Alerts                  | `[PARTIAL]`  | Usage-Alert + Garbage-Pattern done; Uptime/Disk-Alert noch offen |
 | CI-Workflow                          | `[TODO]`     | `.github/workflows/` hat nur dependabot.yml; 129 Tests warten auf re-enable |
 | Pricing-Implementation (Stripe etc.) | `[TODO]`     | `subscriptions`-Modell, Tier-Enforcement, Hard-Cap, Stripe/Lemon-Squeezy — siehe PRICING.md §9 |
-| Bot-Phase 2 + Phase 4 (Server-Side)  | `[TODO]`     | Pro-Tier-Features — siehe Bot-Phase-Plan unten                   |
+| Bot-Phase 2 (Cloudflare-Taxonomie)   | `[DONE]`     | `internal/classify`: 8 Klassen + UA-Patterns + IP-CIDR-Trie (refresh 6h) + FCrDNS für Anthropic + Generic-Cloud-Heuristik |
+| Bot-Phase 4 (Server-Side Ingestion)  | `[TODO]`     | Ruby-Gem + Node-Middleware + Pixel — Pro-Tier-Feature           |
 | Dogfooding (retreaturlaub, triageflow)| `[TODO]`    | Tracker einbauen, eigene Daten via Claude abfragen               |
 
 **Aktuelle Phase**: Production läuft, OAuth komplett, Pricing-Strategie steht.
@@ -349,19 +350,21 @@ Server-Verarbeitung:
 11. Response: 204 No Content (so schnell wie möglich, keine JSON-Response)
 
 Bot-Filter-Strategie:
-- UA-Blacklist beim Ingest (filtert ~80%)
+- 8-Klassen-Klassifikation beim Ingest (`internal/classify`):
+  UA-Pattern + IP-CIDR-Trie (refresh alle 6h) + Reverse-DNS für
+  Anthropic + Generic-Browser-from-Cloud-Heuristik
 - Headless-Browser-Marker im Tracking-Script vorab filtern
   (navigator.webdriver, etc.)
-- Heuristik in ClickHouse-Aggregation: Sessions mit >5 Events/Sek
-  werden in Materialized Views nicht gezählt (markiert, nicht gelöscht)
 
 > **Status**: Alle Schritte 1–11 umgesetzt in
-> `ingestion/internal/server/server.go` + Packages `bot`, `ratelimit`,
-> `session`, `ua`, `ch`, `usage`, `sites`.
+> `ingestion/internal/server/server.go` + Packages `classify`, `ratelimit`,
+> `session`, `ua`, `ch`, `usage`, `sites`. Phase-1 binary `bot/`-Package
+> ist seit Phase-2-Deploy nicht mehr im Hot-Path.
 >
-> **Offen bestätigen**: Heuristik "Sessions mit >5 Events/Sek werden in
-> MVs nicht gezählt" — ist so nicht in den MVs implementiert. Prüfen, ob
-> das vor Launch gebraucht wird oder Post-MVP reicht.
+> Die im Original-Briefing skizzierte MV-Bot-Heuristik (Sessions mit
+> >5 Events/Sek aus den Materialized Views ausklammern) wird nicht
+> implementiert — Phase 2 fängt die meisten Spoofer schon vor der
+> Aggregation, der zusätzliche MV-Filter wäre redundant.
 
 ## MCP-SERVER  — `[DONE]`
 
@@ -585,7 +588,8 @@ Original-Briefing schätzte 4-6 Wochen für MVP. Tatsächlich:
 | Production-Deploy auf Hetzner                                   | `[DONE]`     | Mai 2026         |
 | Pricing-Strategie + Landing-Section                             | `[DONE]`     | 2026-05-07       |
 | **Pricing-Implementation (Stripe + Tier-Enforcement)**          | `[TODO]`     | nächste Phase    |
-| **Bot-Phase 2/4 als Pro-Tier-Features**                         | `[TODO]`     | parallel         |
+| Bot-Phase 2 (Cloudflare-Taxonomie, 8 Klassen)                   | `[DONE]`     | 2026-05-07       |
+| **Bot-Phase 4 (Server-Side-SDK) als Pro-Tier-Feature**          | `[TODO]`     | parallel         |
 | **Dogfooding + Directory-Submissions**                          | `[TODO]`     | nach Pro-Launch  |
 
 ---
@@ -593,7 +597,7 @@ Original-Briefing schätzte 4-6 Wochen für MVP. Tatsächlich:
 ## OPEN ACTIONS (Stand 2026-05-07)
 
 P0/P1-Launch-Block ist durch (Hetzner-Deploy + DNS + Backup + Smoke-Test
-alles done; OAuth Phase 2 + Hardening live; Tests grün; Bot-Phase 1
+alles done; OAuth Phase 2 + Hardening live; Tests grün; Bot-Phase 1+2
 shipped). Was jetzt noch offen ist:
 
 ### A — Pricing-Implementation (vor Pro-Launch nötig)
@@ -611,7 +615,7 @@ Volle Liste mit Aufwand und Begründung in `PRICING.md` §9. Zusammenfassung:
 
 Diese stehen auf der Pricing-Page als "very soon"/"soon"/"soon-ish":
 
-7. **Bot-Phase 2** Cloudflare-kompatible Taxonomie. Siehe Bot-Phase-Plan unten. ~3-4h.
+7. ~~**Bot-Phase 2** Cloudflare-kompatible Taxonomie~~ ✅ done 2026-05-07 (`internal/classify`).
 8. **Bot-Phase 4B** Ruby-Gem `mcp-analytics-rack`. "Biggest Unlock". ~3h.
 9. **Bot-Phase 4A/C/D** Pixel-Endpoint + Node/Next-Middleware + CF-Worker. ~4h zusammen.
 10. **`record_deploy` + `regression_check` MCP-Tools** + GitHub-Action `mcp-analytics/record-deploy@v1`. ~3-4h.
@@ -621,7 +625,6 @@ Diese stehen auf der Pricing-Page als "very soon"/"soon"/"soon-ish":
 11. **CI-Workflow re-enablen** — `.github/workflows/` hat nur dependabot.yml; 129 grüne Tests warten.
 12. **Email-Domain-Blacklist refresh** gegen aktuelle GitHub-Liste.
 13. **Uptime/Disk-Monitoring** — UptimeRobot + `df`-Warning bei >80%. (Usage-Alert + Garbage-Pattern sind durch.)
-14. **Bot-Heuristik in ClickHouse-MVs** — Sessions mit >5 Events/s ausklammern (im Original-Briefing erwähnt, nie umgesetzt).
 
 ### D — Distribution / Marketing
 
@@ -884,25 +887,43 @@ Großteil der Crawler (GPTBot-Training, ClaudeBot, CCBot, Slackbot,
 Censys) ignoriert JS und ist damit unsichtbar in unseren Analytics.
 Diese Lücke schließt erst Phase 4 (Server-Side Ingestion).
 
-### Phase 2 — Refined Crawl-Purpose Klassifikation — `[TODO]`
+### Phase 2 — Refined Crawl-Purpose Klassifikation — `[DONE 2026-05-07]`
 
-Aufwand: ~3-4h. Trigger: 2+ Kunden fragen explizit danach.
+Implementiert in `ingestion/internal/classify`. `traffic_class` ist
+jetzt einer von 8 Werten: `user / ai_user_action / ai_search /
+ai_training / search_index / social_unfurl / scanner / bot_other`.
 
-`traffic_class` Werte erweitern auf Cloudflare-kompatible Taxonomie:
-`user / ai_user_action / ai_search / ai_training / search_index /
-social_unfurl / scanner / bot_other`. Klassifikation kombiniert:
+Architektur (siehe `internal/classify/classify.go` für die Decision-Tree-
+Doku):
 
-1. **UA-Pattern-Matching** — kuratierte Liste der ~30 bekannten AI-Agent-
-   und Indexer-UAs (s. oben), mit purpose-mapping pro UA.
-2. **Cloud-IP-Range-Lookup** — OpenAI publiziert 3 JSON-Files
-   (`openai.com/gptbot.json`, `searchbot.json`, `chatgpt-user.json`).
-   Google publiziert seit jeher seine Files. AWS/GCP/Azure/CF haben
-   öffentliche Range-JSONs. Anthropic publiziert keine — dort nur UA +
-   reverse DNS als Indikator.
-3. **Heuristik** — UA = generic Chrome + IP in Cloud-Range + nur 1 Hit
-   → wahrscheinlich Scanner.
+1. **UA-Pattern-Matching** — kuratierte Liste in `ua_patterns.go`
+   (~70 Einträge mit Purpose-Mapping). Hauptquelle:
+   ai-robots-txt/ai.robots.txt + Anthropic/OpenAI/CF-Radar-Listen.
+2. **IP-CIDR-Trie** (`trie.go`) — refreshed alle 6h via
+   Background-Goroutine (`refresh.go`) gegen die JSONs von
+   OpenAI (3 Endpoints), Google (3), Bing, AWS, GCP, Cloudflare.
+   Atomic-Pointer-Swap, Sanity-Check (`MinShrinkRatio` lehnt
+   wildlich-geschrumpfte Refreshes ab — fängt z.B. das "OpenAI
+   returnt leeres Array"-Failure-Mode), Embedded-Fallback-CIDRs in
+   `fallback_ranges.go` für Cold-Start ohne Netzwerk.
+3. **FCrDNS für Anthropic** (`dns.go`) — Anthropic publiziert keine
+   IP-JSONs; wir verifizieren via Reverse-DNS (`*.anthropic.com`)
+   plus Forward-Confirm gegen Spoofing. Cache 24h success / 1h
+   failure.
+4. **Heuristik** (`classify.go` Step 4) — Generic-Browser-UA + IP
+   in Cloud-Infra-Range → `scanner`. Spoof-Detection: Specific-UA
+   (z.B. "GPTBot") + IP in fremder Vendor-Range → demote zu
+   `bot_other`.
 
-Ops-Burden: Ranges + UA-Liste monatlich aktualisieren (~1-2h/Monat).
+Daily live-source schema-check via
+`.github/workflows/ai-crawler-schema-check.yml` — Out-of-Band-Detector
+für Endpoint-Moves wie das Google-March-2026-Drift-Event.
+
+Retroactive UA-Reklassifikation für historische Rows:
+`go run ./cmd/reclassify --apply` (default dry-run).
+
+Ops-Burden: Ranges automatisch refreshed; UA-Liste alle 1-2 Monate
+gegen ai.robots.txt diffen.
 
 ### Phase 3 — Web Bot Auth Signature Verification — `[FUTURE]`
 
@@ -1123,6 +1144,20 @@ Auch mit allen 4 Phasen können wir niemals sagen:
 
 ## CHANGELOG (Working Doc)
 
+- **2026-05-07** — Bot-Phase 2 (Cloudflare-Taxonomie) deployed. Neuer
+  Go-Package `ingestion/internal/classify` mit 8-Klassen-Klassifikation
+  (`user / ai_user_action / ai_search / ai_training / search_index /
+  social_unfurl / scanner / bot_other`). Kombiniert UA-Pattern-Matching
+  (~70 Einträge), IP-CIDR-Trie (refresh alle 6h aus
+  OpenAI/Google/Bing/AWS/GCP/CF JSONs, atomic-swap, MinShrinkRatio-
+  Sanity-Check, Embedded-Fallback fürs Cold-Start), FCrDNS-Reverse-DNS
+  für Anthropic, und eine Generic-Browser-from-Cloud-Heuristik.
+  MCP-Tools `top_user_agents` + `traffic_class_breakdown` exposen
+  alle 8 Klassen mit `humans`-Filter-Alias (= `user + ai_user_action`).
+  Retroactive Migration via `cmd/reclassify`. Daily Live-Source-
+  Schema-Check via neuer GH-Action (Out-of-Band-Detector für
+  Endpoint-Drifts wie Google's March-2026-URL-Move). CI-Workflow
+  re-enabled (war seit 2026-04-23 deaktiviert).
 - **2026-05-07** — BRIEFING.md aufgeräumt: Status-Dashboard auf
   tatsächlichen Code-Stand gebracht (Deployment + OAuth + Bot-Phase 1
   + Pricing-Strategie alles `[DONE]`), P0-Section komplett entfernt

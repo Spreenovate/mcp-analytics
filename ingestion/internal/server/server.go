@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mcp-analytics/ingestion/internal/bot"
 	"github.com/mcp-analytics/ingestion/internal/ch"
+	"github.com/mcp-analytics/ingestion/internal/classify"
 	"github.com/mcp-analytics/ingestion/internal/ipblock"
 	"github.com/mcp-analytics/ingestion/internal/ratelimit"
 	"github.com/mcp-analytics/ingestion/internal/session"
@@ -24,14 +24,15 @@ import (
 const maxPayloadBytes = 16 * 1024
 
 type Server struct {
-	Log       *slog.Logger
-	Sites     *sites.Cache
-	Batcher   *ch.Batcher
-	Usage     *usage.Buffer
-	DailySalt *session.DailySalt
-	Limiter   *ratelimit.Limiter
-	IPBlock   *ipblock.Tracker // optional; nil disables the feature
-	StaticDir string
+	Log        *slog.Logger
+	Sites      *sites.Cache
+	Batcher    *ch.Batcher
+	Usage      *usage.Buffer
+	DailySalt  *session.DailySalt
+	Limiter    *ratelimit.Limiter
+	IPBlock    *ipblock.Tracker // optional; nil disables the feature
+	Classifier *classify.Classifier
+	StaticDir  string
 }
 
 func (s *Server) Routes() http.Handler {
@@ -101,17 +102,25 @@ func (s *Server) handleEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userAgent := r.Header.Get("User-Agent")
-
-	// Phase 1 bot classification: instead of dropping bot traffic, label it
-	// and write the row anyway. Default analytics queries filter to
-	// traffic_class='user'; the new top_user_agents MCP tool surfaces the
-	// non-user traffic so customers can see who's visiting them.
-	trafficClass := "user"
-	if bot.IsBot(userAgent) {
-		trafficClass = "bot"
-	}
-
 	ip := clientIP(r)
+
+	// Phase 2 bot classification: 8-value Cloudflare-compatible
+	// taxonomy (user / ai_user_action / ai_search / ai_training /
+	// search_index / social_unfurl / scanner / bot_other). Combines
+	// UA pattern matching, IP-range trie lookup (refreshed every 6h
+	// from vendor JSONs), reverse-DNS for Anthropic, and a generic-
+	// browser-from-cloud-IP heuristic. See internal/classify for the
+	// full decision tree.
+	//
+	// Default analytics queries continue to filter traffic_class='user';
+	// the new top_user_agents and traffic_class_breakdown MCP tools
+	// surface the rest. Classifier is wired in cmd/ingest/main.go and
+	// must be non-nil — defensive nil check for tests that construct
+	// Server inline.
+	trafficClass := classify.ClassUser
+	if s.Classifier != nil {
+		trafficClass = s.Classifier.Classify(userAgent, net.ParseIP(ip))
+	}
 
 	if s.IPBlock != nil && s.IPBlock.IsBlocked(ip) {
 		return

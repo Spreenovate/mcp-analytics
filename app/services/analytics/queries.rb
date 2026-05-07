@@ -435,13 +435,21 @@ module Analytics
 
     # --- Bots & user-agents -------------------------------------------------
 
-    # Top user-agents grouped by traffic_class. Default queries hide bots
-    # entirely; this tool deliberately includes them so the customer can see
-    # AI agents (ChatGPT-User, Claude-User, GPTBot, ...), search indexers
-    # (Googlebot), social unfurlers (Slackbot), and scanners — all the
-    # traffic that the other reports exclude.
+    # Top user-agents grouped by traffic_class. Default queries hide
+    # everything except real visitors; this tool deliberately includes
+    # the rest so the customer can see who's actually fetching the site
+    # (8-class Phase 2 taxonomy: user / ai_user_action / ai_search /
+    # ai_training / search_index / social_unfurl / scanner / bot_other).
+    #
+    # The `humans` filter alias expands to (user, ai_user_action) — used
+    # for "real human attention including AI-mediated browsing".
+    #
+    # SQL injection note: `traffic_class` is interpolated through CH's
+    # parameter mechanism for single-value filters and through a
+    # whitelist-validated IN-list for the alias case. We never accept
+    # arbitrary strings into the WHERE clause.
     def top_user_agents(period, limit: 25, traffic_class: nil)
-      where_class = traffic_class.present? ? "AND traffic_class = {tclass:String}" : ""
+      where_class, extra_params = traffic_class_filter(traffic_class)
       sql = <<~SQL
         SELECT user_agent, traffic_class, count() AS hits
         FROM events
@@ -454,8 +462,7 @@ module Analytics
         LIMIT {limit:UInt32}
       SQL
 
-      params = scope_params(period).merge(limit: limit)
-      params[:tclass] = traffic_class if traffic_class.present?
+      params = scope_params(period).merge(limit: limit).merge(extra_params)
 
       @client.query(sql, params: params).map do |r|
         {
@@ -491,6 +498,45 @@ module Analytics
     end
 
     private
+
+    # Phase-2 traffic_class values. Kept in lockstep with the Go
+    # classifier's class.go constants — drift is caught by the daily
+    # AI-crawler-schema-check workflow which compares both.
+    PHASE2_CLASSES = %w[
+      user ai_user_action ai_search ai_training
+      search_index social_unfurl scanner bot_other
+    ].freeze
+
+    # Filter aliases that expand to a set of underlying classes. Add
+    # entries here for "give me everything in bucket X" semantics
+    # without having callers enumerate the underlying values.
+    TRAFFIC_CLASS_ALIASES = {
+      "humans" => %w[user ai_user_action]
+    }.freeze
+
+    # traffic_class_filter validates the requested filter and returns
+    # the SQL WHERE fragment + parameter map. Whitelisted: any value
+    # in PHASE2_CLASSES, plus aliases in TRAFFIC_CLASS_ALIASES, plus
+    # `nil`/blank (= no filter, default behavior of the calling tool).
+    # Any other value is treated as `nil` (defensive: don't 500 on a
+    # client that sends a typo, just unfiltered the query).
+    def traffic_class_filter(value)
+      return ["", {}] if value.blank?
+      v = value.to_s
+      if (members = TRAFFIC_CLASS_ALIASES[v])
+        # Build IN-list with positional CH params (tc0, tc1, ...).
+        placeholders = members.each_with_index.map { |_, i| "{tc#{i}:String}" }
+        params = members.each_with_index.to_h { |m, i| [:"tc#{i}", m] }
+        return ["AND traffic_class IN (#{placeholders.join(', ')})", params]
+      end
+      if PHASE2_CLASSES.include?(v)
+        return ["AND traffic_class = {tclass:String}", { tclass: v }]
+      end
+      # Unknown value — silently drop the filter rather than fail the
+      # query. The MCP schema enum prevents this for well-behaved
+      # clients; this is just defense-in-depth for poorly-behaved ones.
+      ["", {}]
+    end
 
     # Shared helper for "top values of one column" with percentage breakdown.
     def simple_breakdown_query(column, period, limit:, key_alias:)

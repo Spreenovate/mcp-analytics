@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  rails-test:
+    name: Rails 8 tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+      - name: Set up SQLite
+        run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev
+      - name: Prepare DB
+        run: bin/rails db:prepare
+        env:
+          RAILS_ENV: test
+      - name: Run tests
+        run: bin/rails test
+        env:
+          RAILS_ENV: test
+
+  go-test:
+    name: Go ingest tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ingestion
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: ingestion/go.mod
+          cache-dependency-path: ingestion/go.sum
+      - name: Build
+        run: go build ./...
+      - name: Vet
+        run: go vet ./...
+      - name: Test
+        run: go test -race ./...

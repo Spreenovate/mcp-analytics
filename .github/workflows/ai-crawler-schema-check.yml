@@ -1,0 +1,53 @@
+# Daily live-URL schema check for the AI-crawler IP-range sources we
+# consume in `ingestion/internal/classify`. Out-of-band Spec-Drift
+# detector — runs once a day, hits each external endpoint, validates
+# the schema is what our parsers expect, and fails loudly if anything
+# changed silently.
+#
+# Origin story: Google moved their IP-range endpoints in March 2026 with
+# only 8 days of overlap (vs the 6 months they announced). A pure
+# in-process refresh loop would have silently degraded to fallback
+# CIDRs without us noticing for weeks. This workflow catches that
+# shape of issue immediately.
+#
+# Failure routing: workflow fail → GitHub email to repo admins. Add a
+# Slack webhook later if the email rhythm gets noisy.
+
+name: ai-crawler-schema-check
+
+on:
+  schedule:
+    # 06:30 UTC daily — early enough that a same-day fix can ship
+    # before the EU workday gets going.
+    - cron: '30 6 * * *'
+  workflow_dispatch:
+  # Also run on PRs that touch the classify package, so format changes
+  # in source.go / parsers.go are validated before merge.
+  pull_request:
+    paths:
+      - 'ingestion/internal/classify/**'
+      - '.github/workflows/ai-crawler-schema-check.yml'
+
+jobs:
+  fetch-and-validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ingestion
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: ingestion/go.mod
+          cache-dependency-path: ingestion/go.sum
+      - name: Fetch and parse all configured sources
+        # Runs the live-source check test that's tagged `livesources`
+        # (excluded from regular CI). Each source is fetched, parsed,
+        # and asserted to produce >0 valid CIDRs. Failure on any source
+        # fails the workflow.
+        run: go test -tags=livesources -timeout=2m -run TestLiveSources ./internal/classify/...
+        env:
+          # Tighter timeout than the classifier's runtime default so
+          # this test fails fast rather than hanging CI for 15s on each
+          # flaky endpoint.
+          MCP_LIVE_FETCH_TIMEOUT: 10s

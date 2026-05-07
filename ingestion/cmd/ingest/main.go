@@ -14,6 +14,7 @@ import (
 	_ "modernc.org/sqlite"
 
 	"github.com/mcp-analytics/ingestion/internal/ch"
+	"github.com/mcp-analytics/ingestion/internal/classify"
 	"github.com/mcp-analytics/ingestion/internal/config"
 	"github.com/mcp-analytics/ingestion/internal/ipblock"
 	"github.com/mcp-analytics/ingestion/internal/ratelimit"
@@ -85,15 +86,30 @@ func main() {
 		}
 	}()
 
+	// Bot/AI-agent classifier (Phase 2). Loads embedded fallback CIDRs
+	// synchronously, then attempts one live refresh against the public
+	// vendor JSONs (OpenAI/Google/Bing + cloud-infra ranges) with a 2s
+	// timeout. If the live fetch fails the server still boots — we run
+	// on the fallback list until the background refresh goroutine
+	// catches up on its 6h cadence.
+	classifyMetrics := classify.NewMetrics()
+	classifyLookup := &classify.AtomicLookup{}
+	classify.Bootstrap(ctx, classifyLookup, classifyMetrics, log, 2*time.Second)
+	classifier := classify.NewClassifier(classifyLookup)
+	go classify.NewRefresher(classifyLookup, classifyMetrics, classify.RefreshConfig{
+		Log: log,
+	}).Run(ctx)
+
 	srv := &server.Server{
-		Log:       log,
-		Sites:     siteCache,
-		Batcher:   batcher,
-		Usage:     usageBuf,
-		DailySalt: dailySalt,
-		Limiter:   limiter,
-		IPBlock:   ipBlocker,
-		StaticDir: cfg.StaticDir,
+		Log:        log,
+		Sites:      siteCache,
+		Batcher:    batcher,
+		Usage:      usageBuf,
+		DailySalt:  dailySalt,
+		Limiter:    limiter,
+		IPBlock:    ipBlocker,
+		Classifier: classifier,
+		StaticDir:  cfg.StaticDir,
 	}
 
 	httpSrv := &http.Server{

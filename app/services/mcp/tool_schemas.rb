@@ -195,14 +195,30 @@ module Mcp
       },
       {
         name: "top_user_agents",
-        description: "Top User-Agent strings with their traffic_class (user / bot). Default analytics queries hide bots; this surfaces them so you can see AI agents (ChatGPT-User, Claude-User, GPTBot, ...), search indexers (Googlebot), social unfurlers (Slackbot), and scanners. Pass traffic_class to filter to one bucket.",
+        description: <<~DESC.strip,
+          Top User-Agent strings with their traffic_class. Default analytics queries hide everything except real visitors; this tool surfaces the rest so you can see who is actually fetching the site. Pass traffic_class to filter to one bucket. The 8 classes (Phase 2 Cloudflare-compatible taxonomy):
+
+          - user: real human visitor with their own browser
+          - ai_user_action: live AI browse — a human is chatting with ChatGPT/Claude/Perplexity/Copilot and the assistant fetched the page on their behalf (counts as human attention, just AI-mediated)
+          - ai_search: AI search-engine indexers (PerplexityBot, OAI-SearchBot, ...) — your page is a candidate answer in their index
+          - ai_training: AI training crawlers (GPTBot, ClaudeBot, CCBot, Bytespider, ...) — your content lands in training data, no human is actively reading right now
+          - search_index: classic search engines (Googlebot, Bingbot, Yandex, DuckDuckBot, ...)
+          - social_unfurl: link-preview / social-card bots (Slackbot, facebookexternalhit, Twitterbot, LinkedInBot, ...)
+          - scanner: security/uptime/perf monitoring (Censys, Pingdom, Lighthouse, headless Chrome from a cloud range, ...)
+          - bot_other: recognized as a bot but not in any specific bucket, OR a UA we caught spoofing (e.g. a fake "GPTBot" coming from a random EC2 IP)
+
+          The `humans` filter alias expands to (user, ai_user_action) — useful for "real human attention including AI-mediated".
+        DESC
         inputSchema: {
           type: "object",
           properties: {
             site_id: { type: "string" },
             period: { type: "string", default: "last_7_days" },
             limit: { type: "integer", default: 25 },
-            traffic_class: { type: "string", enum: %w[user bot] }
+            traffic_class: {
+              type: "string",
+              enum: %w[user ai_user_action ai_search ai_training search_index social_unfurl scanner bot_other humans]
+            }
           },
           required: [ "site_id" ]
         },
@@ -210,7 +226,7 @@ module Mcp
       },
       {
         name: "traffic_class_breakdown",
-        description: "Hit counts and percentages by traffic_class (user vs bot) for the period.",
+        description: "Hit counts and percentages by traffic_class for the period. Returns one row per class (user / ai_user_action / ai_search / ai_training / search_index / social_unfurl / scanner / bot_other), sorted by hits descending. Useful for the 'how much of my traffic is bots / AI' question. See top_user_agents for the per-class definitions.",
         inputSchema: {
           type: "object",
           properties: {

@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/mcp-analytics/ingestion/internal/ch"
+	"github.com/mcp-analytics/ingestion/internal/classify"
 	"github.com/mcp-analytics/ingestion/internal/ratelimit"
 	"github.com/mcp-analytics/ingestion/internal/session"
 	"github.com/mcp-analytics/ingestion/internal/sites"
@@ -83,10 +84,11 @@ func newAllModeFixture(t *testing.T) *allModeFixture {
 
 	srv := &Server{
 		Log: logger, Sites: cache, Batcher: batcher,
-		Usage:     usage.NewBuffer(nil, time.Hour, logger),
-		DailySalt: session.NewDailySalt(func() []byte { return []byte("daily") }),
-		Limiter:   ratelimit.New(100),
-		StaticDir: staticDir,
+		Usage:      usage.NewBuffer(nil, time.Hour, logger),
+		DailySalt:  session.NewDailySalt(func() []byte { return []byte("daily") }),
+		Limiter:    ratelimit.New(100),
+		Classifier: classify.NewClassifier(&classify.AtomicLookup{}),
+		StaticDir:  staticDir,
 	}
 	return &allModeFixture{
 		srv: srv, rows: &rows, rowsMu: &mu,
@@ -180,20 +182,24 @@ func TestEvent_TrafficClassAndRawUA_PopulatedInClickHouseRow(t *testing.T) {
 	}
 }
 
-func TestEvent_BotUA_LabelsTrafficClassAsBot(t *testing.T) {
+func TestEvent_BotUA_LabelsTrafficClassWithPhase2Taxonomy(t *testing.T) {
 	f := newAllModeFixture(t)
 	defer f.close()
 
 	body := `{"site":"allmode1","name":"pageview","url":"https://example.com/"}`
 	req := httptest.NewRequest("POST", "/event", strings.NewReader(body))
+	// ChatGPT-User is the live-browse UA (a human chatting with
+	// ChatGPT, where ChatGPT fetched the page on their behalf).
+	// Phase 2 classifies this as ai_user_action, not the generic 'bot'.
 	botUA := "Mozilla/5.0 (compatible; ChatGPT-User/1.0; +https://openai.com/bot)"
 	req.Header.Set("User-Agent", botUA)
 	req.Header.Set("X-Forwarded-For", "203.0.113.9")
 	f.srv.Routes().ServeHTTP(httptest.NewRecorder(), req)
 
 	row := waitForRow(t, f, 2*time.Second)
-	if row.TrafficClass != "bot" {
-		t.Errorf("traffic_class for bot UA: got %q want 'bot'", row.TrafficClass)
+	if row.TrafficClass != classify.ClassAIUserAction {
+		t.Errorf("traffic_class for ChatGPT-User UA: got %q want %q",
+			row.TrafficClass, classify.ClassAIUserAction)
 	}
 	if row.UserAgent != botUA {
 		t.Errorf("raw UA: got %q want %q", row.UserAgent, botUA)
