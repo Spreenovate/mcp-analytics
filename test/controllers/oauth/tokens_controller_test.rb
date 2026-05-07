@@ -40,7 +40,7 @@ module Oauth
 
       data = JSON.parse(response.body)
       assert data["access_token"].start_with?("mcpa_oauth_")
-      assert_equal "Bearer", data["token_type"]
+      assert_equal "bearer", data["token_type"]
       assert_in_delta 24 * 3600, data["expires_in"], 60, "access token should be ~24h"
       assert_equal "analytics:read", data["scope"]
 
@@ -182,7 +182,7 @@ module Oauth
       assert data["refresh_token"].start_with?("mcpa_refresh_")
       assert_not_equal original["access_token"],  data["access_token"]
       assert_not_equal original["refresh_token"], data["refresh_token"]
-      assert_equal "Bearer", data["token_type"]
+      assert_equal "bearer", data["token_type"]
       assert_equal "analytics:read", data["scope"]
     end
 

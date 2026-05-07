@@ -2,7 +2,12 @@ module Oauth
   # Dynamic Client Registration per RFC 7591. ChatGPT-Connectors require
   # this; Claude/Cursor work with hardcoded clients but DCR is harmless.
   class ClientsController < ApplicationController
+    include OauthCors
     skip_before_action :verify_authenticity_token, raise: false
+
+    def preflight
+      head :no_content
+    end
 
     # POST /oauth/register
     def create
@@ -76,7 +81,7 @@ module Oauth
         logo_uri: client.logo_uri,
         redirect_uris: client.redirect_uri_list,
         scope: client.scope,
-        grant_types: %w[authorization_code],
+        grant_types: %w[authorization_code refresh_token],
         response_types: %w[code],
         token_endpoint_auth_method: client.token_endpoint_auth_method
       }.compact

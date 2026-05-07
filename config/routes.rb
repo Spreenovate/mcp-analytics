@@ -28,6 +28,18 @@ Rails.application.routes.draw do
   post "/oauth/token" => "oauth/tokens#create",            as: :oauth_token
   post "/oauth/revoke" => "oauth/revocations#create",      as: :oauth_revoke
 
+  # CORS preflight: claude.ai's MCP custom-connector flow runs the token
+  # exchange (and likely /mcp itself) from the browser, so it sends an
+  # OPTIONS preflight first. Without these no-op routes Rails returns
+  # 404 + no CORS headers and the real POST is silently blocked by the
+  # browser. See claude-ai-mcp issues #46 / #163 / #215.
+  match "/.well-known/oauth-authorization-server" => "oauth/discovery#preflight",   via: :options
+  match "/.well-known/oauth-protected-resource"   => "oauth/discovery#preflight",   via: :options
+  match "/oauth/register" => "oauth/clients#preflight",       via: :options
+  match "/oauth/token"    => "oauth/tokens#preflight",        via: :options
+  match "/oauth/revoke"   => "oauth/revocations#preflight",   via: :options
+  match "/mcp"            => "mcp#preflight",                 via: :options
+
   # Self-service settings (web UI). Session is established by clicking
   # the verify-link from a fresh signup-form submission.
   get  "/settings"                            => "settings#show",             as: :settings

@@ -13,7 +13,12 @@ module Oauth
   # the user by killing their connector. Refresh tokens have a 90-day
   # window, making the unauth-revoke window meaningfully long.
   class RevocationsController < ApplicationController
+    include OauthCors
     skip_before_action :verify_authenticity_token, raise: false
+
+    def preflight
+      head :no_content
+    end
 
     # POST /oauth/revoke
     def create

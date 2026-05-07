@@ -6,7 +6,12 @@ module Oauth
   # Public clients use PKCE on the code grant; refresh has no PKCE per
   # RFC but rotates the refresh value on every use and detects replay.
   class TokensController < ApplicationController
+    include OauthCors
     skip_before_action :verify_authenticity_token, raise: false
+
+    def preflight
+      head :no_content
+    end
 
     SUPPORTED_GRANTS = %w[authorization_code refresh_token].freeze
 
@@ -217,7 +222,10 @@ module Oauth
       response.set_header("Pragma", "no-cache")
       payload = {
         access_token: access_token.token,
-        token_type: "Bearer",
+        # Lowercase per RFC 6749 §5.1 ("bearer" is the registered token
+        # type) and matching cloudflare/workers-oauth-provider — strict
+        # clients have been seen rejecting "Bearer" with a capital B.
+        token_type: "bearer",
         expires_in: (access_token.expires_at - Time.current).to_i,
         scope: access_token.scope
       }
