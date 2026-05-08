@@ -137,7 +137,7 @@ module Mcp
       },
       {
         name: "breakdown",
-        description: "Breakdown of visits by browser, os, device_type, or country (country empty in MVP).",
+        description: "Breakdown of visits by browser, os, device_type, or country (country empty in MVP). Volume metric — counts include AI-mediated human browsing (ai_user_action).",
         inputSchema: {
           type: "object",
           properties: {
@@ -152,7 +152,7 @@ module Mcp
       },
       {
         name: "list_events",
-        description: "All event names with counts (includes 'pageview' and custom events).",
+        description: "All event names with counts (includes 'pageview' and custom events). Volume metric — counts include AI-mediated human browsing (ai_user_action).",
         inputSchema: {
           type: "object",
           properties: {
@@ -165,7 +165,7 @@ module Mcp
       },
       {
         name: "event_details",
-        description: "Details for one event. Optionally break down by a custom property.",
+        description: "Details for one event. Optionally break down by a custom property. Volume metric — counts include AI-mediated human browsing (ai_user_action).",
         inputSchema: {
           type: "object",
           properties: {

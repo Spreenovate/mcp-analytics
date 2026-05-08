@@ -311,8 +311,74 @@ module Mcp
       end
     end
 
-    test "default analytics queries do NOT include bot traffic" do
-      # Verify the SQL emitted by overview includes the traffic_class filter.
+    test "default analytics queries filter out bot traffic (Phase 2 split)" do
+      # Each query in get_overview must apply ONE of the three valid
+      # human-traffic filters, depending on whether it's a Volume or
+      # Attribution metric (see queries.rb top-of-file doc-block):
+      #
+      #   - Volume:        traffic_class IN ('user', 'ai_user_action')
+      #   - Attribution:   traffic_class = 'user'
+      #   - bot_share:     countIf(traffic_class NOT IN ...) over ALL rows
+      #
+      # No query should be entirely unfiltered or use an unrelated
+      # filter shape. This test catches both "someone forgot to add
+      # traffic_class" and "someone reverted Phase 2 by accident".
+      captured = capture_clickhouse_sql do
+        auth_tools.get_overview("site_id" => @site.site_id, "period" => "today")
+      end
+      offenders = captured.reject { |sql| valid_phase2_filter?(sql) }
+      assert offenders.empty?,
+        "every default query must apply a Phase 2 traffic_class filter, offenders:\n#{offenders.join("\n---\n")}"
+    end
+
+    test "attribution queries (top_referrers, top_sources) exclude ai_user_action" do
+      # Pinning regression test for the Round 3 attribution/volume split:
+      # ai_user_action loses original utm/referrer when an AI fetches on
+      # a user's behalf, so attribution metrics must filter to
+      # traffic_class = 'user' only. If someone "fixes consistency" by
+      # putting ai_user_action back into these queries, the AI host
+      # (claude.ai etc.) would inflate top referrers / sources.
+
+      top_referrers_sql = capture_clickhouse_sql do
+        auth_tools.top_referrers("site_id" => @site.site_id, "period" => "today", "limit" => 5)
+      end
+      top_referrers_main = top_referrers_sql.find { |s| s.include?("referrer_host") && s.include?("GROUP BY") }
+      assert top_referrers_main, "top_referrers should issue a query with referrer_host + GROUP BY"
+      refute top_referrers_main.include?("ai_user_action"),
+        "top_referrers must NOT include ai_user_action (attribution metric — referrer is lost when AI fetches):\n#{top_referrers_main}"
+      assert top_referrers_main.include?("traffic_class = 'user'"),
+        "top_referrers must filter to traffic_class = 'user' only:\n#{top_referrers_main}"
+
+      top_sources_sql = capture_clickhouse_sql do
+        auth_tools.top_sources("site_id" => @site.site_id, "period" => "today", "limit" => 5)
+      end
+      top_sources_main = top_sources_sql.find { |s| s.include?("utm_source") && s.include?("GROUP BY") }
+      assert top_sources_main, "top_sources should issue a query with utm_source + GROUP BY"
+      refute top_sources_main.include?("ai_user_action"),
+        "top_sources must NOT include ai_user_action (attribution metric — utm tags are lost when AI fetches):\n#{top_sources_main}"
+      assert top_sources_main.include?("traffic_class = 'user'"),
+        "top_sources must filter to traffic_class = 'user' only:\n#{top_sources_main}"
+    end
+
+    test "volume queries (top_pages) include ai_user_action" do
+      # Inverse of the attribution test: volume metrics SHOULD count
+      # AI-mediated human browsing. If someone "fixes" by reverting
+      # this back to '= user', they'd silently undercount real human
+      # attention.
+      sql = capture_clickhouse_sql do
+        auth_tools.top_pages("site_id" => @site.site_id, "period" => "today", "limit" => 5)
+      end.first
+      assert sql, "top_pages should issue a query"
+      assert sql.include?("traffic_class IN ('user', 'ai_user_action')"),
+        "top_pages must include ai_user_action (volume metric):\n#{sql}"
+    end
+
+    private
+
+    # Captures every SQL string passed to ClickHouse.client.query during
+    # the block. Result sets are stubbed to empty so callers focus on
+    # SQL shape rather than data.
+    def capture_clickhouse_sql
       captured = []
       fake = Object.new
       fake.define_singleton_method(:query) do |sql, **_kwargs|
@@ -322,22 +388,25 @@ module Mcp
       ClickHouse.singleton_class.alias_method(:__orig_client, :client)
       ClickHouse.singleton_class.define_method(:client) { fake }
       begin
-        auth_tools.get_overview("site_id" => @site.site_id, "period" => "today")
+        yield
       ensure
         ClickHouse.singleton_class.alias_method(:client, :__orig_client)
         ClickHouse.singleton_class.remove_method(:__orig_client)
       end
-      # Allow exception: the bot_share sub-query inside overview deliberately
-      # counts ALL classes so it can compute a ratio. Identify it by its
-      # countIf(traffic_class != 'user') signature.
-      offenders = captured.reject do |sql|
-        sql.include?("traffic_class = 'user'") || sql.include?("countIf(traffic_class")
-      end
-      assert offenders.empty?,
-        "every default query must filter out bot traffic, offenders:\n#{offenders.join("\n---\n")}"
+      captured
     end
 
-    private
+    # Phase 2 traffic_class filter shapes that are valid in default queries:
+    #   - Volume:        traffic_class IN ('user', 'ai_user_action')
+    #   - Attribution:   traffic_class = 'user'
+    #   - bot_share:     countIf(traffic_class NOT IN ...)
+    # Anything else means the query forgot the filter or used a
+    # Phase 1 shape that would silently include bot traffic.
+    def valid_phase2_filter?(sql)
+      sql.include?("traffic_class IN ('user', 'ai_user_action')") ||
+        sql.include?("traffic_class = 'user'") ||
+        sql.include?("countIf(traffic_class")
+    end
 
     # Stubs ClickHouse.client to return queued result sets in order.
     # Pass an array of result arrays; each `query` call pops the next.
