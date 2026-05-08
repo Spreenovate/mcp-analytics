@@ -180,7 +180,7 @@ module Mcp
       },
       {
         name: "compare_periods",
-        description: "Compare a metric between two periods.",
+        description: "Compare a metric between two periods. Volume metric — counts include AI-mediated human browsing (ai_user_action).",
         inputSchema: {
           type: "object",
           properties: {
