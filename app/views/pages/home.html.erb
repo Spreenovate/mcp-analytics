@@ -266,7 +266,8 @@
       font-weight: 700; cursor: help; position: relative;
     }
     body.home .tier li .qmark:hover::after,
-    body.home .tier li .qmark:focus::after {
+    body.home .tier li .qmark:focus::after,
+    body.home .tier li .qmark:active::after {
       content: attr(data-tip);
       position: absolute; bottom: calc(100% + 10px); left: 50%;
       transform: translateX(-50%);
@@ -333,6 +334,16 @@
       body.home .tier .body { padding: 4px 24px; }
       body.home .tier .foot { padding: 24px 24px 28px; }
       body.home .tier .price { font-size: 64px; }
+
+      /* Tooltip: pin to bottom of viewport so it can't overflow off-screen
+         on narrow displays. Tap-and-hold on the `?` reveals it (`:active`),
+         keyboard focus also works. Pure CSS, no JS = stays CSP-safe. */
+      body.home .tier li .qmark:hover::after,
+      body.home .tier li .qmark:focus::after,
+      body.home .tier li .qmark:active::after {
+        position: fixed; bottom: 16px; left: 18px; right: 18px;
+        top: auto; transform: none; width: auto;
+      }
 
       body.home .signup { padding: 20px; }
       body.home .signup form { flex-direction: column; }
