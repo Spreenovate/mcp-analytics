@@ -473,7 +473,8 @@
         On <strong>your-site.com</strong> yesterday: 412 pageviews from 287 sessions,
         bounce rate 64%, top page <code>/pricing</code> (89 views), top source
         <code>news.ycombinator.com</code>. Up 23% versus the day before. 4 signup events.
-        12% of traffic was bots, mostly GPTBot and Claude-User.
+        Plus 8% AI-mediated reads (Claude-User, ChatGPT-User fetching pages on user
+        questions) and 12% bot crawls (mostly GPTBot training, AhrefsBot scanning).
       </p>
     </div>
     <div class="turn you">
@@ -538,9 +539,9 @@
       <dt><code>top_pages</code></dt>
       <dd>Most-visited URL paths.</dd>
       <dt><code>top_referrers</code></dt>
-      <dd>Top referring hosts (where the link came from).</dd>
+      <dd>Top referring hosts (where the link came from). Counts direct browser visits only — AI-mediated traffic is excluded because the AI sets its own host as referrer or strips it; see <code>traffic_class_breakdown</code> for that split.</dd>
       <dt><code>top_sources</code></dt>
-      <dd>UTM source / medium / campaign breakdowns. Tag your shared links to see exactly what worked.</dd>
+      <dd>UTM source / medium / campaign breakdowns. Tag your shared links to see exactly what worked. Direct browser visits only (same reason as <code>top_referrers</code>).</dd>
       <dt><code>breakdown</code></dt>
       <dd>Visit counts by browser / OS / device type / country.</dd>
       <dt><code>list_events</code></dt>
@@ -651,11 +652,23 @@ window.mcpa('track', 'video_played', { duration_seconds: 42 });</code></pre>
   <details>
     <summary>What's the bot classification?</summary>
     <p>
-      Every event is tagged <code>user</code> or <code>bot</code> based on the
-      User-Agent. Default analytics queries hide bots. Use
-      <code>top_user_agents</code> and <code>traffic_class_breakdown</code> to
-      see which AI agents (ChatGPT-User, Claude-User, GPTBot, ...) fetched
-      your content. More refined buckets are on the roadmap.
+      Every event gets one of eight <code>traffic_class</code> labels: <code>user</code>
+      (real human in their own browser), <code>ai_user_action</code> (a person asked an
+      LLM to fetch your page — Claude-User, ChatGPT-User, Perplexity-User),
+      <code>ai_search</code> (AI search-engine indexers like PerplexityBot), <code>ai_training</code>
+      (training crawlers like GPTBot, ClaudeBot), <code>search_index</code> (Googlebot,
+      Bingbot, ...), <code>social_unfurl</code> (Slackbot, link previews),
+      <code>scanner</code> (security/uptime/perf monitoring), <code>bot_other</code>
+      (recognized but not in any specific bucket).
+    </p>
+    <p>
+      Classification combines UA-pattern matching against ~70 curated patterns,
+      IP-CIDR lookups against vendor-published ranges (refreshed every 6h from OpenAI,
+      Google, Bing, AWS/GCP/Cloudflare), and reverse-DNS for Anthropic. Default analytics
+      queries show <code>user</code> + <code>ai_user_action</code> as "humans" — a
+      person reading your content, whether through their own browser or via an AI
+      assistant. Use <code>top_user_agents</code> and <code>traffic_class_breakdown</code>
+      to see the full split.
     </p>
   </details>
 

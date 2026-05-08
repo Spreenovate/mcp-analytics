@@ -226,6 +226,17 @@
       background: var(--fg); color: var(--bg); padding: 4px 8px;
       display: inline-block; margin-bottom: 20px;
     }
+    /* Top-level tier-status pill (e.g. "Coming Q3 2026"). Distinct from
+       the per-feature `.soon` badges by using the accent color so the
+       eye reads it as a tier-level signal, not a line-item one. */
+    body.home .tier .status {
+      font-family: "JetBrains Mono", monospace; font-size: 11px;
+      font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em;
+      background: var(--accent); color: var(--fg);
+      padding: 4px 8px; margin-left: 10px;
+      border: 1.5px solid var(--fg);
+      display: inline-block; vertical-align: top;
+    }
     body.home .tier .price {
       font-family: "Space Grotesk", sans-serif; font-weight: 900;
       font-size: 80px; line-height: 0.92; letter-spacing: -0.03em;
@@ -498,7 +509,7 @@
       </div>
       <div class="tier pro">
         <div class="head">
-          <span class="name">Pro</span>
+          <span class="name">Pro</span><span class="status">Coming soon</span>
           <div class="price">€19<span class="per">/ month</span></div>
           <p class="tagline">For when the side project actually starts being a thing.</p>
         </div>
@@ -506,8 +517,8 @@
           <ul>
             <li>10M hits / month</li>
             <li>Unlimited sites</li>
-            <li>See which AI agents read your site <span class="qmark" tabindex="0" data-tip="Separate ChatGPT, Claude, Perplexity, GPTBot, ClaudeBot and friends from your human visitors. Tells you which AI bots are crawling your content and how often — useful for AIEO and seeing whether your work is getting cited.">?</span><span class="soon">very soon</span></li>
-            <li>Catch the traffic JS pixels miss <span class="qmark" tabindex="0" data-tip="JavaScript trackers can't see bots that don't run JS — most training crawlers, link unfurlers and headless agents. Drop in a server-side middleware (Ruby, Node) or a 1×1 pixel for static sites without a runtime, every HTTP hit gets captured.">?</span><span class="soon">soon</span></li>
+            <li>See which AI agents read your site <span class="qmark" tabindex="0" data-tip="Separate ChatGPT, Claude, Perplexity, GPTBot, ClaudeBot and friends from your human visitors. Tells you which AI bots are crawling your content and how often — useful for AIEO and seeing whether your work is getting cited.">?</span></li>
+            <li>Catch the traffic JS pixels miss <span class="qmark" tabindex="0" data-tip="JavaScript trackers can't see bots that don't run JS — most training crawlers, link unfurlers and headless agents. Drop in a server-side middleware (Ruby, Node) or a 1×1 pixel for static sites without a runtime, every HTTP hit gets captured.">?</span><span class="soon">very soon</span></li>
             <li>Spot what your last deploy broke <span class="qmark" tabindex="0" data-tip="Add one step to your GitHub Action. After every deploy we compare the next hour against your usual baseline and flag drops in signups, conversion or key page views. Or just ask Claude 'did the last deploy break anything?'">?</span><span class="soon">soon-ish</span></li>
             <li>3 year retention</li>
             <li>Priority email support</li>
@@ -515,7 +526,9 @@
           </ul>
         </div>
         <div class="foot">
-          <a class="cta" href="#signup-form">Start free, upgrade later</a>
+          <%= mail_to "enterprise@mcp-analytics.com", "Get notified when Pro launches",
+                      class: "cta",
+                      subject: "Notify me when Pro launches" %>
         </div>
       </div>
     </div>

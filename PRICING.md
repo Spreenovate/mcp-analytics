@@ -9,7 +9,7 @@ dieses Files (Commit 718c5c2).
 
 ```
 Free       100k Hits/Mo, unlimited Sites, JS-Tracker only,
-           alle 18 MCP-Tools, 1 J Retention, no card
+           alle 23 MCP-Tools, 1 J Retention, no card
 Pro €19/Mo 10M Hits, unlimited Sites, alle Features:
            Bot/AI-Taxonomie, Server-Side SDK, Deploy-Regression
            GH-Action, 3 J Retention, Priority-Support
