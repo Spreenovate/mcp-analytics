@@ -43,6 +43,19 @@ module Mcp
       openWorldHint: false
     }.freeze
 
+    # `add_site` is non-readOnly (it modifies the account) but NOT
+    # destructive — it strictly adds a new row, never touches existing
+    # data. Per MCP spec 2025-06-18, that's the additive-only bucket
+    # (readOnlyHint:false + destructiveHint:false). Important for
+    # safety-conscious clients (ChatGPT Plus/Pro filter by readOnlyHint
+    # but Business+ allow non-destructive writes; some other clients may
+    # warn users specifically for destructiveHint:true tools).
+    ADDITIVE_ANNOTATIONS = {
+      readOnlyHint: false,
+      destructiveHint: false,
+      openWorldHint: false
+    }.freeze
+
     DESTRUCTIVE_ANNOTATIONS = {
       readOnlyHint: false,
       destructiveHint: true,
@@ -78,7 +91,7 @@ module Mcp
           },
           required: [ "domain" ]
         },
-        annotations: DESTRUCTIVE_ANNOTATIONS,
+        annotations: ADDITIVE_ANNOTATIONS,
         scope: Oauth::Scopes::MANAGE
       },
       {
