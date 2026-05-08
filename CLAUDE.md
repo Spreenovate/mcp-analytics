@@ -44,6 +44,15 @@ Confirmed via parallel research agents (Sonnet + Opus 4.7) on 2026-05-07: multip
 
 If you "modernize" any of these (e.g. "spec-says-iss-is-good-let's-add-it", "lowercase-bearer-is-old-let's-Bearer-it"), retest in actual Claude Desktop. The spec is permissive; claude.ai's frontend is not.
 
+### Alpine ships busybox, not GNU — smoke-test the real script, not a paraphrase
+
+The ingest container is `alpine:3.20` so its `/bin/sed`, `/usr/bin/timeout`, `/bin/sh` are all busybox 1.36, not GNU. Two flag-level differences that have bitten us:
+
+- **`sed -u` is GNU-only.** Busybox sed exits with `unrecognized option: u` before reading any input. Was deployed to prod in [entrypoint.sh](ingestion/entrypoint.sh) and ate the entire reclassify run via the broken pipe. Busybox sed is line-buffered by default anyway, so just drop `-u`.
+- **`timeout` without `-k` doesn't escalate.** Busybox `timeout SECS PROG` sends SIGTERM only — if the process ignores it, the timeout is a no-op. Use `timeout -k 30 300 PROG` for "SIGTERM at 5 min, SIGKILL 30 s later".
+
+**Methodology note:** my pre-deploy smoke-test ran `sed s/.../` (no flags) and reported "all good", because I'd written a stripped-down version of the entrypoint logic in the test instead of running the actual `entrypoint.sh`. The real script with `sed -u` was never exercised. Lesson: when smoke-testing a shell script in the actual container image, **invoke the script verbatim** (e.g. mount over `/app/entrypoint.sh` with a stub for the binary it execs), don't rewrite a "simplified version" of the same logic. Strip-down loses exactly the kind of flag-level detail that breaks at runtime.
+
 ## Commands
 
 ### `kamal deploy` — needs zsh wrapper
