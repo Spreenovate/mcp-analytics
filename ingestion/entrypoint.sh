@@ -43,12 +43,14 @@
     # linger if it ignores the signal — would wedge the loop
     # indefinitely. Output piped through sed for a stable
     # `[reclassify]` log prefix so it doesn't blend into ingest's
-    # own log lines. `sed -u` keeps the stream unbuffered. Exit
-    # code logged explicitly when non-zero so a crash before the
-    # first slog line (OOM kill, missing-binary regression, CH
-    # unreachable) is visible instead of vanishing.
+    # own log lines. (Busybox sed is line-buffered by default, no
+    # `-u` flag — that's GNU-only and fails busybox with
+    # "unrecognized option: u".) Exit code logged explicitly when
+    # non-zero so a crash before the first slog line (OOM kill,
+    # missing-binary regression, CH unreachable) is visible
+    # instead of vanishing.
     timeout -k 30 300 /app/reclassify --apply 2>&1 \
-      | sed -u 's/^/[reclassify] /'
+      | sed 's/^/[reclassify] /'
     rc=$?
     [ "$rc" -eq 0 ] || echo "[reclassify] run exited rc=$rc"
     sleep 86400
