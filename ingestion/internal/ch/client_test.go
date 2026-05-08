@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -89,9 +90,13 @@ func TestInsert_ServerError_Bubbles(t *testing.T) {
 }
 
 func TestBatcher_FlushesOnSize(t *testing.T) {
-	flushes := 0
+	// flushes is touched by the HTTP-server goroutine (handler) and the
+	// test goroutine (poll loop). Use atomic to avoid the race detector
+	// failing CI — `flushes++` from one goroutine and `== 0` read from
+	// another otherwise constitutes a data race.
+	var flushes atomic.Int64
 	c, srv := newTestClient(func(w http.ResponseWriter, _ *http.Request) {
-		flushes++
+		flushes.Add(1)
 		w.WriteHeader(http.StatusOK)
 	})
 	defer srv.Close()
@@ -107,10 +112,10 @@ func TestBatcher_FlushesOnSize(t *testing.T) {
 
 	// Allow the Run loop to consume + flush.
 	deadline := time.Now().Add(2 * time.Second)
-	for time.Now().Before(deadline) && flushes == 0 {
+	for time.Now().Before(deadline) && flushes.Load() == 0 {
 		time.Sleep(20 * time.Millisecond)
 	}
-	if flushes == 0 {
+	if flushes.Load() == 0 {
 		t.Fatal("size-based flush never happened")
 	}
 }
