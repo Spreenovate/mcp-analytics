@@ -62,12 +62,22 @@ module Mcp
       openWorldHint: false
     }.freeze
 
+    # Per MCP spec 2025-06-18, when `outputSchema` is set the response
+    # MUST conform to it. We declare a permissive default — any object
+    # is valid — to satisfy strict clients (OpenAI Apps SDK requires
+    # outputSchema be present per their submission docs) without locking
+    # ourselves into a specific response shape that could break a
+    # future tool-impl change. If we want to tighten a particular
+    # tool's contract later, replace its `outputSchema` inline.
+    PERMISSIVE_OUTPUT = { type: "object" }.freeze
+
     AUTHENTICATED = [
       {
         name: "get_started_guide",
         title: "Getting started guide",
         description: "Markdown walkthrough of the mcp-analytics workflow: adding sites, installing the tracker, querying analytics, custom events.",
         inputSchema: { type: "object", properties: {} },
+        outputSchema: PERMISSIVE_OUTPUT,
         annotations: READ_ANNOTATIONS,
         scope: Oauth::Scopes::READ
       },
@@ -76,6 +86,7 @@ module Mcp
         title: "List sites",
         description: "List all sites on the authenticated account. Each entry contains: site_id, domain, privacy_mode, hits_this_month (current calendar month), plan_limit, created_at.",
         inputSchema: { type: "object", properties: {} },
+        outputSchema: PERMISSIVE_OUTPUT,
         annotations: READ_ANNOTATIONS,
         scope: Oauth::Scopes::READ
       },
@@ -91,6 +102,7 @@ module Mcp
           },
           required: [ "domain" ]
         },
+        outputSchema: PERMISSIVE_OUTPUT,
         annotations: ADDITIVE_ANNOTATIONS,
         scope: Oauth::Scopes::MANAGE
       },
@@ -103,6 +115,7 @@ module Mcp
           properties: { site_id: { type: "string" } },
           required: [ "site_id" ]
         },
+        outputSchema: PERMISSIVE_OUTPUT,
         annotations: READ_ANNOTATIONS,
         scope: Oauth::Scopes::READ
       },
@@ -115,6 +128,7 @@ module Mcp
           properties: { site_id: { type: "string" } },
           required: [ "site_id" ]
         },
+        outputSchema: PERMISSIVE_OUTPUT,
         annotations: DESTRUCTIVE_ANNOTATIONS,
         scope: Oauth::Scopes::MANAGE
       },
@@ -130,6 +144,7 @@ module Mcp
           },
           required: [ "site_id" ]
         },
+        outputSchema: PERMISSIVE_OUTPUT,
         annotations: READ_ANNOTATIONS,
         scope: Oauth::Scopes::READ
       },
@@ -147,6 +162,7 @@ module Mcp
           },
           required: [ "site_id", "metric" ]
         },
+        outputSchema: PERMISSIVE_OUTPUT,
         annotations: READ_ANNOTATIONS,
         scope: Oauth::Scopes::READ
       },
@@ -163,6 +179,7 @@ module Mcp
           },
           required: [ "site_id" ]
         },
+        outputSchema: PERMISSIVE_OUTPUT,
         annotations: READ_ANNOTATIONS,
         scope: Oauth::Scopes::READ
       },
@@ -179,6 +196,7 @@ module Mcp
           },
           required: [ "site_id" ]
         },
+        outputSchema: PERMISSIVE_OUTPUT,
         annotations: READ_ANNOTATIONS,
         scope: Oauth::Scopes::READ
       },
@@ -195,6 +213,7 @@ module Mcp
           },
           required: [ "site_id" ]
         },
+        outputSchema: PERMISSIVE_OUTPUT,
         annotations: READ_ANNOTATIONS,
         scope: Oauth::Scopes::READ
       },
@@ -212,6 +231,7 @@ module Mcp
           },
           required: [ "site_id", "dimension" ]
         },
+        outputSchema: PERMISSIVE_OUTPUT,
         annotations: READ_ANNOTATIONS,
         scope: Oauth::Scopes::READ
       },
@@ -227,6 +247,7 @@ module Mcp
           },
           required: [ "site_id" ]
         },
+        outputSchema: PERMISSIVE_OUTPUT,
         annotations: READ_ANNOTATIONS,
         scope: Oauth::Scopes::READ
       },
@@ -244,6 +265,7 @@ module Mcp
           },
           required: [ "site_id", "event_name" ]
         },
+        outputSchema: PERMISSIVE_OUTPUT,
         annotations: READ_ANNOTATIONS,
         scope: Oauth::Scopes::READ
       },
@@ -261,6 +283,7 @@ module Mcp
           },
           required: [ "site_id", "metric", "period_a", "period_b" ]
         },
+        outputSchema: PERMISSIVE_OUTPUT,
         annotations: READ_ANNOTATIONS,
         scope: Oauth::Scopes::READ
       },
@@ -294,6 +317,7 @@ module Mcp
           },
           required: [ "site_id" ]
         },
+        outputSchema: PERMISSIVE_OUTPUT,
         annotations: READ_ANNOTATIONS,
         scope: Oauth::Scopes::READ
       },
@@ -328,6 +352,7 @@ module Mcp
           },
           required: [ "site_id" ]
         },
+        outputSchema: PERMISSIVE_OUTPUT,
         annotations: READ_ANNOTATIONS,
         scope: Oauth::Scopes::READ
       },
@@ -344,6 +369,7 @@ module Mcp
           },
           required: [ "site_id" ]
         },
+        outputSchema: PERMISSIVE_OUTPUT,
         annotations: READ_ANNOTATIONS,
         scope: Oauth::Scopes::READ
       },
@@ -360,6 +386,7 @@ module Mcp
           },
           required: [ "site_id" ]
         },
+        outputSchema: PERMISSIVE_OUTPUT,
         annotations: READ_ANNOTATIONS,
         scope: Oauth::Scopes::READ
       },
@@ -375,6 +402,7 @@ module Mcp
           },
           required: [ "site_id" ]
         },
+        outputSchema: PERMISSIVE_OUTPUT,
         annotations: READ_ANNOTATIONS,
         scope: Oauth::Scopes::READ
       },
@@ -390,6 +418,7 @@ module Mcp
           },
           required: [ "site_id" ]
         },
+        outputSchema: PERMISSIVE_OUTPUT,
         annotations: READ_ANNOTATIONS,
         scope: Oauth::Scopes::READ
       },
@@ -405,6 +434,7 @@ module Mcp
           },
           required: [ "site_id" ]
         },
+        outputSchema: PERMISSIVE_OUTPUT,
         annotations: READ_ANNOTATIONS,
         scope: Oauth::Scopes::READ
       },
@@ -413,6 +443,7 @@ module Mcp
         title: "Account info",
         description: "Account info — email, current plan, total active sites, total_hits_this_month (across all sites), plan_limit, and api_token_first_chars (first 10 chars of the legacy API token, for identification only — not enough to authenticate).",
         inputSchema: { type: "object", properties: {} },
+        outputSchema: PERMISSIVE_OUTPUT,
         annotations: READ_ANNOTATIONS,
         scope: Oauth::Scopes::READ
       },
@@ -426,6 +457,7 @@ module Mcp
         title: "Regenerate API token",
         description: "Invalidate the current API token and issue a new one. Returns the new MCP URL.",
         inputSchema: { type: "object", properties: {} },
+        outputSchema: PERMISSIVE_OUTPUT,
         annotations: DESTRUCTIVE_ANNOTATIONS,
         scope: Oauth::Scopes::MANAGE,
         oauth_forbidden: true
