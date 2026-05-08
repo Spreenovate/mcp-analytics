@@ -20,6 +20,14 @@ Rails.application.routes.draw do
   # OAuth 2.1 (RFC 6749 + RFC 7636 + RFC 7591 + RFC 9728)
   get  "/.well-known/oauth-authorization-server" => "oauth/discovery#authorization_server"
   get  "/.well-known/oauth-protected-resource"   => "oauth/discovery#protected_resource"
+  # Path-aware variant per RFC 8414 §3.1 / RFC 9728 §3.1: clients that
+  # know the resource path query the suffixed form first. ChatGPT's MCP
+  # custom-connector flow specifically does this (per OpenAI community
+  # report — fails with "Failed to resolve OAuth client" if the suffixed
+  # path 404s, doesn't fall back to the root-level path). Both serve
+  # the same JSON for our single resource at /mcp.
+  get  "/.well-known/oauth-authorization-server/mcp" => "oauth/discovery#authorization_server"
+  get  "/.well-known/oauth-protected-resource/mcp"   => "oauth/discovery#protected_resource"
   post "/oauth/register" => "oauth/clients#create",        as: :oauth_register
   get  "/oauth/authorize" => "oauth/authorizations#new",   as: :oauth_authorize
   post "/oauth/authorize/start" => "oauth/authorizations#start", as: :oauth_authorize_start
@@ -35,6 +43,8 @@ Rails.application.routes.draw do
   # browser. See claude-ai-mcp issues #46 / #163 / #215.
   match "/.well-known/oauth-authorization-server" => "oauth/discovery#preflight",   via: :options
   match "/.well-known/oauth-protected-resource"   => "oauth/discovery#preflight",   via: :options
+  match "/.well-known/oauth-authorization-server/mcp" => "oauth/discovery#preflight", via: :options
+  match "/.well-known/oauth-protected-resource/mcp"   => "oauth/discovery#preflight", via: :options
   match "/oauth/register" => "oauth/clients#preflight",       via: :options
   match "/oauth/token"    => "oauth/tokens#preflight",        via: :options
   match "/oauth/revoke"   => "oauth/revocations#preflight",   via: :options

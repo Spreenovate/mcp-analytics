@@ -23,6 +23,9 @@ module OauthCors
     %r{\Ahttps://claude\.ai\z},
     %r{\Ahttps://[a-z0-9-]+\.claude\.ai\z},
     %r{\Ahttps://(?:www\.)?anthropic\.com\z},
+    %r{\Ahttps://chatgpt\.com\z},
+    %r{\Ahttps://[a-z0-9-]+\.chatgpt\.com\z},
+    %r{\Ahttps://(?:www\.)?openai\.com\z},
     %r{\Ahttps?://localhost(?::\d+)?\z},
     %r{\Ahttps?://127\.0\.0\.1(?::\d+)?\z}
   ].freeze
