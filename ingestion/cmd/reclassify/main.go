@@ -73,6 +73,11 @@ func main() {
 		os.Exit(1)
 	}
 	log.Info("pulled UA list", "rows", len(rows))
+	if len(rows) >= maxDistinctUAs {
+		log.Warn("hit UA cap — long-tail UAs not reclassified this run",
+			"cap", maxDistinctUAs,
+			"hint", "if persistent, investigate UA-spam or move to streaming reclassify")
+	}
 
 	// Step 2: classify each UA with the Phase-2 logic (UA-only path,
 	// no IP).
@@ -153,13 +158,25 @@ func (c *chClient) query(ctx context.Context, sql string) (string, error) {
 	return string(body), nil
 }
 
+// Hard ceiling on how many (UA, class) pairs we pull into memory in a
+// single run. At 100k pairs * ~150 B average = ~15 MB, so OOM is not a
+// concern up to that point. The auto-loop in entrypoint.sh re-runs
+// every 24h, so a UA-spam attack that pushed beyond this would still
+// see the most-frequent UAs reclassified each cycle — the long tail
+// keeps its old class until volume drops or we move to streaming.
+const maxDistinctUAs = 100_000
+
 func (c *chClient) queryDistinctUAs(ctx context.Context) ([]uaRow, error) {
-	out, err := c.query(ctx, `
+	// ORDER BY count() DESC: if we hit the cap, we want to have
+	// reclassified the high-volume UAs first, not a random sample.
+	out, err := c.query(ctx, fmt.Sprintf(`
 		SELECT user_agent, traffic_class
 		FROM events
 		WHERE user_agent != ''
 		GROUP BY user_agent, traffic_class
-		FORMAT TabSeparated`)
+		ORDER BY count() DESC
+		LIMIT %d
+		FORMAT TabSeparated`, maxDistinctUAs))
 	if err != nil {
 		return nil, err
 	}
@@ -186,6 +203,12 @@ func (c *chClient) updateTrafficClass(ctx context.Context, ua, oldClass, newClas
 	q.Set("param_ua", ua)
 	q.Set("param_old", oldClass)
 	q.Set("param_new", newClass)
+	// mutations_sync=1: wait for the mutation to finish on this replica
+	// before returning. Default is 0 (queue-and-return) which lets the
+	// async mutation queue stack up if the auto-loop runs faster than
+	// CH can rewrite parts. We're on a single CH instance so =1
+	// suffices; bump to 2 if we ever go multi-replica.
+	q.Set("mutations_sync", "1")
 	q.Set("query", `
 		ALTER TABLE events
 		UPDATE traffic_class = {new:String}
