@@ -53,6 +53,14 @@ The ingest container is `alpine:3.20` so its `/bin/sed`, `/usr/bin/timeout`, `/b
 
 **Methodology note:** my pre-deploy smoke-test ran `sed s/.../` (no flags) and reported "all good", because I'd written a stripped-down version of the entrypoint logic in the test instead of running the actual `entrypoint.sh`. The real script with `sed -u` was never exercised. Lesson: when smoke-testing a shell script in the actual container image, **invoke the script verbatim** (e.g. mount over `/app/entrypoint.sh` with a stub for the binary it execs), don't rewrite a "simplified version" of the same logic. Strip-down loses exactly the kind of flag-level detail that breaks at runtime.
 
+### `outputSchema` — declare permissive first, never strict-without-tests
+
+MCP spec 2025-06-18 §`outputSchema`: *"If specified, server's response to a tools/call for this tool MUST conform to this schema."* Claude.ai has been historically strict about adjacent details (302 vs 303, no `iss`, lowercase `bearer`, `sed -u` quirks under busybox) — it's plausible that Claude or the next strict client will hard-reject responses on `outputSchema` mismatch too. We haven't proven it does, but the asymmetry is wrong: a tight schema costs us a future-debugging headache, a loose schema costs us nothing.
+
+**Convention:** all 23 tool entries in [tool_schemas.rb](app/services/mcp/tool_schemas.rb) reference a single `PERMISSIVE_OUTPUT = { type: "object" }` constant. Spec-formal-conformant (every tool returns an object — `Mcp::Server#tool_success` wraps arrays under `items`) without constraining shape. OpenAI's Apps SDK submission is happy with this.
+
+**When to tighten:** only with concrete reason (e.g. an MCP client that demonstrably benefits from richer schema introspection) AND with tests that validate the real tool's return value against the declared schema. Don't hand-write a richer outputSchema and hope it matches — the response can drift any time a tool implementation changes a key name and the schema would need to be updated in lockstep.
+
 ## Commands
 
 ### `kamal deploy` — needs zsh wrapper
