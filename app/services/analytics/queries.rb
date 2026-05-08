@@ -6,16 +6,27 @@ module Analytics
   # so that the auth layer stays the single enforcement point.
   #
   # Human-traffic definition (Phase 2):
-  # All default queries filter `traffic_class IN ('user', 'ai_user_action')`.
   # 'user' = real human visitor with their own browser. 'ai_user_action' =
   # a human chatting with Claude/ChatGPT/Perplexity where the assistant
   # fetched the page on their behalf — counts as human attention, just
-  # AI-mediated. This matches the IsHuman() helper in the Go classifier
-  # and the `humans` filter alias in top_user_agents. The bot_share field
-  # in #overview uses the inverse split (NOT IN those two), so all halves
-  # of get_overview agree on what a human is.
+  # AI-mediated. This matches IsHuman() in the Go classifier and the
+  # `humans` filter alias in top_user_agents.
   #
-  # If you want a stricter "browser-only" filter, query top_user_agents
+  # Two different filters apply, depending on whether the metric is
+  # *volume* or *attribution*:
+  #
+  #   - Volume metrics (pageviews, sessions, top_pages, engagement, …)
+  #     filter traffic_class IN ('user', 'ai_user_action'). AI-mediated
+  #     browsing IS human attention so we count it. The bot_share field
+  #     in #overview uses the inverse split.
+  #
+  #   - Attribution metrics (top_source in #overview, top_sources,
+  #     top_referrers) filter traffic_class = 'user' only. ai_user_action
+  #     loses original utm/referrer tags — Claude/ChatGPT set their own
+  #     host or empty when fetching on a user's behalf — so including it
+  #     would inflate "direct" or "claude.ai" without adding signal.
+  #
+  # If you want a stricter "browser-only" everywhere, query top_user_agents
   # with traffic_class:'user'. If you want every class broken out, use
   # traffic_class_breakdown.
   class Queries
@@ -81,6 +92,12 @@ module Analytics
         LIMIT 1
       SQL
 
+      # Attribution metric: 'user' only, NOT 'humans' (= user + ai_user_action).
+      # ai_user_action loses original utm/referrer (Claude/ChatGPT set their
+      # own host or empty when fetching on a user's behalf), so including it
+      # would inflate "direct" or "claude.ai" without adding signal. Volume
+      # metrics (pageviews/sessions/etc.) include ai_user_action; attribution
+      # metrics don't. See class file doc-block.
       top_source_row = @client.query(<<~SQL, params: scope_params(period)).first || {}
         SELECT
           multiIf(utm_source != '', utm_source,
@@ -88,7 +105,7 @@ module Analytics
                   'direct') AS source,
           count() AS visits
         FROM events
-        WHERE site_id = {site:String} AND traffic_class IN ('user', 'ai_user_action')
+        WHERE site_id = {site:String} AND traffic_class = 'user'
           AND event_name = 'pageview'
           AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
         GROUP BY source
@@ -189,13 +206,16 @@ module Analytics
       end
     end
 
+    # Attribution metric: 'user' only. ai_user_action's referrer is set to
+    # the AI host (claude.ai etc.) or empty, so including it would inflate
+    # bogus referrers. See class doc-block.
     def top_referrers(period, limit: 10)
       total = referrer_total(period)
 
       sql = <<~SQL
         SELECT referrer_host, count() AS visits
         FROM events
-        WHERE site_id = {site:String} AND traffic_class IN ('user', 'ai_user_action')
+        WHERE site_id = {site:String} AND traffic_class = 'user'
           AND event_name = 'pageview'
           AND referrer_host != ''
           AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
@@ -215,11 +235,13 @@ module Analytics
       end
     end
 
+    # Attribution metric: 'user' only. ai_user_action loses original utm
+    # tags when the AI fetches on a user's behalf. See class doc-block.
     def top_sources(period, limit: 10)
       sql = <<~SQL
         SELECT utm_source, utm_medium, utm_campaign, count() AS visits
         FROM events
-        WHERE site_id = {site:String} AND traffic_class IN ('user', 'ai_user_action')
+        WHERE site_id = {site:String} AND traffic_class = 'user'
           AND event_name = 'pageview'
           AND (utm_source != '' OR utm_medium != '' OR utm_campaign != '')
           AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
@@ -587,11 +609,14 @@ module Analytics
       { site: @site.site_id, from: period.from_sql, to: period.to_sql }
     end
 
+    # Denominator for top_referrers percentages — must use the same
+    # 'user'-only filter as top_referrers itself (attribution metric,
+    # see top_referrers comment).
     def referrer_total(period)
       row = @client.query(<<~SQL, params: scope_params(period)).first || {}
         SELECT count() AS total
         FROM events
-        WHERE site_id = {site:String} AND traffic_class IN ('user', 'ai_user_action')
+        WHERE site_id = {site:String} AND traffic_class = 'user'
           AND event_name = 'pageview'
           AND referrer_host != ''
           AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}

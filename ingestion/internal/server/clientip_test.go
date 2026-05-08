@@ -48,6 +48,31 @@ func TestClientIP_RightmostXFFEntry(t *testing.T) {
 	}
 }
 
+// Trailing-comma XFF used to return "" — an attacker-crafted header
+// could then bypass IPBlock checks (which call IsBlocked("")). The
+// fix falls through to RemoteAddr instead.
+func TestClientIP_TrailingCommaFallsBackToRemoteAddr(t *testing.T) {
+	cases := []struct {
+		name string
+		xff  string
+	}{
+		{name: "single trailing comma", xff: "1.2.3.4,"},
+		{name: "trailing comma + whitespace", xff: "1.2.3.4, "},
+		{name: "all whitespace", xff: "   "},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			req := httptest.NewRequest("POST", "/event", nil)
+			req.Header.Set("X-Forwarded-For", c.xff)
+			req.RemoteAddr = "203.0.113.5:54321"
+			if got := clientIP(req); got != "203.0.113.5" {
+				t.Errorf("XFF=%q: got %q want fallback to RemoteAddr 203.0.113.5",
+					c.xff, got)
+			}
+		})
+	}
+}
+
 func TestClientIP_FallsBackToRemoteAddr(t *testing.T) {
 	req := httptest.NewRequest("POST", "/event", nil)
 	req.RemoteAddr = "203.0.113.5:54321"

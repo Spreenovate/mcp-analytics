@@ -67,7 +67,7 @@ module Mcp
       },
       {
         name: "get_overview",
-        description: "TL;DR for the period: headline metrics (pageviews, visitors, sessions, bounce rate, avg session duration) plus pageviews_change_pct vs the previous equivalent window, top page, top traffic source, bot share, and top 3 custom events. Designed so a single call answers 'how did <period> go?' without chaining other tools.",
+        description: "TL;DR for the period: headline metrics (pageviews, visitors, sessions, bounce rate, avg session duration) plus pageviews_change_pct vs the previous equivalent window, top page, top traffic source, bot share, and top 3 custom events. Designed so a single call answers 'how did <period> go?' without chaining other tools. Volume metrics (pageviews / visitors / sessions / bot_share) include AI-mediated human browsing (ai_user_action — Claude/ChatGPT fetching on a user's behalf); attribution metrics (top_source) count direct browser visits only because AI-mediated traffic loses original utm/referrer tags. See traffic_class_breakdown for the per-class split.",
         inputSchema: {
           type: "object",
           properties: {
@@ -80,7 +80,7 @@ module Mcp
       },
       {
         name: "get_timeseries",
-        description: "Time-bucketed metric over a period.",
+        description: "Time-bucketed metric over a period. pageviews/visitors/sessions include AI-mediated human browsing (ai_user_action) — see traffic_class_breakdown to see the AI-vs-direct split.",
         inputSchema: {
           type: "object",
           properties: {
@@ -95,7 +95,7 @@ module Mcp
       },
       {
         name: "top_pages",
-        description: "Most-viewed URL paths.",
+        description: "Most-viewed URL paths. Counts both direct browser visits and AI-mediated human browsing (ai_user_action) — see traffic_class_breakdown if you need to separate them.",
         inputSchema: {
           type: "object",
           properties: {
@@ -109,7 +109,7 @@ module Mcp
       },
       {
         name: "top_referrers",
-        description: "Top referring hosts.",
+        description: "Top referring hosts. Attribution metric — counts direct browser visits only ('user' class). AI-mediated traffic (Claude/ChatGPT fetching on a user's behalf) is excluded because the AI sets its own host as referrer or strips it; including it would inflate 'direct' or 'claude.ai' without telling you where the human attention actually came from.",
         inputSchema: {
           type: "object",
           properties: {
@@ -123,7 +123,7 @@ module Mcp
       },
       {
         name: "top_sources",
-        description: "Top UTM source/medium/campaign combinations.",
+        description: "Top UTM source/medium/campaign combinations. Attribution metric — counts direct browser visits only ('user' class). AI-mediated traffic loses original UTM tags so it would only add noise.",
         inputSchema: {
           type: "object",
           properties: {
