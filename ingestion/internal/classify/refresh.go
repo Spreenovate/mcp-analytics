@@ -67,7 +67,10 @@ func (c *RefreshConfig) defaults() {
 					return fmt.Errorf("redirect to non-HTTPS rejected: %s",
 						req.URL)
 				}
-				if len(via) > 5 {
+				// Allow up to 5 prior hops (this is the 6th request, but
+				// stricter than Go's default-10 and bounded enough for
+				// any legitimate vendor CDN chain).
+				if len(via) >= 5 {
 					return fmt.Errorf("too many redirects (%d)", len(via))
 				}
 				return nil

@@ -4,6 +4,20 @@ module Analytics
   # All ClickHouse queries used by the MCP tools live here, scoped by site_id.
   # Callers pass the Site model; we never accept raw site_id strings directly
   # so that the auth layer stays the single enforcement point.
+  #
+  # Human-traffic definition (Phase 2):
+  # All default queries filter `traffic_class IN ('user', 'ai_user_action')`.
+  # 'user' = real human visitor with their own browser. 'ai_user_action' =
+  # a human chatting with Claude/ChatGPT/Perplexity where the assistant
+  # fetched the page on their behalf — counts as human attention, just
+  # AI-mediated. This matches the IsHuman() helper in the Go classifier
+  # and the `humans` filter alias in top_user_agents. The bot_share field
+  # in #overview uses the inverse split (NOT IN those two), so all halves
+  # of get_overview agree on what a human is.
+  #
+  # If you want a stricter "browser-only" filter, query top_user_agents
+  # with traffic_class:'user'. If you want every class broken out, use
+  # traffic_class_breakdown.
   class Queries
     def initialize(site, client: ClickHouse.client)
       @site   = site
@@ -23,7 +37,7 @@ module Analytics
           uniqIf(visitor_id, visitor_id != 0) AS unique_visitors,
           uniq(session_id) AS sessions
         FROM events
-        WHERE site_id = {site:String} AND traffic_class = 'user'
+        WHERE site_id = {site:String} AND traffic_class IN ('user', 'ai_user_action')
           AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
       SQL
       row = @client.query(headline_sql, params: scope_params(period)).first || {}
@@ -35,7 +49,7 @@ module Analytics
         FROM (
           SELECT session_id, count() AS cnt
           FROM events
-          WHERE site_id = {site:String} AND traffic_class = 'user'
+          WHERE site_id = {site:String} AND traffic_class IN ('user', 'ai_user_action')
             AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
           GROUP BY session_id
         )
@@ -46,7 +60,7 @@ module Analytics
         FROM (
           SELECT session_id, dateDiff('second', min(timestamp), max(timestamp)) AS sec
           FROM events
-          WHERE site_id = {site:String} AND traffic_class = 'user'
+          WHERE site_id = {site:String} AND traffic_class IN ('user', 'ai_user_action')
             AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
           GROUP BY session_id
           HAVING count() > 1
@@ -59,7 +73,7 @@ module Analytics
       top_page_row = @client.query(<<~SQL, params: scope_params(period)).first || {}
         SELECT url_path, count() AS pageviews
         FROM events
-        WHERE site_id = {site:String} AND traffic_class = 'user'
+        WHERE site_id = {site:String} AND traffic_class IN ('user', 'ai_user_action')
           AND event_name = 'pageview'
           AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
         GROUP BY url_path
@@ -74,7 +88,7 @@ module Analytics
                   'direct') AS source,
           count() AS visits
         FROM events
-        WHERE site_id = {site:String} AND traffic_class = 'user'
+        WHERE site_id = {site:String} AND traffic_class IN ('user', 'ai_user_action')
           AND event_name = 'pageview'
           AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
         GROUP BY source
@@ -101,7 +115,7 @@ module Analytics
       top_events = @client.query(<<~SQL, params: scope_params(period))
         SELECT event_name, count() AS count
         FROM events
-        WHERE site_id = {site:String} AND traffic_class = 'user'
+        WHERE site_id = {site:String} AND traffic_class IN ('user', 'ai_user_action')
           AND event_name != 'pageview'
           AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
         GROUP BY event_name
@@ -140,7 +154,7 @@ module Analytics
       sql = <<~SQL
         SELECT #{bucket}(timestamp) AS bucket, #{metric_sql} AS value
         FROM events
-        WHERE site_id = {site:String} AND traffic_class = 'user'
+        WHERE site_id = {site:String} AND traffic_class IN ('user', 'ai_user_action')
           AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
         GROUP BY bucket
         ORDER BY bucket
@@ -160,7 +174,7 @@ module Analytics
           count() AS pageviews,
           uniqIf(visitor_id, visitor_id != 0) AS unique_visitors
         FROM events
-        WHERE site_id = {site:String} AND traffic_class = 'user'
+        WHERE site_id = {site:String} AND traffic_class IN ('user', 'ai_user_action')
           AND event_name = 'pageview'
           AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
         GROUP BY url_path
@@ -181,7 +195,7 @@ module Analytics
       sql = <<~SQL
         SELECT referrer_host, count() AS visits
         FROM events
-        WHERE site_id = {site:String} AND traffic_class = 'user'
+        WHERE site_id = {site:String} AND traffic_class IN ('user', 'ai_user_action')
           AND event_name = 'pageview'
           AND referrer_host != ''
           AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
@@ -205,7 +219,7 @@ module Analytics
       sql = <<~SQL
         SELECT utm_source, utm_medium, utm_campaign, count() AS visits
         FROM events
-        WHERE site_id = {site:String} AND traffic_class = 'user'
+        WHERE site_id = {site:String} AND traffic_class IN ('user', 'ai_user_action')
           AND event_name = 'pageview'
           AND (utm_source != '' OR utm_medium != '' OR utm_campaign != '')
           AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
@@ -240,7 +254,7 @@ module Analytics
       sql = <<~SQL
         SELECT #{column} AS value, count() AS visits
         FROM events
-        WHERE site_id = {site:String} AND traffic_class = 'user'
+        WHERE site_id = {site:String} AND traffic_class IN ('user', 'ai_user_action')
           AND event_name = 'pageview'
           AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
         GROUP BY value
@@ -267,7 +281,7 @@ module Analytics
                count() AS count,
                uniq(session_id) AS unique_sessions
         FROM events
-        WHERE site_id = {site:String} AND traffic_class = 'user'
+        WHERE site_id = {site:String} AND traffic_class IN ('user', 'ai_user_action')
           AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
         GROUP BY event_name
         ORDER BY count DESC
@@ -288,7 +302,7 @@ module Analytics
           SELECT prop_values[indexOf(prop_keys, {prop:String})] AS value,
                  count() AS count
           FROM events
-          WHERE site_id = {site:String} AND traffic_class = 'user'
+          WHERE site_id = {site:String} AND traffic_class IN ('user', 'ai_user_action')
             AND event_name = {event:String}
             AND has(prop_keys, {prop:String})
             AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
@@ -306,7 +320,7 @@ module Analytics
         SELECT count() AS total_count,
                uniq(session_id) AS sessions_with_event
         FROM events
-        WHERE site_id = {site:String} AND traffic_class = 'user'
+        WHERE site_id = {site:String} AND traffic_class IN ('user', 'ai_user_action')
           AND event_name = {event:String}
           AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
       SQL
@@ -316,7 +330,7 @@ module Analytics
       pages_sql = <<~SQL
         SELECT url_path, count() AS count
         FROM events
-        WHERE site_id = {site:String} AND traffic_class = 'user'
+        WHERE site_id = {site:String} AND traffic_class IN ('user', 'ai_user_action')
           AND event_name = {event:String}
           AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
         GROUP BY url_path
@@ -361,7 +375,7 @@ module Analytics
       sql = <<~SQL
         SELECT color_scheme, count() AS hits
         FROM events
-        WHERE site_id = {site:String} AND traffic_class = 'user'
+        WHERE site_id = {site:String} AND traffic_class IN ('user', 'ai_user_action')
           AND event_name = 'pageview'
           AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
         GROUP BY color_scheme
@@ -394,7 +408,7 @@ module Analytics
           ) AS bucket,
           count() AS hits
         FROM events
-        WHERE site_id = {site:String} AND traffic_class = 'user'
+        WHERE site_id = {site:String} AND traffic_class IN ('user', 'ai_user_action')
           AND event_name = 'pageview'
           AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
         GROUP BY bucket
@@ -424,7 +438,7 @@ module Analytics
           avg(scroll_depth) AS avg_scroll_depth,
           quantile(0.5)(scroll_depth) AS median_scroll_depth
         FROM events
-        WHERE site_id = {site:String} AND traffic_class = 'user'
+        WHERE site_id = {site:String} AND traffic_class IN ('user', 'ai_user_action')
           AND event_name = 'engagement'
           AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
       SQL
@@ -549,7 +563,7 @@ module Analytics
       sql = <<~SQL
         SELECT #{column} AS value, count() AS hits
         FROM events
-        WHERE site_id = {site:String} AND traffic_class = 'user'
+        WHERE site_id = {site:String} AND traffic_class IN ('user', 'ai_user_action')
           AND event_name = 'pageview'
           AND #{column} != ''
           AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
@@ -577,7 +591,7 @@ module Analytics
       row = @client.query(<<~SQL, params: scope_params(period)).first || {}
         SELECT count() AS total
         FROM events
-        WHERE site_id = {site:String} AND traffic_class = 'user'
+        WHERE site_id = {site:String} AND traffic_class IN ('user', 'ai_user_action')
           AND event_name = 'pageview'
           AND referrer_host != ''
           AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
@@ -606,7 +620,7 @@ module Analytics
       sql = <<~SQL
         SELECT #{metric_expression(metric)} AS value
         FROM events
-        WHERE site_id = {site:String} AND traffic_class = 'user'
+        WHERE site_id = {site:String} AND traffic_class IN ('user', 'ai_user_action')
           AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
       SQL
       row = @client.query(sql, params: scope_params(period)).first || {}

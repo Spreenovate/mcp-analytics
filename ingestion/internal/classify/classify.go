@@ -211,23 +211,35 @@ func classesAgree(uaClass, ipClass Class) bool {
 	return false
 }
 
+// authoritativeClassSet is the set of Classes that have at least one
+// non-cloud-infra Source published. Computed once at package init from
+// Sources() so adding a new Source automatically updates the set —
+// no separate hand-curated list to drift.
+//
+// Mutability: package-level var initialized once; never modified after
+// init. Reads from hasAuthoritativeIPRanges are race-safe.
+var authoritativeClassSet = func() map[Class]bool {
+	m := make(map[Class]bool)
+	for _, src := range Sources() {
+		if !src.IsCloudInfra {
+			m[src.Class] = true
+		}
+	}
+	return m
+}()
+
 // hasAuthoritativeIPRanges reports whether we have published IP-range
 // data for the given class. If we DO and the IP isn't in those ranges,
 // the UA-vs-IP mismatch is meaningful (spoof). If we DON'T, the IP
 // signal is non-authoritative for that class (e.g. Slackbot can run
 // from anywhere on AWS).
 //
-// Drift risk: if we ever add a vendor JSON for social_unfurl (e.g.
-// Slack publishes IP ranges), update this function. The Source list
-// in source.go is the source of truth — this function mirrors which
-// classes are represented there.
+// Derived from Sources() at init — no separate hand-curated whitelist
+// to drift out of sync. Adding a Source for ClassSocialUnfurl (e.g.
+// Slack publishes ranges) automatically flips this to true for that
+// class.
 func hasAuthoritativeIPRanges(c Class) bool {
-	switch c {
-	case ClassAIUserAction, ClassAISearch, ClassAITraining, ClassSearchIndex:
-		return true
-	default:
-		return false
-	}
+	return authoritativeClassSet[c]
 }
 
 // isCloudInfraClass reports whether a Class came from a cloud-infra

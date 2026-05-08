@@ -84,6 +84,81 @@ func TestParseOpenAI_RejectsHostileWildcard(t *testing.T) {
 	}
 }
 
+// --- v4-mapped IPv6 bypass (HIGH from Round 2 review) ---------------
+
+func TestParseCIDR_RejectsV4MappedWildcard(t *testing.T) {
+	// Hostile vendor entry that defeats the IPv4 floor by hiding behind
+	// an IPv6 wrapper. cidranger matches IPv4 lookups against this, so
+	// failing to reject it would hijack the entire IPv4 space.
+	hostile := []string{
+		"::ffff:0.0.0.0/96",   // entire IPv4 space
+		"::ffff:0.0.0.0/100",  // /4 IPv4 equivalent — still under /8 floor
+		"::ffff:128.0.0.0/103", // /7 IPv4 equivalent
+	}
+	for _, raw := range hostile {
+		if _, err := parseCIDR(raw); err == nil {
+			t.Errorf("expected rejection for v4-mapped wildcard %q", raw)
+		}
+	}
+}
+
+func TestParseCIDR_AcceptsLegitV4Mapped(t *testing.T) {
+	// Real v4-mapped prefixes that are above the IPv4 floor (effective
+	// >= /8) should still be accepted — we don't want to break a
+	// vendor that publishes ranges in v4-mapped notation.
+	ok := []string{
+		"::ffff:3.0.0.0/104",  // effective /8 — at the floor
+		"::ffff:23.98.142.176/124", // effective /28
+	}
+	for _, raw := range ok {
+		if _, err := parseCIDR(raw); err != nil {
+			t.Errorf("legitimate v4-mapped prefix %q rejected: %v", raw, err)
+		}
+	}
+}
+
+// --- Drift prevention: hasAuthoritativeIPRanges vs Sources() ---------
+
+func TestHasAuthoritativeIPRanges_CoversEveryNonCloudSource(t *testing.T) {
+	// Anyone who adds a Source in source.go must end up with
+	// hasAuthoritativeIPRanges returning true for that source's Class
+	// (unless it's marked IsCloudInfra). Since we now derive the set
+	// from Sources() this should always pass — but the test pins the
+	// invariant so a refactor that breaks the linkage fails loudly.
+	for _, src := range Sources() {
+		if src.IsCloudInfra {
+			continue
+		}
+		if !hasAuthoritativeIPRanges(src.Class) {
+			t.Errorf("source %q is non-cloud-infra with class %q but "+
+				"hasAuthoritativeIPRanges returns false — derivation broken",
+				src.Name, src.Class)
+		}
+	}
+}
+
+// --- Slackbot-from-AWS: Classify() level integration ----------------
+
+func TestClassifier_SlackbotFromAWS_StaysSocialUnfurl(t *testing.T) {
+	// Round 1 fixed classesAgree at the helper level; this test pins
+	// the full Classify() decision tree end-to-end. Slackbot
+	// legitimately runs on AWS — must NOT demote to bot_other just
+	// because the IP is in a cloud-infra range.
+	_, awsNet, _ := net.ParseCIDR("3.0.0.0/8")
+	lookup := &AtomicLookup{}
+	lookup.Store(NewTrie([]TrieEntry{
+		{Net: awsNet, Class: ClassScanner, Provider: "aws", IsCloudInfra: true},
+	}))
+	c := NewClassifier(lookup)
+	got := c.Classify(
+		"Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)",
+		net.ParseIP("3.42.99.99"))
+	if got != ClassSocialUnfurl {
+		t.Errorf("Slackbot from AWS IP: got %q want %q (must stay social_unfurl despite cloud-infra IP — social_unfurl has no authoritative ranges)",
+			got, ClassSocialUnfurl)
+	}
+}
+
 // --- DNS gating (no longer fires for unrelated UAs) -----------------
 
 func TestClassifier_DNSGatedByUA(t *testing.T) {

@@ -292,10 +292,18 @@ func isValidVisitorID(s string) bool {
 // proxies in the chain. Single proxy today.
 func clientIP(r *http.Request) string {
 	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		var candidate string
 		if i := strings.LastIndex(xff, ","); i >= 0 {
-			return strings.TrimSpace(xff[i+1:])
+			candidate = strings.TrimSpace(xff[i+1:])
+		} else {
+			candidate = strings.TrimSpace(xff)
 		}
-		return strings.TrimSpace(xff)
+		if candidate != "" {
+			return candidate
+		}
+		// Trailing comma or all-whitespace XFF — fall through to
+		// RemoteAddr rather than returning "" (which would let an
+		// attacker pivot ipblock checks via crafted header).
 	}
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {

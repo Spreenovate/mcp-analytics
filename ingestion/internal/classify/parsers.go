@@ -237,7 +237,21 @@ func parseCIDR(raw string) (*net.IPNet, error) {
 				ones, MinIPv4Prefix, raw)
 		}
 	case 128:
-		if ones < MinIPv6Prefix {
+		// Detect v4-mapped IPv6 prefixes (::ffff:0:0/96 family). These
+		// LOOK like IPv6 (bits=128) but cidranger matches IPv4 lookup
+		// keys against them — a hostile vendor JSON containing
+		// {"ipv6Prefix":"::ffff:0.0.0.0/96"} would otherwise pass the
+		// IPv6 floor (/96 >= /32) and hijack the entire IPv4 space.
+		// Convert the v4-mapped prefix to its IPv4 equivalent and
+		// re-validate against the IPv4 floor.
+		if isV4MappedNet(n) {
+			effectiveOnes := ones - 96
+			if effectiveOnes < MinIPv4Prefix {
+				return nil, fmt.Errorf(
+					"v4-mapped ipv6 prefix /%d (effective ipv4 /%d) too broad (min /%d): %s",
+					ones, effectiveOnes, MinIPv4Prefix, raw)
+			}
+		} else if ones < MinIPv6Prefix {
 			return nil, fmt.Errorf("ipv6 prefix /%d too broad (min /%d): %s",
 				ones, MinIPv6Prefix, raw)
 		}
@@ -245,4 +259,21 @@ func parseCIDR(raw string) (*net.IPNet, error) {
 		return nil, fmt.Errorf("unexpected mask bits=%d in %s", bits, raw)
 	}
 	return n, nil
+}
+
+// isV4MappedNet reports whether the IPNet's address sits inside the
+// IPv4-mapped IPv6 prefix ::ffff:0:0/96. Such prefixes match IPv4
+// lookups in cidranger and must be treated as IPv4 for the prefix-
+// length floor.
+func isV4MappedNet(n *net.IPNet) bool {
+	if n == nil || len(n.IP) != net.IPv6len {
+		return false
+	}
+	// First 80 bits must be zero, next 16 bits must be 0xff.
+	for i := 0; i < 10; i++ {
+		if n.IP[i] != 0 {
+			return false
+		}
+	}
+	return n.IP[10] == 0xff && n.IP[11] == 0xff
 }

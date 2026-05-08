@@ -244,7 +244,7 @@ module Mcp
 
           Note on consistency: get_overview's `bot_share` field uses the same human/non-human split (excludes user + ai_user_action), so the two tools agree on what counts as bot traffic.
 
-          Note on history: rows from before Phase 2 deployed (May 2026) were reclassified by User-Agent only (we don't store IPs for privacy), so older data may under-report scanner-via-cloud-IP and over-attribute spoofed UAs.
+          Note on history: rows from before Phase 2 deployed were reclassified by User-Agent only (we don't store IPs for privacy), so older data may under-report scanner-via-cloud-IP and over-attribute spoofed UAs.
         DESC
         inputSchema: {
           type: "object",
