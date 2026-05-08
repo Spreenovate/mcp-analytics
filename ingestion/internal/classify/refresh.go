@@ -55,7 +55,24 @@ func (c *RefreshConfig) defaults() {
 		c.SourceFn = Sources
 	}
 	if c.HTTPClient == nil {
-		c.HTTPClient = &http.Client{Timeout: c.HTTPTimeout}
+		c.HTTPClient = &http.Client{
+			Timeout: c.HTTPTimeout,
+			// Lock the redirect chain to HTTPS only — defense against
+			// a vendor accidentally (or maliciously) redirecting to an
+			// HTTP URL, which would strip TLS. Public IP-range JSONs
+			// are HTTPS in practice; same-scheme redirects within
+			// the vendor's own domain are fine.
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				if req.URL.Scheme != "https" {
+					return fmt.Errorf("redirect to non-HTTPS rejected: %s",
+						req.URL)
+				}
+				if len(via) > 5 {
+					return fmt.Errorf("too many redirects (%d)", len(via))
+				}
+				return nil
+			},
+		}
 	}
 	if c.Log == nil {
 		c.Log = slog.Default()
@@ -67,10 +84,18 @@ func (c *RefreshConfig) defaults() {
 
 // Refresher fetches sources, parses them, builds a Trie and atomic-
 // swaps it into a target *AtomicLookup. Holds telemetry for ops.
+//
+// prevSwapTotal caches the entry count of the LAST trie that was
+// successfully swapped in (not the current gauge total — that gets
+// reset before swap). Used by the MinShrinkRatio sanity-check so a
+// partial-success refresh that legitimately shrunk the data doesn't
+// get rejected against a zero baseline. Mutated only by RunOnce on
+// the refresh goroutine.
 type Refresher struct {
-	cfg    RefreshConfig
-	target *AtomicLookup
-	mx     *Metrics
+	cfg           RefreshConfig
+	target        *AtomicLookup
+	mx            *Metrics
+	prevSwapTotal int64
 }
 
 // NewRefresher creates a Refresher. Caller is responsible for storing
@@ -92,7 +117,7 @@ func (r *Refresher) RunOnce(ctx context.Context) error {
 
 	var entries []TrieEntry
 	freshPerSource := map[string]int64{}
-	var anyOK bool
+	var okCount, failCount int
 
 	for _, src := range sources {
 		nets, err := r.fetchSource(ctx, src)
@@ -100,9 +125,10 @@ func (r *Refresher) RunOnce(ctx context.Context) error {
 			r.cfg.Log.Warn("classify refresh source failed",
 				"source", src.Name, "err", err)
 			r.mx.RefreshFailedTotal.WithSource(src.Name).Add(1)
+			failCount++
 			continue
 		}
-		anyOK = true
+		okCount++
 		freshPerSource[src.Name] = int64(len(nets))
 		for _, n := range nets {
 			entries = append(entries, TrieEntry{
@@ -114,35 +140,45 @@ func (r *Refresher) RunOnce(ctx context.Context) error {
 		}
 	}
 
-	if !anyOK {
+	if okCount == 0 {
 		r.mx.RefreshTotal.WithLabel("none").Add(1)
 		return errors.New("all sources failed")
 	}
 
-	// Sanity-check: refuse to swap a wildly-shrunken trie. Compares
-	// against the previous CIDRsLoaded total (proxy for live trie size,
-	// since cidranger doesn't expose Len()).
-	prevTotal := r.mx.CIDRsLoaded.Total()
+	// Sanity-check against the LAST swap's total, not the current
+	// gauge value — RunOnce resets the gauges as part of the swap, so
+	// reading them is correct only on the first refresh after restart
+	// (where prevSwapTotal is also 0). The cached field survives those
+	// restarts naturally because the Refresher itself is process-
+	// scoped.
 	freshTotal := int64(len(entries))
-	if prevTotal > 0 {
-		ratio := float64(freshTotal) / float64(prevTotal)
+	if r.prevSwapTotal > 0 {
+		ratio := float64(freshTotal) / float64(r.prevSwapTotal)
 		if ratio < r.cfg.MinShrinkRatio {
 			r.mx.RefreshTotal.WithLabel("rejected_shrink").Add(1)
 			return fmt.Errorf(
 				"refresh rejected: new=%d prev=%d ratio=%.2f threshold=%.2f",
-				freshTotal, prevTotal, ratio, r.cfg.MinShrinkRatio)
+				freshTotal, r.prevSwapTotal, ratio, r.cfg.MinShrinkRatio)
 		}
 	}
 
-	// Swap-in succeeded — only now update the per-source gauges so
-	// they reflect what's actually live.
+	// Swap-in approved — now mutate the gauge to reflect the new live
+	// state and cache the count for next time.
 	r.mx.CIDRsLoaded.Reset()
 	for name, n := range freshPerSource {
 		r.mx.CIDRsLoaded.WithSource(name).Store(n)
 	}
 
 	r.target.Store(NewTrie(entries))
-	r.mx.RefreshTotal.WithLabel("ok").Add(1)
+	r.prevSwapTotal = freshTotal
+	if failCount > 0 {
+		// Partial success: some sources contributed, others failed.
+		// Don't crow about success when the trie is missing data
+		// from a source — ops should investigate.
+		r.mx.RefreshTotal.WithLabel("ok_partial").Add(1)
+	} else {
+		r.mx.RefreshTotal.WithLabel("ok").Add(1)
+	}
 	r.mx.RefreshAgeSeconds.SetNow(r.cfg.Now)
 	return nil
 }

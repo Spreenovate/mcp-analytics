@@ -15,6 +15,9 @@
 
 name: ai-crawler-schema-check
 
+permissions:
+  contents: read
+
 on:
   schedule:
     # 06:30 UTC daily — early enough that a same-day fix can ship

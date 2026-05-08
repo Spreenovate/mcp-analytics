@@ -226,7 +226,26 @@ module Mcp
       },
       {
         name: "traffic_class_breakdown",
-        description: "Hit counts and percentages by traffic_class for the period. Returns one row per class (user / ai_user_action / ai_search / ai_training / search_index / social_unfurl / scanner / bot_other), sorted by hits descending. Useful for the 'how much of my traffic is bots / AI' question. See top_user_agents for the per-class definitions.",
+        description: <<~DESC.strip,
+          Hit counts and percentages by traffic_class for the period. Sorted by hits descending. Classes with zero hits are omitted (a missing class means no hits in that period, treat as zero).
+
+          The 8 classes (Phase 2 Cloudflare-compatible taxonomy):
+
+          - user: real human visitor with their own browser
+          - ai_user_action: live AI browse — a human is chatting with ChatGPT/Claude/Perplexity/Copilot and the assistant fetched the page on their behalf. Counts as human attention, just AI-mediated.
+          - ai_search: AI search-engine indexers (PerplexityBot, OAI-SearchBot) — your page is a candidate answer in their index
+          - ai_training: AI training crawlers (GPTBot, ClaudeBot, CCBot, Bytespider) — your content lands in training data, no human is actively reading right now
+          - search_index: classic search engines (Googlebot, Bingbot, Yandex, DuckDuckBot)
+          - social_unfurl: link-preview / social-card bots (Slackbot, facebookexternalhit, Twitterbot, LinkedInBot)
+          - scanner: security/uptime/perf monitoring (Censys, Pingdom, Lighthouse, headless Chrome from a cloud range)
+          - bot_other: recognized as a bot but not in any specific bucket, OR a UA we caught spoofing (e.g. a fake "GPTBot" coming from a random EC2 IP)
+
+          For "how much human traffic did I get?" sum hits where traffic_class is 'user' or 'ai_user_action'. The same union is also exposed as the 'humans' alias in top_user_agents' traffic_class filter.
+
+          Note on consistency: get_overview's `bot_share` field uses the same human/non-human split (excludes user + ai_user_action), so the two tools agree on what counts as bot traffic.
+
+          Note on history: rows from before Phase 2 deployed (May 2026) were reclassified by User-Agent only (we don't store IPs for privacy), so older data may under-report scanner-via-cloud-IP and over-attribute spoofed UAs.
+        DESC
         inputSchema: {
           type: "object",
           properties: {

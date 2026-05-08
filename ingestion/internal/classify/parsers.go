@@ -59,6 +59,9 @@ func parseOpenAI(body io.Reader) ([]*net.IPNet, error) {
 			}
 			if n, err := parseCIDR(raw); err == nil {
 				out = append(out, n)
+				if len(out) >= MaxEntriesPerSource {
+					return out, nil
+				}
 			}
 		}
 	}
@@ -86,6 +89,9 @@ func parseGoogle(body io.Reader) ([]*net.IPNet, error) {
 			}
 			if n, err := parseCIDR(raw); err == nil {
 				out = append(out, n)
+				if len(out) >= MaxEntriesPerSource {
+					return out, nil
+				}
 			}
 		}
 	}
@@ -122,11 +128,17 @@ func parseAWS(body io.Reader) ([]*net.IPNet, error) {
 	for _, e := range p.Prefixes {
 		if n, err := parseCIDR(e.IPPrefix); err == nil {
 			out = append(out, n)
+			if len(out) >= MaxEntriesPerSource {
+				return out, nil
+			}
 		}
 	}
 	for _, e := range p.IPv6Prefixes {
 		if n, err := parseCIDR(e.IPv6Prefix); err == nil {
 			out = append(out, n)
+			if len(out) >= MaxEntriesPerSource {
+				return out, nil
+			}
 		}
 	}
 	return out, nil
@@ -149,6 +161,12 @@ func parseGCP(body io.Reader) ([]*net.IPNet, error) {
 //   ...
 func parseCloudflare(body io.Reader) ([]*net.IPNet, error) {
 	scanner := bufio.NewScanner(body)
+	// Explicit small buffer (4 KB) — CIDR lines are at most ~50 bytes,
+	// so anything longer indicates the endpoint returned an HTML error
+	// page or got hijacked. Failing fast (with bufio.ErrTooLong) is
+	// correct behavior here; the refresh-loop's MinShrinkRatio check
+	// will then keep the previous good trie.
+	scanner.Buffer(make([]byte, 4096), 4096)
 	var out []*net.IPNet
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -157,6 +175,9 @@ func parseCloudflare(body io.Reader) ([]*net.IPNet, error) {
 		}
 		if n, err := parseCIDR(line); err == nil {
 			out = append(out, n)
+			if len(out) >= MaxEntriesPerSource {
+				return out, nil
+			}
 		}
 	}
 	if err := scanner.Err(); err != nil {
@@ -165,8 +186,31 @@ func parseCloudflare(body io.Reader) ([]*net.IPNet, error) {
 	return out, nil
 }
 
-// parseCIDR is a forgiving wrapper around net.ParseCIDR that:
+// MinIPv4Prefix is the smallest accepted IPv4 prefix length. Anything
+// broader (smaller number) is rejected as a defense against vendor-JSON
+// poisoning — a compromised endpoint pushing 0.0.0.0/0 would otherwise
+// hijack classification of the entire IPv4 space until the next refresh
+// (or forever, if combined with a swap that passes MinShrinkRatio).
+//
+// Real-world floor: AWS's broadest published prefix is /8 (e.g. 3.0.0.0/8),
+// no other vendor publishes anything broader. /8 is the right floor.
+const MinIPv4Prefix = 8
+
+// MinIPv6Prefix follows the same logic for IPv6. Vendors publish /32 or
+// narrower; nothing broader is legitimate.
+const MinIPv6Prefix = 32
+
+// MaxEntriesPerSource caps each source's contribution to defend against
+// pathologically-large vendor JSONs (a 32MB body of repeated minimal
+// entries decodes to ~1M structs and fills ~200MB heap on a single
+// refresh). At 200k entries per source we stay well under what's
+// realistic — AWS has ~6k prefixes today.
+const MaxEntriesPerSource = 200_000
+
+// parseCIDR is a wrapper around net.ParseCIDR that:
 //   - accepts a bare IP and treats it as a /32 (v4) or /128 (v6)
+//   - rejects prefixes broader than the per-family floor (defends
+//     against vendor-compromise pushing 0.0.0.0/0 etc.)
 //   - returns the IPNet only (we don't need the IP separately)
 func parseCIDR(raw string) (*net.IPNet, error) {
 	if !strings.Contains(raw, "/") {
@@ -182,5 +226,23 @@ func parseCIDR(raw string) (*net.IPNet, error) {
 		return n, err
 	}
 	_, n, err := net.ParseCIDR(raw)
-	return n, err
+	if err != nil || n == nil {
+		return n, err
+	}
+	ones, bits := n.Mask.Size()
+	switch bits {
+	case 32:
+		if ones < MinIPv4Prefix {
+			return nil, fmt.Errorf("ipv4 prefix /%d too broad (min /%d): %s",
+				ones, MinIPv4Prefix, raw)
+		}
+	case 128:
+		if ones < MinIPv6Prefix {
+			return nil, fmt.Errorf("ipv6 prefix /%d too broad (min /%d): %s",
+				ones, MinIPv6Prefix, raw)
+		}
+	default:
+		return nil, fmt.Errorf("unexpected mask bits=%d in %s", bits, raw)
+	}
+	return n, nil
 }

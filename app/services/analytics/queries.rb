@@ -82,10 +82,16 @@ module Analytics
         LIMIT 1
       SQL
 
-      # Bot share: deliberately does NOT filter traffic_class — we want the ratio.
+      # Bot share: deliberately does NOT filter traffic_class — we want
+      # the ratio. "Bot" here means non-human, so it excludes BOTH 'user'
+      # (real visitor with their own browser) AND 'ai_user_action' (a
+      # human chatting with ChatGPT/Claude where the assistant fetched
+      # the page on their behalf — counts as human attention, just
+      # AI-mediated). This matches the IsHuman() semantics in the Go
+      # classifier and the `humans` filter alias in top_user_agents.
       bot_row = @client.query(<<~SQL, params: scope_params(period)).first || {}
         SELECT
-          countIf(traffic_class != 'user') AS bot_hits,
+          countIf(traffic_class NOT IN ('user', 'ai_user_action')) AS bot_hits,
           count() AS total_hits
         FROM events
         WHERE site_id = {site:String}

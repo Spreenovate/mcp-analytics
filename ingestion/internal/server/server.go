@@ -104,24 +104,13 @@ func (s *Server) handleEvent(w http.ResponseWriter, r *http.Request) {
 	userAgent := r.Header.Get("User-Agent")
 	ip := clientIP(r)
 
-	// Phase 2 bot classification: 8-value Cloudflare-compatible
-	// taxonomy (user / ai_user_action / ai_search / ai_training /
-	// search_index / social_unfurl / scanner / bot_other). Combines
-	// UA pattern matching, IP-range trie lookup (refreshed every 6h
-	// from vendor JSONs), reverse-DNS for Anthropic, and a generic-
-	// browser-from-cloud-IP heuristic. See internal/classify for the
-	// full decision tree.
-	//
-	// Default analytics queries continue to filter traffic_class='user';
-	// the new top_user_agents and traffic_class_breakdown MCP tools
-	// surface the rest. Classifier is wired in cmd/ingest/main.go and
-	// must be non-nil — defensive nil check for tests that construct
-	// Server inline.
-	trafficClass := classify.ClassUser
-	if s.Classifier != nil {
-		trafficClass = s.Classifier.Classify(userAgent, net.ParseIP(ip))
-	}
-
+	// Cheap gates first — drop traffic before doing any classification
+	// work that could be exploited as an amplifier (DNS lookups, trie
+	// walks). Earlier versions of this handler called Classifier above
+	// these gates, which meant attacker-controlled XFF + a flood of
+	// random IPs could trigger DNS lookups for unknown sites or
+	// rate-limited traffic. Order matters: ipblock → site lookup →
+	// rate-limit → classify.
 	if s.IPBlock != nil && s.IPBlock.IsBlocked(ip) {
 		return
 	}
@@ -137,6 +126,20 @@ func (s *Server) handleEvent(w http.ResponseWriter, r *http.Request) {
 
 	if !s.Limiter.Allow(site.SiteID) {
 		return
+	}
+
+	// Phase 2 bot classification: 8-value Cloudflare-compatible
+	// taxonomy (user / ai_user_action / ai_search / ai_training /
+	// search_index / social_unfurl / scanner / bot_other). Combines
+	// UA pattern matching, IP-range trie lookup (refreshed every 6h
+	// from vendor JSONs), reverse-DNS for Anthropic (gated by UA
+	// hint to avoid DoS amplification), and a generic-browser-from-
+	// cloud-IP heuristic. See internal/classify for the full
+	// decision tree. Classifier is wired in cmd/ingest/main.go;
+	// the nil-guard is for tests that construct Server inline.
+	trafficClass := classify.ClassUser
+	if s.Classifier != nil {
+		trafficClass = s.Classifier.Classify(userAgent, net.ParseIP(ip))
 	}
 
 	name := in.Name
@@ -270,11 +273,27 @@ func isValidVisitorID(s string) bool {
 	return true
 }
 
+// clientIP extracts the real client IP from the X-Forwarded-For chain.
+//
+// Trust assumption: kamal-proxy is the ONLY trusted proxy in front of
+// the Go ingest. kamal-proxy *appends* the connecting client's IP to
+// XFF (rather than overwriting), so the rightmost entry is what
+// kamal-proxy added — the client we want. Earlier entries can come
+// from anywhere (the public internet) and are attacker-controlled.
+//
+// Phase 1 took the LEFTMOST entry, which let an attacker spoof their
+// classification IP by sending `X-Forwarded-For: 23.98.142.180` (an
+// OpenAI range). With Phase 2 IP-range classification this would
+// turn the spoof-detection logic upside down — the attacker controls
+// the IP we use for classifesAgree(). Taking the rightmost fixes it.
+//
+// If we ever add a CDN (Cloudflare, etc.) in front of kamal-proxy,
+// this needs to count back N entries where N = number of trusted
+// proxies in the chain. Single proxy today.
 func clientIP(r *http.Request) string {
-	// kamal-proxy forwards the client IP in X-Forwarded-For. Take the first hop.
 	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		if i := strings.Index(xff, ","); i > 0 {
-			return strings.TrimSpace(xff[:i])
+		if i := strings.LastIndex(xff, ","); i >= 0 {
+			return strings.TrimSpace(xff[i+1:])
 		}
 		return strings.TrimSpace(xff)
 	}

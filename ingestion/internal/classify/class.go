@@ -33,10 +33,9 @@
 //
 // The default-deny shape is intentional: unmatched bots fall to
 // bot_other rather than being dropped, so customers can still see the
-// long-tail traffic. UA="" alone is no longer treated as bot — many
-// legitimate clients (server-side fetches, RSS readers, federated
-// services) send no UA and we'd rather classify them as bot_other than
-// hide them.
+// long-tail traffic. UA="" classifies as bot_other (real browsers
+// always send a UA), but unlike Phase 1 we don't drop it — the row
+// is written so customers can see the traffic and decide what to do.
 package classify
 
 // Class is one of the eight traffic-class string constants below. Stored

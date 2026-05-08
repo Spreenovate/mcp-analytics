@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [main]
 
+# Default-deny — workflow only needs to read the repo to run tests.
+# Anything that needs write access (e.g. comment on a PR, push a tag)
+# would have to grant itself permission explicitly.
+permissions:
+  contents: read
+
 jobs:
   rails-test:
     name: Rails 8 tests

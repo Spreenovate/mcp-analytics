@@ -48,6 +48,7 @@ var uaPatterns = []uaPattern{
 	{"perplexity-user", ClassAIUserAction},
 	{"copilot-user", ClassAIUserAction}, // Microsoft Copilot live-fetches
 	{"meta-externalfetcher", ClassAIUserAction},
+	{"mistralai-user", ClassAIUserAction}, // Mistral live-fetch (-user suffix convention)
 
 	// --- ai_search: AI search-engine indexers ------------------------
 	// They build an index used to answer queries with citations. Closer
@@ -73,7 +74,6 @@ var uaPatterns = []uaPattern{
 	{"applebot-extended", ClassAITraining},
 	{"cohere-ai", ClassAITraining},
 	{"cohere-training-data-crawler", ClassAITraining},
-	{"mistralai-user", ClassAITraining},
 	{"omgili", ClassAITraining},
 	{"webzbot", ClassAITraining},
 	{"timpibot", ClassAITraining},
