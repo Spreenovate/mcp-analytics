@@ -39,7 +39,7 @@ jobs:
         working-directory: ingestion
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: ingestion/go.mod
           cache-dependency-path: ingestion/go.sum
