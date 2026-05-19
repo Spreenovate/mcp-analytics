@@ -1,0 +1,208 @@
+<%
+  base_url = ENV.fetch("PUBLIC_BASE_URL", "https://mcp-analytics.com")
+%>
+<% content_for(:title, "AI Crawler Index — GPTBot, ClaudeBot, PerplexityBot hits | mcp-analytics") %>
+<% content_for(:description, "Live tracking of AI crawler traffic across mcp-analytics-tracked sites. GPTBot, ClaudeBot, PerplexityBot, Bytespider, and more. Hits, week-over-week trends, robots.txt tokens.") %>
+<% content_for(:body_class, "home article") %>
+<% content_for(:head) do %>
+  <%= render "shared/article_styles" %>
+  <style>
+    body.home.article table.crawlers {
+      width: 100%; border-collapse: collapse; margin: 16px 0 32px;
+      font-family: "JetBrains Mono", monospace; font-size: 13px;
+    }
+    body.home.article table.crawlers th,
+    body.home.article table.crawlers td {
+      border: 2px solid var(--fg); padding: 10px 12px; text-align: left;
+      vertical-align: top;
+    }
+    body.home.article table.crawlers th {
+      background: var(--fg); color: var(--bg);
+      font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em;
+    }
+    body.home.article table.crawlers td.num { text-align: right; }
+    body.home.article table.crawlers .wow-up { color: #007733; font-weight: 700; }
+    body.home.article table.crawlers .wow-down { color: #aa0000; font-weight: 700; }
+    body.home.article table.crawlers .wow-flat { color: #555; }
+    body.home.article .disclaimer {
+      background: #fffaeb;
+      border: var(--border) solid var(--fg);
+      padding: 20px 22px;
+      margin: 24px 0;
+      font-size: 14px;
+    }
+    body.home.article .disclaimer strong { display: block; margin-bottom: 6px; }
+    body.home.article .stats-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;
+      margin: 24px 0;
+    }
+    body.home.article .stats-grid .stat {
+      border: var(--border) solid var(--fg);
+      padding: 16px 18px;
+    }
+    body.home.article .stats-grid .stat .label {
+      font-family: "JetBrains Mono", monospace; font-size: 10px;
+      text-transform: uppercase; letter-spacing: 0.14em;
+      color: #666; margin-bottom: 6px;
+    }
+    body.home.article .stats-grid .stat .value {
+      font-family: "Space Grotesk", sans-serif; font-weight: 900;
+      font-size: 28px; line-height: 1;
+    }
+  </style>
+<% end %>
+
+<div class="wrap">
+  <%= render "shared/topnav" %>
+
+  <h1>AI <span class="accent">Crawler</span> Index</h1>
+
+  <div class="article-meta">
+    Last updated <%= @last_updated.strftime("%Y-%m-%d") %>
+    <span class="dot">·</span>
+    Window: <%= @summary[:window_days] %> days
+    <span class="dot">·</span>
+    Sample: <%= @sample_size_sites %> site
+    <span class="dot">·</span>
+    <a href="/blog/llms-txt-explained">Why this matters</a>
+  </div>
+
+  <div class="disclaimer">
+    <strong>Heads up — this is a single-site demo (N=1) for now.</strong>
+    The data on this page is mcp-analytics.com's own crawler traffic, May 2026.
+    The page exists as a working preview of the format. Once ≥50 paying customers
+    are on the Pro tier, the index switches to an anonymized aggregate across all
+    Pro sites, refreshed weekly. Sign up for free at <a href="/">mcp-analytics.com</a>
+    and your traffic helps build the aggregate (no individual site is identifiable
+    in the published index).
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat">
+      <div class="label">AI Crawler Share</div>
+      <div class="value"><%= @summary[:crawler_share_pct] %>%</div>
+    </div>
+    <div class="stat">
+      <div class="label">AI-mediated browsing</div>
+      <div class="value"><%= @summary[:ai_user_action_share_pct] %>%</div>
+    </div>
+  </div>
+
+  <div class="article-body">
+    <h2>Top AI crawlers, last 30 days</h2>
+    <table class="crawlers">
+      <thead>
+        <tr>
+          <th>Bot</th>
+          <th>Operator</th>
+          <th>Hits</th>
+          <th>Share</th>
+          <th>WoW</th>
+          <th>robots.txt</th>
+          <th>Note</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @entries.each do |e| %>
+          <tr>
+            <td><strong><%= e[:bot] %></strong></td>
+            <td><%= e[:operator] %></td>
+            <td class="num"><%= number_with_delimiter(e[:hits]) %></td>
+            <td class="num"><%= e[:share_pct] %>%</td>
+            <td class="num">
+              <% if e[:wow_pct] > 0 %>
+                <span class="wow-up">+<%= e[:wow_pct] %>%</span>
+              <% elsif e[:wow_pct] < 0 %>
+                <span class="wow-down"><%= e[:wow_pct] %>%</span>
+              <% else %>
+                <span class="wow-flat">±0%</span>
+              <% end %>
+            </td>
+            <td><code><%= e[:robots_token] %></code></td>
+            <td><%= e[:note] %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+
+    <h2>What's interesting in this snapshot</h2>
+    <p>
+      <strong>OpenAI and Anthropic dominate.</strong> GPTBot, ClaudeBot,
+      OAI-SearchBot, and Claude-Web together account for over 80% of AI
+      crawler hits we see. PerplexityBot is the fastest-growing, up
+      30% week-over-week.
+    </p>
+    <p>
+      <strong>Bytespider down.</strong> ByteDance's crawler had been
+      aggressive through 2024-2025 but has cooled off in 2026,
+      consistent with our reading of their robots.txt-respecting
+      patterns improving.
+    </p>
+    <p>
+      <strong>DuckAssistBot just appeared.</strong> Q2 2026 we saw
+      DuckDuckGo's AI assist crawler in our logs for the first time.
+      Small volume but rising 25% WoW.
+    </p>
+    <p>
+      <strong>Common Crawl flat.</strong> CCBot's volume is
+      structurally bound to its monthly bulk-crawl cadence — usually
+      it's a single multi-day spike, not steady traffic.
+    </p>
+
+    <h2>Method</h2>
+    <p>
+      Hits classified via <a href="/mcp/tools/traffic-class-breakdown"><code>traffic_class_breakdown</code></a>
+      — eight Cloudflare-compatible buckets including
+      <code>ai_crawler</code> (this index),
+      <code>ai_user_action</code> (Claude/ChatGPT fetching for a user, not shown here),
+      and <code>verified_search_bot</code> (Google, Bing — also not shown).
+    </p>
+    <p>
+      User-agent matching uses
+      <a href="https://github.com/Spreenovate/mcp-analytics">our open
+      pattern list</a> plus FCrDNS verification for operators that publish
+      verifiable IP ranges (Anthropic, OpenAI). UA spoofing is mitigated
+      by reverse-DNS + forward-DNS round-tripping; bots claiming to be
+      GPTBot but routing from cloud IPs without proper verification land
+      in <code>unverified_bot</code>, not here.
+    </p>
+
+    <h2>What to do with this data</h2>
+    <p>If you're a site operator:</p>
+    <ul>
+      <li>
+        Decide whether to <code>Allow:</code> or <code>Disallow:</code>
+        each bot in your <code>robots.txt</code>. For an
+        SEO/discoverability play, allow GPTBot, ClaudeBot, PerplexityBot,
+        OAI-SearchBot — the answer-grounding tokens. For an
+        opt-out-of-training play, disallow them.
+      </li>
+      <li>
+        Notice if a crawler is over-aggressive (excessive hits, slow
+        page-load impact). Use Cloudflare's bot management or
+        your hosting platform's rate-limiting.
+      </li>
+      <li>
+        Cross-reference with our <a href="/blog/llms-txt-explained">llms.txt explainer</a>
+        — robots allow + an <code>llms.txt</code> + standard SEO is the
+        complete AI-search stack.
+      </li>
+    </ul>
+
+    <h2>Track your own crawler share</h2>
+    <p>
+      Sign up free at <a href="/">mcp-analytics.com</a>, paste the
+      tracking snippet on your site, and ask Claude:
+    </p>
+    <pre><code>"How much of mysite.com's traffic is ai_crawler?"
+"Show me top user agents in the ai_crawler class last 30 days."
+"WoW change in GPTBot hits."</code></pre>
+    <p>
+      Free tier: 100,000 hits/month, unlimited sites, no card. Your
+      contributions feed the aggregate index once we reach launch
+      threshold — no identifiable per-site data is published.
+    </p>
+  </div>
+
+  <%= render "shared/article_footer", lang: "en" %>
+</div>

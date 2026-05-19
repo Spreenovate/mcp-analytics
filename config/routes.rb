@@ -86,6 +86,11 @@ Rails.application.routes.draw do
   get "/mcp/tools"        => "mcp_tools#index", as: :mcp_tools
   get "/mcp/tools/:slug"  => "mcp_tools#show",  as: :mcp_tool, constraints: { slug: /[a-z0-9][a-z0-9\-_]*/ }
 
+  # AI-crawler observability page — moat content. Static shell with
+  # N=1 demo pre-launch; swap to live ClickHouse aggregates once we
+  # have ≥50 Pro customers (see CONTENT_MARKETING.md §C).
+  get "/ai-crawler-index" => "ai_crawler_index#show", as: :ai_crawler_index
+
   # Dynamic sitemap — replaces the static public/sitemap.xml so blog
   # posts and comparison pages get picked up automatically.
   get "/sitemap.xml" => "sitemaps#show", as: :sitemap

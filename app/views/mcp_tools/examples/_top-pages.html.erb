@@ -1,0 +1,30 @@
+<p>Ask:</p>
+
+<pre><code>"What are my top pages on mysite.com last 30 days?"
+"Top 20 pages for example.com this week."
+"Which URLs are getting the most traffic right now?"</code></pre>
+
+<p>A typical response, formatted by Claude:</p>
+
+<pre><code>Top pages for mysite.com (last 30 days):
+
+  1. /                            14,232 views
+  2. /pricing                      8,914 views
+  3. /blog/llms-txt-explained      4,847 views
+  4. /docs                         3,210 views
+  5. /vs/google-analytics          2,891 views
+  6. /blog/claude-mcp-setup        2,447 views
+  7. /vs/plausible                 2,108 views
+  8. /de/blog/mcp-server-anleitung 1,963 views
+  9. /docs/setup                   1,442 views
+ 10. /privacy                      1,287 views</code></pre>
+
+<p>Returns an array of <code>{ path, pageviews }</code> objects. Counts
+include both direct browser visits and AI-mediated human browsing
+(<code>ai_user_action</code> — e.g. Claude fetching a page on a user's
+behalf). If you need to separate them, follow up with
+<a href="/mcp/tools/traffic-class-breakdown"><code>traffic_class_breakdown</code></a>.</p>
+
+<p>For long-tail SEO investigation you can stack this with
+<a href="/mcp/tools/compare-periods"><code>compare_periods</code></a> to
+identify pages that grew or fell sharply between periods.</p>

@@ -1,0 +1,36 @@
+<p>Ask:</p>
+
+<pre><code>"Show me pageviews day-by-day for the last 30 days on mysite.com."
+"Hourly visitor count for the last 24 hours."
+"Weekly trend for sessions over the past quarter."</code></pre>
+
+<p>A typical response:</p>
+
+<pre><code>Pageviews, daily, last 30 days for mysite.com:
+
+  2026-04-20    1,847
+  2026-04-21    1,920
+  2026-04-22    2,114
+  2026-04-23    1,887  ← spike (HN thread)
+  ...
+  2026-05-17    8,114
+  2026-05-18    7,420
+  2026-05-19    2,890</code></pre>
+
+<p>Returns an array of <code>{ ts, value }</code> objects.</p>
+
+<p>The <code>metric</code> argument controls what's measured —
+<code>pageviews</code>, <code>visitors</code>, or <code>sessions</code>.
+The <code>granularity</code> argument controls bucket size —
+<code>hour</code>, <code>day</code>, or <code>week</code>. Long periods
+at hour-granularity return a lot of rows; consider day or week for
+ranges over 30 days.</p>
+
+<p>Counts include AI-mediated human browsing. See
+<a href="/mcp/tools/traffic-class-breakdown"><code>traffic_class_breakdown</code></a>
+to see the AI-vs-direct split if it matters for your interpretation.</p>
+
+<p>Pair with
+<a href="/mcp/tools/compare-periods"><code>compare_periods</code></a>
+for headline-style "is this up or down?" rather than the full
+day-by-day list.</p>

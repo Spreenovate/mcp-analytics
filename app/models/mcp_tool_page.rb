@@ -78,8 +78,9 @@ class McpToolPage
   end
 
   # Examples partial. Returns the partial path if a file exists, else nil.
+  # Partials live at app/views/mcp_tools/examples/_{slug}.html.erb.
   def example_partial
-    candidate = Rails.root.join("app/views/mcp_tools/_examples/_#{slug}.html.erb")
+    candidate = Rails.root.join("app/views/mcp_tools/examples/_#{slug}.html.erb")
     candidate.file? ? "mcp_tools/examples/#{slug}" : nil
   end
 end

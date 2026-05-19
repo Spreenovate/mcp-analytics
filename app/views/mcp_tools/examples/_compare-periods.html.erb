@@ -1,0 +1,38 @@
+<p>Ask:</p>
+
+<pre><code>"Compare last 7 days vs the previous 7 days for mysite.com."
+"How does this month look compared to last month?"
+"Pageviews trend week-over-week."</code></pre>
+
+<p>A typical response:</p>
+
+<pre><code>Pageviews — last 7 days vs previous 7 days:
+
+  Period A (May 12-18):  42,180
+  Period B (May 5-11):   31,420
+  Change:                +34.2%
+  Absolute delta:        +10,760
+
+  Best day in A:  May 16 (8,114 views)
+  Best day in B:  May 9  (5,847 views)</code></pre>
+
+<p>Returns a single object with both period values, the percentage and
+absolute delta, and bucket info if the period is sub-week granularity.</p>
+
+<p>Period strings the parser understands:</p>
+
+<ul>
+  <li><code>last_7_days</code>, <code>last_30_days</code>, <code>last_90_days</code></li>
+  <li><code>previous_7_days</code>, <code>previous_30_days</code></li>
+  <li><code>this_week</code>, <code>last_week</code>, <code>this_month</code>, <code>last_month</code></li>
+  <li><code>last_24_hours</code>, <code>last_hour</code></li>
+  <li><code>YYYY-MM-DD..YYYY-MM-DD</code> for explicit ranges</li>
+</ul>
+
+<p>Volume metric — counts include AI-mediated human browsing. If you want
+to compare only direct browser traffic, you can filter using
+<code>traffic_class_breakdown</code> for each period instead.</p>
+
+<p>Common workflow: pair with
+<a href="/mcp/tools/top-pages"><code>top_pages</code></a> on both
+periods to identify pages driving the change.</p>

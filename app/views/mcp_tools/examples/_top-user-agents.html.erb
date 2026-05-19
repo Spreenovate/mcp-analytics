@@ -1,0 +1,45 @@
+<p>Ask:</p>
+
+<pre><code>"Which bots are hitting mysite.com? Show me the top 20 user agents."
+"Show me only ai_crawler user agents for the last 7 days."
+"What's the user-agent breakdown for unverified_bot traffic?"</code></pre>
+
+<p>A typical response (filtered to <code>ai_crawler</code>):</p>
+
+<pre><code>Top user agents — ai_crawler class (last 30 days):
+
+  Mozilla/5.0 (compatible; GPTBot/1.2; +https://openai.com/gptbot)
+                                                      2,847 hits
+  Mozilla/5.0 (compatible; ClaudeBot/1.0; +claudebot@anthropic.com)
+                                                      1,612 hits
+  PerplexityBot/1.0 (+https://www.perplexity.ai/bot)
+                                                        802 hits
+  Mozilla/5.0 (compatible; OAI-SearchBot/1.0; +https://openai.com/searchbot)
+                                                        412 hits
+  Mozilla/5.0 (compatible; CCBot/2.0; +https://commoncrawl.org/...)
+                                                        148 hits
+  Anthropic/Claude-Web (+https://www.anthropic.com/claude/web)
+                                                         92 hits
+  Mozilla/5.0 (compatible; Bytespider; +https://www.bytedance.com/spider)
+                                                         71 hits
+  Mozilla/5.0 (compatible; Applebot-Extended/1.0; +http://www.apple.com/go/applebot)
+                                                         48 hits</code></pre>
+
+<p>Default analytics queries hide everything except the
+<code>user</code> traffic class. This tool surfaces the rest. Pass
+<code>traffic_class</code> to filter to one bucket
+(<code>user</code>, <code>ai_user_action</code>, <code>ai_crawler</code>,
+<code>verified_search_bot</code>, <code>unverified_bot</code>,
+<code>cloud_egress</code>, <code>headless_browser</code>, <code>unknown</code>),
+or omit it to see everything.</p>
+
+<p>This is one of the more popular tools — AI crawler activity changed
+substantially through 2025 and 2026, and most analytics products silently
+filter it. Seeing the actual UAs lets you decide whether to
+<code>Allow:</code> or <code>Disallow:</code> them in your
+<code>robots.txt</code>, and whether AI crawler hits are a meaningful
+share of your origin load.</p>
+
+<p>Common follow-up: cross-reference unfamiliar UAs against
+<a href="https://www.cloudflare.com/learning/ai/what-is-an-ai-crawler/">Cloudflare's AI crawler taxonomy</a>
+or our own <a href="/ai-crawler-index">AI crawler index</a>.</p>

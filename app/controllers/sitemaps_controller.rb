@@ -21,6 +21,7 @@ class SitemapsController < ApplicationController
     entries << { loc: "#{BASE_URL}/vs",      changefreq: "monthly", priority: 0.6 }
     entries << { loc: "#{BASE_URL}/de/vs",   changefreq: "monthly", priority: 0.6 }
     entries << { loc: "#{BASE_URL}/mcp/tools", changefreq: "monthly", priority: 0.6 }
+    entries << { loc: "#{BASE_URL}/ai-crawler-index", changefreq: "weekly", priority: 0.7 }
 
     # Blog posts (EN + DE).
     BlogPost::LOCALES.each do |locale|

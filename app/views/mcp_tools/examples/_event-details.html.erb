@@ -1,0 +1,50 @@
+<p>Ask:</p>
+
+<pre><code>"Show me details for the signup_started event on mysite.com last 30 days."
+"How is the spring_launch_clicked event split by referrer?"
+"For the demo_booked event, group by source."</code></pre>
+
+<p>A typical response, grouped by <code>referrer_host</code>:</p>
+
+<pre><code>Event signup_started — last 30 days, grouped by referrer_host:
+
+  news.ycombinator.com    72 events
+  twitter.com             58 events
+  reddit.com              41 events
+  (direct)                34 events
+  dev.to                  22 events
+  google.com              19 events
+  perplexity.ai            8 events
+  duckduckgo.com           6 events</code></pre>
+
+<p>Returns event counts segmented by a property of your choice. The
+<code>group_by_property</code> argument can be any property you attach
+when firing the event (e.g. <code>plan</code>, <code>variant</code>,
+<code>source</code>) plus the built-in dimensions
+<code>referrer_host</code>, <code>utm_source</code>, <code>browser</code>,
+<code>device_type</code>, <code>country</code>.</p>
+
+<p>Volume metric — counts include AI-mediated human browsing if the
+event was fired from a Claude/ChatGPT-fetched page.</p>
+
+<p>To fire custom events from your JS:</p>
+
+<pre><code>window.mcpa?.event('signup_started', {
+  plan: 'pro',
+  source: 'pricing_cta'
+});</code></pre>
+
+<p>From your backend (Pro tier, via the <code>record_event</code> tool or
+the server-side SDK):</p>
+
+<pre><code>POST https://t.mcp-analytics.com/event
+Content-Type: application/json
+{
+  "site_id": "abc12345",
+  "event_name": "demo_booked",
+  "properties": { "rep": "alex", "deal_size": "10k" }
+}</code></pre>
+
+<p>List all event names with
+<a href="/mcp/tools/list-events"><code>list_events</code></a> first if
+you're not sure what's being tracked.</p>

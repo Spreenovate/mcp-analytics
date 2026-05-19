@@ -1,0 +1,30 @@
+<p>Ask Claude or any MCP client connected to mcp-analytics things like:</p>
+
+<pre><code>"How did mysite.com do last week?"
+"Give me a summary for example.com — last 30 days."
+"Quick overview for my main site — past 24 hours."</code></pre>
+
+<p>Claude picks <code>get_overview</code> automatically. A real example response (formatted by Claude from the structured tool output):</p>
+
+<pre><code>67,348 pageviews (↑ 8% week-over-week), 22,104 unique visitors,
+13,440 sessions. Bounce rate 41%. Average session duration 2m 14s.
+
+Top page: /pricing (4,232 views).
+Top traffic source: hacker news (1,847 visits — a thread from
+last Wednesday is driving most of it).
+Bot share: 11% (mostly Googlebot + GPTBot).
+Top 3 custom events: signup_started (412), tracking_added (87),
+account_created (74).</code></pre>
+
+<p>The tool returns a single object with all the headline metrics plus
+<code>pageviews_change_pct</code> versus the previous equivalent period —
+designed so one tool call answers the "how did X go?" question without
+chaining further calls.</p>
+
+<p>Volume metrics here (pageviews, visitors, sessions, bot_share) include
+AI-mediated human browsing (the <code>ai_user_action</code> traffic class
+— Claude or ChatGPT fetching a page on a user's behalf). Attribution
+metrics (the <code>top_source</code> field) count direct browser visits
+only, because AI-mediated traffic loses original UTM and referrer tags.
+See <a href="/mcp/tools/traffic-class-breakdown"><code>traffic_class_breakdown</code></a>
+for the per-class split.</p>

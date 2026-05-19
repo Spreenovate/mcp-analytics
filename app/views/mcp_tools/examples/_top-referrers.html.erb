@@ -1,0 +1,38 @@
+<p>Ask:</p>
+
+<pre><code>"Where is mysite.com traffic coming from this week?"
+"Top referrers for the last 30 days — anything new?"
+"Show me my top 20 referrers."</code></pre>
+
+<p>A typical response:</p>
+
+<pre><code>Top referrers for mysite.com (last 7 days):
+
+  news.ycombinator.com   1,847 visits
+  twitter.com              612 visits
+  reddit.com               487 visits
+  bluesky.app              312 visits
+  dev.to                   258 visits
+  google.com (organic)     244 visits
+  perplexity.ai            147 visits  ← AI-mediated human
+  chatgpt.com              124 visits  ← AI-mediated human
+  duckduckgo.com            89 visits
+  linkedin.com              71 visits</code></pre>
+
+<p>Returns an array of <code>{ referrer_host, visits }</code> objects.</p>
+
+<p><strong>Attribution metric</strong> — counts direct browser visits only
+(the <code>user</code> traffic class). AI-mediated traffic
+(<code>ai_user_action</code> — Claude or ChatGPT fetching on a user's
+behalf) is excluded from this list, because the AI sets its own host as
+the referrer or strips it; including it would inflate "direct" or
+"claude.ai" without telling you where the human attention actually
+came from. Use
+<a href="/mcp/tools/traffic-class-breakdown"><code>traffic_class_breakdown</code></a>
+to see the AI-mediated share separately.</p>
+
+<p>The "AI-mediated human" lines above (<code>perplexity.ai</code>,
+<code>chatgpt.com</code>) ARE included here — they're humans clicking
+through from those services in their browser, not the AI fetching for
+them. That distinction matters for understanding AI's role in your
+acquisition funnel.</p>

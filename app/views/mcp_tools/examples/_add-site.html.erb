@@ -1,0 +1,43 @@
+<p>Ask:</p>
+
+<pre><code>"Add example.com to my mcp-analytics account in strict privacy mode."
+"Set up tracking for newsite.com — balanced mode."
+"Add mysecondsite.com."</code></pre>
+
+<p>A typical response (after Claude requests your approval to call this
+write tool):</p>
+
+<pre><code>Added example.com to your account.
+
+  site_id:       abc12345
+  privacy_mode:  strict (no cookies, daily-rotating salt)
+  created_at:    2026-05-19T14:33:21Z
+
+Paste this snippet into the &lt;head&gt; of every page you want
+tracked:
+
+  &lt;script defer
+    data-site="abc12345"
+    src="https://t.mcp-analytics.com/script.js"&gt;&lt;/script&gt;
+
+That's it. No further configuration needed.</code></pre>
+
+<p>Returns the new site object plus the tracking snippet. The
+<code>site_id</code> is permanent and public. The
+<code>privacy_mode</code> is set once at creation and cannot be changed
+later — choose carefully:</p>
+
+<ul>
+  <li><strong><code>strict</code> (recommended for EU sites)</strong> — no cookies, no persistent visitor ID, daily-rotating salt. No cookie banner required under typical EU interpretation.</li>
+  <li><strong><code>balanced</code></strong> — no cookies, same-day session/visitor dedup via salted hash. Most common middle ground.</li>
+  <li><strong><code>all</code></strong> — persistent cookie, cross-session tracking. You handle the consent banner.</li>
+</ul>
+
+<p>This is one of two write tools you'll call regularly during
+onboarding (the other being
+<a href="/mcp/tools/get-tracking-snippet"><code>get_tracking_snippet</code></a>
+when you lose the snippet and need it again). Claude will prompt for
+your approval before invoking it on the first call.</p>
+
+<p>Free tier allows unlimited sites; the 100k hits/month cap is
+account-wide across all sites combined.</p>
