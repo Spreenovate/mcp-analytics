@@ -60,11 +60,11 @@ Simple Analytics is the radically minimalist take on web analytics. No cookies, 
 
 **MCP primary interface.** You ask in chat, you get an answer. Simple Analytics has an API for programmatic access, but no chat interface.
 
-**Custom events as a first-class concept.** Simple Analytics's events story is limited. You can track them but the workflow is constrained compared to ours. Pro tier adds the server-side SDK so you can `record_event` from your backend (webhooks, cron, server-side conversions).
+**Custom events as a first-class concept.** Simple Analytics's events story is limited. You can track them but the workflow is constrained compared to ours. Our ingest endpoint accepts `POST /event` directly from your backend (webhooks, cron, server-side conversions); first-party Ruby/npm wrappers are on the Pro roadmap.
 
 **AI crawler visibility.** Simple Analytics filters bots; we surface them across 8 classes.
 
-**Server-side SDK plus deploy regression** (Pro). Ruby gem, npm package, GitHub Action with `record_deploy` / `regression_check` MCP tools. Simple Analytics doesn't have either.
+**Deploy-regression tracking on the Pro roadmap.** GitHub Action plus MCP tools to flag traffic anomalies caused by a deploy. Simple Analytics has nothing similar.
 
 ## When you should pick Simple Analytics
 

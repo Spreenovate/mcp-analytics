@@ -80,7 +80,7 @@ Fathom hat eine API, aber kein Chat-Interface. Ihr Dashboard verlangt einen Tab 
 
 **AI-Crawler-Sicht.** Wir klassifizieren Traffic in acht Buckets inklusive `ai_user_action` (Claude oder ChatGPT holt eine Page für einen User), `ai_crawler` (GPTBot, ClaudeBot, etc.) und `verified_search_bot` (Googlebot et al). Fathom filtert Bots still. Du siehst deinen GPTBot-Anteil nicht.
 
-**Server-Side-SDK plus Custom Events vom Backend.** Pro-Tier hat ein Ruby-Gem, npm-Package, Pixel-Endpoint und das `record_event` MCP-Tool. Du kannst Webhook-Deliveries, Server-Side-Conversions, Cron-Jobs tracken. Alles, was der JS-Tracker nie sieht. Fathom ist JS-only auf Cloud (die selbst-gehostete Lite-Version ist anders).
+**Server-Side-Events vom Backend.** Unser Ingest-Endpoint nimmt `POST /event` direkt entgegen. Du kannst Webhook-Deliveries, Server-Side-Conversions, Cron-Jobs tracken. Alles, was der JS-Tracker nie sieht. Erst-Party Ruby-Gem und npm-Wrapper sind auf der Pro-Roadmap. Fathom ist JS-only auf Cloud (die selbst-gehostete Lite-Version ist anders).
 
 ## Wann du Fathom nehmen solltest
 

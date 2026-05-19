@@ -31,7 +31,7 @@ table:
     us: "EU-gehostet, keine Drittland-Übertragung, keine Cookies (Strict). Gebaut für EU-Indie-Sites."
     them: "Schrems-II-Probleme. AV-Vertrag plus IP-Anonymisierung plus Consent-Banner Pflicht. Mehrere DSB haben GA4 in Default-Konfiguration als rechtswidrig eingestuft."
   - feature: "Funnel- / Werbe-Attribution"
-    us: "Custom Events plus UTM-Tracking. Keinen Funnel-Builder."
+    us: "Custom Events plus UTM-Tracking. Kein Funnel-Builder."
     them: "Volle Funnel-Attribution, Google-Ads-Integration, Conversion-Modellierung, Audience-Builder."
   - feature: "Bot / AI-Crawler-Sicht"
     us: "8 Traffic-Klassen inklusive AI-Crawler (GPTBot, ClaudeBot etc.). Eigenes MCP-Tool dafür."

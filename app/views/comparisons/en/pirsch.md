@@ -75,7 +75,7 @@ Claude: "Pageviews 42,180 vs 31,420, up 34%. The big jump is on
 
 **Bot crawler visibility.** Pirsch tracks AI-referrer (human-from-AI). We additionally classify AI crawlers themselves (GPTBot, ClaudeBot, PerplexityBot, ByteSpider, etc.). You see how often your site is being indexed by AI training/answer systems. Pirsch filters those out silently.
 
-**Server-side SDK** (Pro). Ruby gem, npm package, pixel endpoint, `record_event` MCP tool for webhook/cron/server-side conversion tracking. Pirsch is JS-only.
+**Server-side events.** Our ingest endpoint accepts `POST /event` directly for webhook/cron/server-side conversion tracking. First-party Ruby gem and npm wrappers are on the Pro roadmap. Pirsch is JS-only.
 
 **Truly unlimited sites on all tiers**, including free. Pirsch caps Standard at 50 sites. Generous, but a cap.
 

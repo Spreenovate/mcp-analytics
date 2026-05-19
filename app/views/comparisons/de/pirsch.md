@@ -75,7 +75,7 @@ Claude: "Pageviews 42.180 vs 31.420, plus 34%. Großer Sprung auf
 
 **Bot-Crawler-Sicht.** Pirsch trackt AI-Referrer (Mensch-aus-AI). Wir klassifizieren zusätzlich AI-Crawler selbst (GPTBot, ClaudeBot, PerplexityBot, ByteSpider, etc.). Du siehst, wie oft deine Site von AI-Trainings-/Antwort-Systemen indiziert wird. Pirsch filtert die still raus.
 
-**Server-Side-SDK** (Pro). Ruby-Gem, npm-Package, Pixel-Endpoint, `record_event` MCP-Tool für Webhook-/Cron-/Server-Side-Conversion-Tracking. Pirsch ist JS-only.
+**Server-Side-Events.** Unser Ingest-Endpoint nimmt `POST /event` direkt für Webhook-/Cron-/Server-Side-Conversion-Tracking entgegen. Erst-Party Ruby-Gem und npm-Wrapper sind auf der Pro-Roadmap. Pirsch ist JS-only.
 
 **Wirklich unbegrenzte Sites auf allen Tiers**, inklusive Free. Pirsch cappt Standard bei 50 Sites. Großzügig, aber ein Cap.
 

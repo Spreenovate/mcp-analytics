@@ -19,20 +19,30 @@
   {
     "@context": "https://schema.org",
     "@type": "Article",
-    "headline": "<%= j @comparison.title %>",
-    "description": "<%= j @comparison.description %>",
+    "headline": <%= @comparison.title.to_json.html_safe %>,
+    "description": <%= @comparison.description.to_json.html_safe %>,
     "datePublished": "<%= @comparison.date.iso8601 %>",
     "inLanguage": "<%= is_de ? 'de-DE' : 'en-US' %>",
     "mainEntityOfPage": "<%= base_url %><%= @comparison.path %>",
+    "image": "<%= base_url %>/og-image.png",
     "about": {
       "@type": "SoftwareApplication",
-      "name": "<%= j @comparison.competitor %>",
-      "url": "<%= j @comparison.competitor_url.to_s %>"
+      "name": <%= @comparison.competitor.to_json.html_safe %>,
+      "url": <%= @comparison.competitor_url.to_s.to_json.html_safe %>
+    },
+    "author": {
+      "@type": "Organization",
+      "name": "Spreenovate GmbH",
+      "url": "<%= base_url %>"
     },
     "publisher": {
       "@type": "Organization",
       "name": "mcp-analytics",
-      "url": "<%= base_url %>"
+      "url": "<%= base_url %>",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "<%= base_url %>/og-image.png"
+      }
     }
   }
   </script>

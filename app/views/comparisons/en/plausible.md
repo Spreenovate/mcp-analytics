@@ -74,7 +74,7 @@ Claude: "Three new referrers this week: dev.to (84 visits, post about
 
 **Bot and AI crawler visibility.** We have eight traffic classes, including dedicated buckets for AI crawlers (GPTBot, ClaudeBot, PerplexityBot, etc.), AI user-mediated browsing (Claude/ChatGPT fetching a page on a user's behalf), and search engine bots. Plausible filters bots silently. You can't see how much of your traffic is GPTBot indexing you for ChatGPT search. We can.
 
-**Server-side SDK plus deploy regression** (Pro tier). We ship a Ruby gem, an npm package, and a `record_event` MCP tool for events the JS tracker can't see: webhooks, server-side conversions, cron jobs. Plus a GitHub Action and `record_deploy` / `regression_check` tools that flag traffic anomalies caused by a deploy. Plausible doesn't have either.
+**Server-side events from your backend.** Our ingest endpoint accepts `POST /event` for events the JS tracker can't see: webhooks, server-side conversions, cron jobs. First-party Ruby gem and npm wrappers plus a GitHub Action for deploy-regression checks are on the Pro roadmap. Plausible has neither in any form.
 
 ## When you should pick Plausible
 

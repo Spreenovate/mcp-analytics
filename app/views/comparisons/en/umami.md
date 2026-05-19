@@ -78,7 +78,7 @@ Umami has an API, but no chat interface. To get the same answer, you open the da
 
 **EU hosting by default.** Umami Cloud is on AWS. You can pick the EU region, but the default is US. We're on Hetzner Falkenstein, always.
 
-**Server-side deploy regression tracking** (Pro). GitHub Action plus MCP tools (`record_deploy`, `regression_check`) that flag traffic anomalies caused by deploys. Umami has no equivalent.
+**Deploy-regression tracking on the Pro roadmap.** A GitHub Action plus MCP tools to flag traffic anomalies caused by a deploy. Umami has no equivalent.
 
 ## When you should pick Umami
 

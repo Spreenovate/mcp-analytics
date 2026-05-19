@@ -85,7 +85,7 @@ Claude: "Drei neue Top-Pages diese Woche: /blog/llms-txt-explained
 
 **AI-Crawler-Sicht.** Matomo zeigt AI-Referrer (Mensch aus ChatGPT/Perplexity), wir zusätzlich AI-Crawler selbst (GPTBot, ClaudeBot, etc.). Die werden 2026 zur eigenständigen Traffic-Quelle, die du tracken willst.
 
-**Server-Side-SDK** (Pro). Ruby-Gem, npm-Package, Pixel-Endpoint für Backend-Events. Matomo hat Tracking-API, aber kein dediziertes Server-Side-Event-Pattern wie unser `record_event`.
+**Server-Side-Events.** Unser Ingest-Endpoint nimmt `POST /event` direkt entgegen für Backend-Events. Erst-Party Ruby-Gem und npm-Wrapper sind auf der Pro-Roadmap. Matomo hat eine Tracking-API, aber kein dediziertes Server-Side-Event-Pattern.
 
 **Schlankheit.** Matomo ist ein großes Produkt mit vielen Features, was Setup-Zeit und Onboarding-Aufwand bedeutet. Wir sind klein. Snippet einbauen, in Claude fragen, fertig.
 

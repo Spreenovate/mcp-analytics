@@ -5,6 +5,7 @@ slug: fathom
 title: "mcp-analytics vs Fathom Analytics (2026)"
 description: "Fathom is the premium-UX play in privacy-first analytics. We're MCP-native. Where each wins, where neither is right."
 date: 2026-05-19
+hreflang_alt: fathom
 verdict_us: "Built for the Claude/Cursor power-user who wants stats in chat. Free 100k hits/mo with no card. Bot/AI-crawler taxonomy. EU-hosted."
 verdict_them: "Built for an aesthetics-conscious founder who wants a beautiful single-pane dashboard. Mature product, unlimited sites on all plans, isolated EU servers available."
 table:
@@ -79,7 +80,7 @@ Fathom has an API, but no chat interface. Their dashboard requires you to open a
 
 **AI crawler visibility.** We classify traffic into eight buckets including `ai_user_action` (Claude or ChatGPT fetching a page on a user's behalf), `ai_crawler` (GPTBot, ClaudeBot, etc.), and `verified_search_bot` (Googlebot et al). Fathom filters bots silently. You can't see your GPTBot share.
 
-**Server-side SDK and custom events from your backend.** Pro tier includes a Ruby gem, an npm package, a pixel endpoint, and the `record_event` MCP tool. You can track webhook deliveries, server-side conversions, cron jobs. Things the JS tracker never sees. Fathom is JS-tracker-only on Cloud (their self-hosted Lite version is different).
+**Server-side events from your backend.** Our ingest endpoint accepts `POST /event` directly. You can track webhook deliveries, server-side conversions, cron jobs. Things the JS tracker never sees. First-party Ruby gem and npm wrappers are on the Pro roadmap. Fathom is JS-tracker-only on Cloud (their self-hosted Lite version is different).
 
 ## When you should pick Fathom
 

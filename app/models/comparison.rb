@@ -77,7 +77,8 @@ class Comparison
       verdict_us: frontmatter["verdict_us"],
       verdict_them: frontmatter["verdict_them"],
       hreflang_alt: hreflang_alt,
-      body_markdown: body
+      body_markdown: body,
+      mtime: path.mtime
     )
   rescue StandardError => e
     Rails.logger.warn("Comparison: failed to parse #{path}: #{e.class} #{e.message}")
@@ -88,14 +89,18 @@ class Comparison
     attrs.each { |k, v| instance_variable_set("@#{k}", v) }
   end
 
+  # Kramdown rendering cache keyed by file mtime. See BlogPost#body_html.
   def body_html
-    Kramdown::Document.new(
-      @body_markdown.to_s,
-      input: "GFM",
-      hard_wrap: false,
-      auto_ids: true,
-      syntax_highlighter: nil
-    ).to_html.html_safe
+    key = "comparison/#{@locale}/#{@slug}/#{@mtime&.to_i || 0}/body_html"
+    Rails.cache.fetch(key) do
+      Kramdown::Document.new(
+        @body_markdown.to_s,
+        input: "GFM",
+        hard_wrap: false,
+        auto_ids: true,
+        syntax_highlighter: nil
+      ).to_html.html_safe
+    end
   end
 
   def path

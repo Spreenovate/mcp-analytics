@@ -40,7 +40,7 @@ Remote-MCP-Server sind das, was die meisten kommerziellen Tools 2025/2026 anbiet
 
 Drei mögliche Antworten:
 
-**Nein**, wenn du nur Power-User bist. Du installierst einen MCP-Server, den jemand anderes gebaut hat. Den offiziellen GitHub-MCP-Server, einen Filesystem-Server, oder eben einen, den dein SaaS-Anbieter bereitstellt (z.B. [mcp-analytics](/de/blog/mcp-server-anleitung) für Web-Analytics, Sentry, Linear, Cloudflare). Dafür musst du nichts bauen, nur installieren. Genau darum geht es im Rest dieser Anleitung.
+**Nein**, wenn du nur Power-User bist. Du installierst einen MCP-Server, den jemand anderes gebaut hat. Den offiziellen GitHub-MCP-Server, einen Filesystem-Server, oder eben einen, den dein SaaS-Anbieter bereitstellt (z.B. [mcp-analytics](/) für Web-Analytics, Sentry, Linear, Cloudflare). Dafür musst du nichts bauen, nur installieren. Genau darum geht es im Rest dieser Anleitung.
 
 **Ja**, wenn du eine eigene Datenquelle oder API hast, die ein LLM bedienen soll. Eine interne Wissensbasis, ein CRM-Excerpt, ein Bug-Tracker. MCP-Server selbst zu bauen ist überraschend zugänglich. Die offiziellen SDKs in Python, TypeScript, Go decken den Großteil der Boilerplate ab. Der Abschnitt [Eigener MCP-Server](#eigener-mcp-server-die-kurzform) am Ende skizziert das.
 
@@ -67,7 +67,7 @@ Du brauchst zwei verschiedene Wege, je nachdem ob der Server lokal (stdio) oder 
 5. Im Browser: bei dem Anbieter einloggen oder Account erstellen, OAuth-Consent klicken
 6. Zurück in Claude: der Connector taucht in der Liste auf
 
-Beim erfolgreichen Setup siehst du in der Connector-Liste den Tool-Count, z.B. "23 tools available". Das ist der Sanity-Check. Wenn da `0 tools` steht oder gar nichts erscheint, hat der OAuth-Flow nicht ordentlich finalisiert (siehe [Troubleshooting](#troubleshooting-die-tatsachlichen-fehler)).
+Beim erfolgreichen Setup siehst du in der Connector-Liste den Tool-Count, z.B. "23 tools available". Das ist der Sanity-Check. Wenn da `0 tools` steht oder gar nichts erscheint, hat der OAuth-Flow nicht ordentlich finalisiert (siehe [Troubleshooting](#troubleshooting)).
 
 **Lokal (stdio):**
 
@@ -108,7 +108,7 @@ Wie viel meines Traffics ist Bot?
 
 ## ChatGPT einrichten (Custom Connectors)
 
-ChatGPT hat Custom Connectors für MCP-Server Mitte 2025 ausgerollt. Das Setup ist deutlich kniffliger als bei Claude. Nicht wegen des Protokolls, wegen der Implementierungs-Details (siehe [Troubleshooting](#troubleshooting-die-tatsachlichen-fehler)).
+ChatGPT hat Custom Connectors für MCP-Server Mitte 2025 ausgerollt. Das Setup ist deutlich kniffliger als bei Claude. Nicht wegen des Protokolls, wegen der Implementierungs-Details (siehe [Troubleshooting](#troubleshooting)).
 
 **Voraussetzung**: ChatGPT Plus, Pro, Business, oder Enterprise. Free-Accounts können keine Custom Connectors hinzufügen.
 
@@ -175,7 +175,7 @@ Den Bearer-Token bekommst du bei den meisten Anbietern unter `/settings` nach de
 
 Für **Zed**, **Codeium**, und andere Editoren: schau in deren MCP-Doc. Das Pattern ist immer das gleiche: Config-Datei plus Server-Eintrag plus Restart.
 
-## Troubleshooting: Die tatsächlichen Fehler
+## Troubleshooting: Die tatsächlichen Fehler {#troubleshooting}
 
 Aus der eigenen Trickkiste. Wir haben mcp-analytics über mehrere Monate gegen die echten Quirks von Claude.ai und ChatGPT getestet. Das sind die Bugs, die du erwarten kannst:
 
@@ -204,7 +204,7 @@ Symptom: Du klickst "Approve" auf dem OAuth-Consent-Screen und nichts passiert. 
 
 Ursache: Strenge Referrer-Policy auf der Consent-Page lässt den Browser keinen `Origin`-Header schicken, Rails (oder ein anderes Framework mit Origin-basiertem CSRF-Check) lehnt den POST ab. Oder: CSP `form-action 'self'` blockiert den 302-Redirect zu claude.ai/chatgpt.com.
 
-Das ist kein End-User-Fix. Der Tool-Anbieter muss `Referrer-Policy: same-origin` und `form-action 'self' https:` setzen. Falls du eigene OAuth-Flows baust: [CLAUDE.md](#) hat die ausführliche Doku.
+Das ist kein End-User-Fix. Der Tool-Anbieter muss `Referrer-Policy: same-origin` und `form-action 'self' https:` setzen. Falls du eigene OAuth-Flows baust: unser [MCP-OAuth-Deep-Dive](/blog/mcp-oauth-deep-dive) (auf Englisch) hat die ausführliche Doku.
 
 ### "Tools tauchen auf, aber jeder Call schlägt fehl"
 
@@ -293,7 +293,7 @@ MCP-Server haben **drei Risiko-Kategorien**, die du dir bewusst machen solltest:
 
 2. **Confused Deputy.** Der LLM-Client hat Auth zu Server A und Server B. Server A schickt eine "harmlose" Anweisung im Tool-Output, die der LLM dann gegen Server B ausführt. Bekannt aus klassischer Sicherheits-Literatur, aber MCP macht es leicht. **Mitigation**: Read-only Server bevorzugen, Write-Tools mit Approval-Prompts.
 
-3. **Credential-Leaks.** Token in Config-Files können bei Backups, Synchronisation (Dropbox, iCloud), oder Repo-Pushes (`.cursor/mcp.json`) ausspilen. **Mitigation**: OAuth statt Token. Wenn Token, dann nur in Files mit `chmod 600`.
+3. **Credential-Leaks.** Token in Config-Files können bei Backups, Synchronisation (Dropbox, iCloud) oder versehentlichen Repo-Pushes (`.cursor/mcp.json`) abhanden kommen. **Mitigation**: OAuth statt Token. Wenn Token, dann nur in Files mit `chmod 600`.
 
 Anthropic hat im April 2026 ein Security-Audit zu MCP-Workflows veröffentlicht, das diese Punkte detailliert ausführt. Lesenswert, bevor du sensiblen Servern Schreib-Zugriff gibst.
 

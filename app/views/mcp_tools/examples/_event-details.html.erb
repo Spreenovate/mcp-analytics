@@ -34,8 +34,7 @@ event was fired from a Claude/ChatGPT-fetched page.</p>
   source: 'pricing_cta'
 });</code></pre>
 
-<p>From your backend (Pro tier, via the <code>record_event</code> tool or
-the server-side SDK):</p>
+<p>Or directly from your backend, hitting the ingest endpoint:</p>
 
 <pre><code>POST https://t.mcp-analytics.com/event
 Content-Type: application/json
@@ -44,6 +43,9 @@ Content-Type: application/json
   "event_name": "demo_booked",
   "properties": { "rep": "alex", "deal_size": "10k" }
 }</code></pre>
+
+<p>A first-party Ruby gem and npm wrapper around this endpoint are on
+the Pro roadmap.</p>
 
 <p>List all event names with
 <a href="/mcp/tools/list-events"><code>list_events</code></a> first if

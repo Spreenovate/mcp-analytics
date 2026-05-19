@@ -65,7 +65,8 @@ class BlogPost
       date: frontmatter["date"].is_a?(Date) ? frontmatter["date"] : Date.parse(frontmatter["date"].to_s),
       hreflang_alt: hreflang_alt,
       draft: frontmatter["draft"] == true,
-      body_markdown: body
+      body_markdown: body,
+      mtime: path.mtime
     )
   rescue StandardError => e
     Rails.logger.warn("BlogPost: failed to parse #{path}: #{e.class} #{e.message}")
@@ -81,7 +82,7 @@ class BlogPost
     [ YAML.safe_load(parts[1], permitted_classes: [ Date, Time ]), parts[2].strip ]
   end
 
-  def initialize(slug:, locale:, title:, description:, date:, hreflang_alt:, draft:, body_markdown:)
+  def initialize(slug:, locale:, title:, description:, date:, hreflang_alt:, draft:, body_markdown:, mtime: nil)
     @slug = slug
     @locale = locale
     @title = title
@@ -90,18 +91,25 @@ class BlogPost
     @hreflang_alt = hreflang_alt
     @draft = draft
     @body_markdown = body_markdown
+    @mtime = mtime
   end
 
   def draft? = @draft
 
+  # Kramdown rendering is ~80-200ms per call on a 2500-word post. Cache
+  # by mtime so an edit invalidates immediately on next request without
+  # needing a manual cache bust.
   def body_html
-    Kramdown::Document.new(
-      @body_markdown,
-      input: "GFM",
-      hard_wrap: false,
-      auto_ids: true,
-      syntax_highlighter: nil
-    ).to_html.html_safe
+    key = "blog_post/#{@locale}/#{@slug}/#{@mtime&.to_i || 0}/body_html"
+    Rails.cache.fetch(key) do
+      Kramdown::Document.new(
+        @body_markdown,
+        input: "GFM",
+        hard_wrap: false,
+        auto_ids: true,
+        syntax_highlighter: nil
+      ).to_html.html_safe
+    end
   end
 
   def path
