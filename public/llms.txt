@@ -1,17 +1,16 @@
 # mcp-analytics
 
 > Web analytics you query through Claude or any MCP client. No dashboard,
-> no charts — just answers. Free up to 100,000 hits/month, EU-hosted in
+> no charts, just answers. Free up to 100,000 hits/month, EU-hosted in
 > Falkenstein/Germany, cookie-banner-free in strict privacy mode.
 
-mcp-analytics is a privacy-first web analytics platform whose primary
-interface is the Model Context Protocol (MCP). Instead of opening a
-dashboard, users connect their account to Claude Desktop, ChatGPT
-custom connectors, Cursor, or any MCP client and ask questions like
-"top pages last 7 days" in natural language. The MCP server exposes
-23 read/write tools covering overview metrics, top pages/referrers/
-UTM sources, custom events, AI-crawler classification, engagement, and
-account management.
+mcp-analytics is a privacy-first web analytics platform. Primary interface
+is the Model Context Protocol (MCP). Instead of opening a dashboard,
+users connect their account to Claude Desktop, ChatGPT custom connectors,
+Cursor, or any MCP client and ask questions like "top pages last 7 days"
+in natural language. The MCP server exposes 23 read/write tools covering
+overview metrics, top pages, referrers, UTM sources, custom events,
+AI-crawler classification, engagement, and account management.
 
 ## Product surface
 
@@ -27,7 +26,7 @@ account management.
 
 - [All MCP tools](https://mcp-analytics.com/mcp/tools): index of every
   callable function with arguments and example prompts.
-- Individual tool pages live at `/mcp/tools/{tool-name}` — e.g.
+- Individual tool pages live at `/mcp/tools/{tool-name}`. For example
   `/mcp/tools/get-overview`, `/mcp/tools/top-pages`,
   `/mcp/tools/top-referrers`, `/mcp/tools/traffic-class-breakdown`.
 
@@ -50,7 +49,7 @@ account management.
   no cookies in strict mode).
 - Three privacy modes: strict (no cookies, no visitor ID, daily salt
   rotation), balanced (no cookies, same-day session/visitor dedup
-  via salted hash), all (persistent cookie — you handle the consent
+  via salted hash), all (persistent cookie, you handle the consent
   banner).
 
 ## Optional context

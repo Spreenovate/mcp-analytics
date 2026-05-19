@@ -1,8 +1,8 @@
 <%
   base_url = ENV.fetch("PUBLIC_BASE_URL", "https://mcp-analytics.com")
 %>
-<% content_for(:title, "#{@tool.title} (#{@tool.name}) — MCP tool | mcp-analytics") %>
-<% content_for(:description, "#{@tool.title} — #{@tool.summary} Call it from Claude or any MCP client.") %>
+<% content_for(:title, "#{@tool.title} (#{@tool.name}) · MCP tool | mcp-analytics") %>
+<% content_for(:description, "#{@tool.title}. #{@tool.summary} Call it from Claude or any MCP client.") %>
 <% content_for(:body_class, "home article") %>
 <% content_for(:canonical_url, "#{base_url}#{@tool.path}") %>
 <% content_for(:head) do %>
@@ -50,7 +50,7 @@
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "<%= j @tool.title %> (<%= j @tool.name %>) — MCP tool",
+    "headline": "<%= j @tool.title %> (<%= j @tool.name %>) · MCP tool",
     "description": "<%= j @tool.summary %>",
     "inLanguage": "en-US",
     "mainEntityOfPage": "<%= base_url %><%= @tool.path %>",
@@ -113,10 +113,10 @@
           <% @tool.args.each do |arg| %>
             <tr>
               <td><code><%= arg[:name] %></code></td>
-              <td><%= arg[:type] || "—" %><% if arg[:enum] %><br><span style="font-size: 11px; color: #555;">enum: <%= arg[:enum].join(", ") %></span><% end %></td>
+              <td><%= arg[:type] || "·" %><% if arg[:enum] %><br><span style="font-size: 11px; color: #555;">enum: <%= arg[:enum].join(", ") %></span><% end %></td>
               <td><%= arg[:required] ? content_tag(:span, "required", class: "required") : content_tag(:span, "optional", class: "optional") %></td>
               <td>
-                <%= arg[:description] || "—" %>
+                <%= arg[:description] || "·" %>
                 <% if arg[:default] %>
                   <br><span style="font-size: 11px; color: #555;">default: <code><%= arg[:default] %></code></span>
                 <% end %>
@@ -138,7 +138,7 @@
     <h2>Related tools</h2>
     <ul>
       <% McpToolPage.all.reject { |t| t.name == @tool.name }.sample(5).each do |t| %>
-        <li><a href="<%= t.path %>"><code><%= t.name %></code></a> — <%= t.summary %></li>
+        <li><a href="<%= t.path %>"><code><%= t.name %></code></a>: <%= t.summary %></li>
       <% end %>
     </ul>
   </div>

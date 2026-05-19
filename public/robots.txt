@@ -4,9 +4,9 @@
 # Keep authenticated/transactional surfaces (/signup, /verify, /settings,
 # /oauth/*) and the JSON-RPC endpoint (/mcp itself) out of the index.
 #
-# AI crawlers are explicitly ALLOWED on the public content surface — we
+# AI crawlers are explicitly ALLOWED on the public content surface. We
 # want to be discoverable in Claude, ChatGPT, Perplexity, and other
-# LLM-grounded answer surfaces, that's a primary acquisition channel
+# LLM-grounded answer surfaces. That's a primary acquisition channel
 # for an MCP-native product. Each named-bot block re-declares the same
 # Disallow set because per robots.txt RFC the named-UA block REPLACES
 # the wildcard block, it does not extend it; missing Disallow lines
@@ -15,7 +15,7 @@
 #
 # The "Allow: /mcp/tools" line ahead of "Disallow: /mcp$" is for
 # crawlers that don't honor the $-suffix wildcard (Yandex, some smaller
-# bots) — they read /mcp as a path prefix and would otherwise block
+# bots). They read /mcp as a path prefix and would otherwise block
 # /mcp/tools too. The $-honoring crawlers (Google, Bing) treat the
 # Allow line as a no-op since /mcp/tools is already not matched by
 # /mcp$.
