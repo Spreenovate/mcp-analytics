@@ -2,79 +2,182 @@
 #
 # Policy: index all public content (landing, docs, blog, /vs, /mcp/tools).
 # Keep authenticated/transactional surfaces (/signup, /verify, /settings,
-# /oauth/*) and the JSON-RPC endpoint (/mcp) out of the index.
+# /oauth/*) and the JSON-RPC endpoint (/mcp itself) out of the index.
 #
-# AI crawlers are explicitly ALLOWED. We want to be discoverable in
-# Claude, ChatGPT, Perplexity, and other LLM-grounded search/answer
-# surfaces — that's a primary acquisition channel for an MCP-native
-# product. If we ever change our mind, switch each User-agent block
-# below to `Disallow: /`.
+# AI crawlers are explicitly ALLOWED on the public content surface — we
+# want to be discoverable in Claude, ChatGPT, Perplexity, and other
+# LLM-grounded answer surfaces, that's a primary acquisition channel
+# for an MCP-native product. Each named-bot block re-declares the same
+# Disallow set because per robots.txt RFC the named-UA block REPLACES
+# the wildcard block, it does not extend it; missing Disallow lines
+# under a named bot would otherwise let GPTBot etc. crawl /oauth/* and
+# /verify/*.
+#
+# The "Allow: /mcp/tools" line ahead of "Disallow: /mcp$" is for
+# crawlers that don't honor the $-suffix wildcard (Yandex, some smaller
+# bots) — they read /mcp as a path prefix and would otherwise block
+# /mcp/tools too. The $-honoring crawlers (Google, Bing) treat the
+# Allow line as a no-op since /mcp/tools is already not matched by
+# /mcp$.
 
 User-agent: *
-Allow: /
 Disallow: /signup/
 Disallow: /signup
 Disallow: /verify/
 Disallow: /settings
 Disallow: /oauth/
+Allow: /mcp/tools
 Disallow: /mcp$
 Disallow: /up
 
-# OpenAI's web crawler (training + ChatGPT browsing).
 User-agent: GPTBot
-Allow: /
+Disallow: /signup/
+Disallow: /signup
+Disallow: /verify/
+Disallow: /settings
+Disallow: /oauth/
+Allow: /mcp/tools
+Disallow: /mcp$
+Disallow: /up
 
-# OpenAI ChatGPT user-initiated browsing.
 User-agent: ChatGPT-User
-Allow: /
+Disallow: /signup/
+Disallow: /signup
+Disallow: /verify/
+Disallow: /settings
+Disallow: /oauth/
+Allow: /mcp/tools
+Disallow: /mcp$
+Disallow: /up
 
-# OpenAI plugin/search backend.
 User-agent: OAI-SearchBot
-Allow: /
+Disallow: /signup/
+Disallow: /signup
+Disallow: /verify/
+Disallow: /settings
+Disallow: /oauth/
+Allow: /mcp/tools
+Disallow: /mcp$
+Disallow: /up
 
-# Anthropic.
 User-agent: ClaudeBot
-Allow: /
+Disallow: /signup/
+Disallow: /signup
+Disallow: /verify/
+Disallow: /settings
+Disallow: /oauth/
+Allow: /mcp/tools
+Disallow: /mcp$
+Disallow: /up
 
 User-agent: Claude-Web
-Allow: /
+Disallow: /signup/
+Disallow: /signup
+Disallow: /verify/
+Disallow: /settings
+Disallow: /oauth/
+Allow: /mcp/tools
+Disallow: /mcp$
+Disallow: /up
 
 User-agent: anthropic-ai
-Allow: /
+Disallow: /signup/
+Disallow: /signup
+Disallow: /verify/
+Disallow: /settings
+Disallow: /oauth/
+Allow: /mcp/tools
+Disallow: /mcp$
+Disallow: /up
 
-# Perplexity.
 User-agent: PerplexityBot
-Allow: /
+Disallow: /signup/
+Disallow: /signup
+Disallow: /verify/
+Disallow: /settings
+Disallow: /oauth/
+Allow: /mcp/tools
+Disallow: /mcp$
+Disallow: /up
 
 User-agent: Perplexity-User
-Allow: /
+Disallow: /signup/
+Disallow: /signup
+Disallow: /verify/
+Disallow: /settings
+Disallow: /oauth/
+Allow: /mcp/tools
+Disallow: /mcp$
+Disallow: /up
 
-# Google's AI summaries (Gemini).
 User-agent: Google-Extended
-Allow: /
+Disallow: /signup/
+Disallow: /signup
+Disallow: /verify/
+Disallow: /settings
+Disallow: /oauth/
+Allow: /mcp/tools
+Disallow: /mcp$
+Disallow: /up
 
-# Common Crawl — feeds many LLMs.
 User-agent: CCBot
-Allow: /
+Disallow: /signup/
+Disallow: /signup
+Disallow: /verify/
+Disallow: /settings
+Disallow: /oauth/
+Allow: /mcp/tools
+Disallow: /mcp$
+Disallow: /up
 
-# Apple Intelligence.
 User-agent: Applebot-Extended
-Allow: /
+Disallow: /signup/
+Disallow: /signup
+Disallow: /verify/
+Disallow: /settings
+Disallow: /oauth/
+Allow: /mcp/tools
+Disallow: /mcp$
+Disallow: /up
 
-# Bytedance / Doubao.
 User-agent: Bytespider
-Allow: /
+Disallow: /signup/
+Disallow: /signup
+Disallow: /verify/
+Disallow: /settings
+Disallow: /oauth/
+Allow: /mcp/tools
+Disallow: /mcp$
+Disallow: /up
 
-# Meta AI.
 User-agent: FacebookBot
-Allow: /
+Disallow: /signup/
+Disallow: /signup
+Disallow: /verify/
+Disallow: /settings
+Disallow: /oauth/
+Allow: /mcp/tools
+Disallow: /mcp$
+Disallow: /up
 
-# DuckDuckGo AI assist.
 User-agent: DuckAssistBot
-Allow: /
+Disallow: /signup/
+Disallow: /signup
+Disallow: /verify/
+Disallow: /settings
+Disallow: /oauth/
+Allow: /mcp/tools
+Disallow: /mcp$
+Disallow: /up
 
-# Cohere.
 User-agent: cohere-ai
-Allow: /
+Disallow: /signup/
+Disallow: /signup
+Disallow: /verify/
+Disallow: /settings
+Disallow: /oauth/
+Allow: /mcp/tools
+Disallow: /mcp$
+Disallow: /up
 
 Sitemap: https://mcp-analytics.com/sitemap.xml

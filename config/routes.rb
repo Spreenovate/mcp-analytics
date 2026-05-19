@@ -84,7 +84,7 @@ Rails.application.routes.draw do
   # routing is unambiguous because /mcp is exact-match on the RPC
   # controller while /mcp/tools/* is a different prefix.
   get "/mcp/tools"        => "mcp_tools#index", as: :mcp_tools
-  get "/mcp/tools/:slug"  => "mcp_tools#show",  as: :mcp_tool, constraints: { slug: /[a-z0-9][a-z0-9\-_]*/ }
+  get "/mcp/tools/:slug"  => "mcp_tools#show",  as: :mcp_tool, constraints: slug_constraint
 
   # AI-crawler observability page — moat content. Static shell with
   # N=1 demo pre-launch; swap to live ClickHouse aggregates once we

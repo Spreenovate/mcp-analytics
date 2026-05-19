@@ -143,8 +143,8 @@
         <% @comparison.table.each do |row| %>
           <tr>
             <td class="col-feature"><%= row["feature"] %></td>
-            <td class="col-us"><%= raw row["us"].to_s.gsub("\n", "<br>") %></td>
-            <td class="col-them"><%= raw row["them"].to_s.gsub("\n", "<br>") %></td>
+            <td class="col-us"><%= safe_join(row["us"].to_s.split("\n"), tag.br) %></td>
+            <td class="col-them"><%= safe_join(row["them"].to_s.split("\n"), tag.br) %></td>
           </tr>
         <% end %>
       </tbody>

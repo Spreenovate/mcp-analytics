@@ -46,7 +46,7 @@ class Comparison
   end
 
   def self.find(slug, locale: "en")
-    return nil unless LOCALES.include?(locale) && slug =~ /\A[a-z0-9][a-z0-9\-]*\z/
+    return nil unless LOCALES.include?(locale) && slug =~ BlogPost::SLUG_RE
 
     path = ROOT.join(locale, "#{slug}.md")
     return nil unless path.file?
@@ -59,8 +59,14 @@ class Comparison
     frontmatter, body = BlogPost.split_frontmatter(raw)
     return nil unless frontmatter
 
+    slug = (frontmatter["slug"] || path.basename(".md").to_s).to_s
+    return nil unless slug.match?(BlogPost::SLUG_RE)
+
+    hreflang_alt = frontmatter["hreflang_alt"]
+    return nil if hreflang_alt && !hreflang_alt.to_s.match?(BlogPost::SLUG_RE)
+
     new(
-      slug: frontmatter["slug"] || path.basename(".md").to_s,
+      slug: slug,
       locale: locale,
       competitor: frontmatter["competitor"],
       competitor_url: frontmatter["competitor_url"],
@@ -70,7 +76,7 @@ class Comparison
       table: frontmatter["table"] || [],
       verdict_us: frontmatter["verdict_us"],
       verdict_them: frontmatter["verdict_them"],
-      hreflang_alt: frontmatter["hreflang_alt"],
+      hreflang_alt: hreflang_alt,
       body_markdown: body
     )
   rescue StandardError => e

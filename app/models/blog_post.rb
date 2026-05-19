@@ -35,8 +35,10 @@ class BlogPost
     posts.sort_by(&:date).reverse
   end
 
+  SLUG_RE = /\A[a-z0-9][a-z0-9\-]*\z/
+
   def self.find(slug, locale: "en")
-    return nil unless LOCALES.include?(locale) && slug =~ /\A[a-z0-9][a-z0-9\-]*\z/
+    return nil unless LOCALES.include?(locale) && slug =~ SLUG_RE
 
     path = POSTS_ROOT.join(locale, "#{slug}.md")
     return nil unless path.file?
@@ -49,13 +51,19 @@ class BlogPost
     frontmatter, body = split_frontmatter(raw)
     return nil unless frontmatter
 
+    slug = (frontmatter["slug"] || path.basename(".md").to_s).to_s
+    return nil unless slug.match?(SLUG_RE)
+
+    hreflang_alt = frontmatter["hreflang_alt"]
+    return nil if hreflang_alt && !hreflang_alt.to_s.match?(SLUG_RE)
+
     new(
-      slug: frontmatter["slug"] || path.basename(".md").to_s,
+      slug: slug,
       locale: locale,
       title: frontmatter["title"],
       description: frontmatter["description"],
       date: frontmatter["date"].is_a?(Date) ? frontmatter["date"] : Date.parse(frontmatter["date"].to_s),
-      hreflang_alt: frontmatter["hreflang_alt"],
+      hreflang_alt: hreflang_alt,
       draft: frontmatter["draft"] == true,
       body_markdown: body
     )

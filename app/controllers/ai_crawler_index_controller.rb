@@ -10,6 +10,8 @@
 class AiCrawlerIndexController < ApplicationController
   def show
     @last_updated = Date.new(2026, 5, 19)
+    response.set_header("Last-Modified", @last_updated.to_time(:utc).httpdate)
+    response.set_header("Cache-Control", "public, max-age=3600")
     @sample_size_sites = 1
     @sample_size_hits = 24_847
     @summary = {
