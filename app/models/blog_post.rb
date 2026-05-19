@@ -22,7 +22,7 @@ class BlogPost
   LOCALES = %w[en de].freeze
   POSTS_ROOT = Rails.root.join("app/views/blog/posts")
 
-  attr_reader :slug, :locale, :title, :description, :date, :hreflang_alt, :draft, :body_markdown
+  attr_reader :slug, :locale, :title, :description, :date, :hreflang_alt, :draft, :body_markdown, :mtime
 
   def self.all(locale: "en")
     return [] unless LOCALES.include?(locale)
@@ -120,5 +120,17 @@ class BlogPost
     return nil unless @hreflang_alt
 
     @locale == "de" ? "/blog/#{@hreflang_alt}" : "/de/blog/#{@hreflang_alt}"
+  end
+
+  # Best-available signal for sitemap lastmod. File mtime if the file
+  # was edited after publication, otherwise the publication date.
+  # NB: container builds (kamal/docker) reset mtime to build time, so
+  # this is a useful signal in dev and a deploy-timestamp signal in
+  # prod. Good enough for crawler recrawl heuristics either way.
+  def lastmod_date
+    return @date unless @mtime
+
+    mtime_date = @mtime.to_date
+    [ @date, mtime_date ].max
   end
 end

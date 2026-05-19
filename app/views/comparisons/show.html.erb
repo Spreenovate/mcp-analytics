@@ -19,16 +19,16 @@
   {
     "@context": "https://schema.org",
     "@type": "Article",
-    "headline": <%= @comparison.title.to_json.html_safe %>,
-    "description": <%= @comparison.description.to_json.html_safe %>,
+    "headline": <%= json_ld(@comparison.title) %>,
+    "description": <%= json_ld(@comparison.description) %>,
     "datePublished": "<%= @comparison.date.iso8601 %>",
     "inLanguage": "<%= is_de ? 'de-DE' : 'en-US' %>",
     "mainEntityOfPage": "<%= base_url %><%= @comparison.path %>",
     "image": "<%= base_url %>/og-image.png",
     "about": {
       "@type": "SoftwareApplication",
-      "name": <%= @comparison.competitor.to_json.html_safe %>,
-      "url": <%= @comparison.competitor_url.to_s.to_json.html_safe %>
+      "name": <%= json_ld(@comparison.competitor) %>,
+      "url": <%= json_ld(@comparison.competitor_url.to_s) %>
     },
     "author": {
       "@type": "Organization",

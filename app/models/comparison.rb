@@ -34,7 +34,7 @@ class Comparison
   ROOT = Rails.root.join("app/views/comparisons")
 
   attr_reader :slug, :locale, :competitor, :competitor_url, :title, :description,
-              :date, :table, :verdict_us, :verdict_them, :hreflang_alt, :body_markdown
+              :date, :table, :verdict_us, :verdict_them, :hreflang_alt, :body_markdown, :mtime
 
   def self.all(locale: "en")
     return [] unless LOCALES.include?(locale)
@@ -111,5 +111,13 @@ class Comparison
     return nil unless @hreflang_alt
 
     @locale == "de" ? "/vs/#{@hreflang_alt}" : "/de/vs/#{@hreflang_alt}"
+  end
+
+  # See BlogPost#lastmod_date.
+  def lastmod_date
+    return @date unless @mtime
+
+    mtime_date = @mtime.to_date
+    [ @date, mtime_date ].max
   end
 end

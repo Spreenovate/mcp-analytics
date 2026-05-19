@@ -50,8 +50,8 @@
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": <%= "#{@tool.title} (#{@tool.name}) · MCP tool".to_json.html_safe %>,
-    "description": <%= @tool.summary.to_json.html_safe %>,
+    "headline": <%= json_ld("#{@tool.title} (#{@tool.name}) · MCP tool") %>,
+    "description": <%= json_ld(@tool.summary) %>,
     "inLanguage": "en-US",
     "mainEntityOfPage": "<%= base_url %><%= @tool.path %>",
     "image": "<%= base_url %>/og-image.png",

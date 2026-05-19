@@ -31,7 +31,7 @@ class SitemapsController < ApplicationController
       BlogPost.all(locale: locale).each do |post|
         entries << {
           loc: "#{base}#{post.path}",
-          lastmod: post.date.iso8601,
+          lastmod: post.lastmod_date.iso8601,
           changefreq: "monthly",
           priority: 0.7
         }
@@ -43,7 +43,7 @@ class SitemapsController < ApplicationController
       Comparison.all(locale: locale).each do |comp|
         entries << {
           loc: "#{base}#{comp.path}",
-          lastmod: comp.date.iso8601,
+          lastmod: comp.lastmod_date.iso8601,
           changefreq: "monthly",
           priority: 0.7
         }

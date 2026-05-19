@@ -19,8 +19,8 @@
   {
     "@context": "https://schema.org",
     "@type": "Article",
-    "headline": <%= @post.title.to_json.html_safe %>,
-    "description": <%= @post.description.to_json.html_safe %>,
+    "headline": <%= json_ld(@post.title) %>,
+    "description": <%= json_ld(@post.description) %>,
     "datePublished": "<%= @post.date.iso8601 %>",
     "inLanguage": "<%= is_de ? 'de-DE' : 'en-US' %>",
     "mainEntityOfPage": "<%= base_url %><%= @post.path %>",
