@@ -69,7 +69,7 @@
 
   <div class="disclaimer">
     <strong>Heads up: this is a single-site demo (N=1) for now.</strong>
-    The data on this page is mcp-analytics.com's own crawler traffic, May 2026.
+    The data on this page is mcp-analytics.com's own crawler traffic, snapshot of <%= @last_updated.strftime("%B %Y") %>.
     The page exists as a working preview of the format. Once ≥50 paying customers
     are on the Pro tier, the index switches to an anonymized aggregate across all
     Pro sites, refreshed weekly. Sign up for free at <a href="/">mcp-analytics.com</a>
@@ -137,15 +137,14 @@
       30% week-over-week.
     </p>
     <p>
-      <strong>Bytespider down.</strong> ByteDance's crawler had been
-      aggressive through 2024-2025 but has cooled off in 2026,
-      consistent with our reading of their robots.txt-respecting
+      <strong>Bytespider down.</strong> ByteDance's crawler was
+      aggressive through 2024-2025; the current snapshot has it cooled
+      off, consistent with our reading of their robots.txt-respecting
       patterns improving.
     </p>
     <p>
-      <strong>DuckAssistBot just appeared.</strong> Q2 2026 we saw
-      DuckDuckGo's AI assist crawler in our logs for the first time.
-      Small volume but rising 25% WoW.
+      <strong>DuckAssistBot just appeared.</strong> First showed up in
+      our logs this snapshot. Small volume but rising 25% WoW.
     </p>
     <p>
       <strong>Common Crawl flat.</strong> CCBot's volume is

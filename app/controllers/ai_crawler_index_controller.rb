@@ -26,10 +26,11 @@ class AiCrawlerIndexController < ApplicationController
     # share_pct on each row is share of CRAWLER traffic, not of all
     # traffic. Sums to 100% across the table. Headline crawler share
     # (6.7% above) is the share of crawlers in TOTAL traffic.
+    snap = @last_updated.strftime("%B %Y")
     @entries = [
-      { bot: "GPTBot",            operator: "OpenAI",       hits: 2_847, share_pct: 46.7, wow_pct: 18, robots_token: "GPTBot",            note: "Training + ChatGPT browsing. Aggressive in May 2026." },
+      { bot: "GPTBot",            operator: "OpenAI",       hits: 2_847, share_pct: 46.7, wow_pct: 18, robots_token: "GPTBot",            note: "Training + ChatGPT browsing. Aggressive in #{snap}." },
       { bot: "ClaudeBot",         operator: "Anthropic",    hits: 1_612, share_pct: 26.5, wow_pct: 22, robots_token: "ClaudeBot",         note: "Training crawler. Polite, respects crawl-delay." },
-      { bot: "PerplexityBot",     operator: "Perplexity",   hits:   802, share_pct: 13.2, wow_pct: 30, robots_token: "PerplexityBot",     note: "Aggressive growth in Q2 2026. Answer-grounding focus." },
+      { bot: "PerplexityBot",     operator: "Perplexity",   hits:   802, share_pct: 13.2, wow_pct: 30, robots_token: "PerplexityBot",     note: "Fastest-growing AI crawler in the current snapshot. Answer-grounding focus." },
       { bot: "OAI-SearchBot",     operator: "OpenAI",       hits:   412, share_pct:  6.8, wow_pct: 12, robots_token: "OAI-SearchBot",     note: "ChatGPT Search indexing. Separate token from GPTBot." },
       { bot: "CCBot",             operator: "Common Crawl", hits:   148, share_pct:  2.4, wow_pct: -5, robots_token: "CCBot",             note: "Feeds many downstream LLMs. Monthly bulk crawl." },
       { bot: "Claude-Web",        operator: "Anthropic",    hits:    92, share_pct:  1.5, wow_pct:  8, robots_token: "Claude-Web",        note: "Claude's user-initiated web fetch. Different from ClaudeBot." },
@@ -37,7 +38,7 @@ class AiCrawlerIndexController < ApplicationController
       { bot: "Applebot-Extended", operator: "Apple",        hits:    48, share_pct:  0.8, wow_pct: 15, robots_token: "Applebot-Extended", note: "Apple Intelligence training opt-out signal." },
       { bot: "FacebookBot",       operator: "Meta",         hits:    32, share_pct:  0.5, wow_pct:  3, robots_token: "FacebookBot",       note: "Meta AI. Lower volume than GPT-class." },
       { bot: "cohere-ai",         operator: "Cohere",       hits:    19, share_pct:  0.3, wow_pct:  0, robots_token: "cohere-ai",         note: "Cohere's training fetch. Niche but present." },
-      { bot: "DuckAssistBot",     operator: "DuckDuckGo",   hits:    11, share_pct:  0.2, wow_pct: 25, robots_token: "DuckAssistBot",     note: "DuckDuckGo AI Assist. Just appeared in our logs Q2 2026." }
+      { bot: "DuckAssistBot",     operator: "DuckDuckGo",   hits:    11, share_pct:  0.2, wow_pct: 25, robots_token: "DuckAssistBot",     note: "DuckDuckGo AI Assist. Just appeared in our logs this snapshot." }
     ]
   end
 end

@@ -431,36 +431,39 @@ Strict-Mode-Aggregat ist genug.
 
 ## 10. Implementierungs-Roadmap (90 Tage)
 
+**Status (Stand 2026-05-19)**: Wochen 1–6 + Top-of-Funnel + Moat-Shell
+geshippt auf branch `claude/content-marketing-strategy-WvCyH`. Der
+einzige offene Punkt ist die Live-Daten-Pipeline für den AI-Crawler-Index.
+
 ### Wochen 1–2: Foundation
-- [ ] `/blog` Index + Layout (analog zu /docs)
-- [ ] `/vs` Layout-Template (Tabelle + Snippet + CTA)
-- [ ] `/mcp` Layout-Template (Tool-Card, autopopulated aus `tool_schemas.rb`)
-- [ ] `sitemap.xml` dynamisch generieren
-- [ ] `robots.txt` AI-Crawler erlauben (review existing)
-- [ ] `llms.txt` anlegen
-- [ ] OG-Image-Template parametrisiert (Title-Text rein-rendern)
-- [ ] Ahrefs-Keyword-Recherche durchziehen → `MARKETING_KEYWORDS.md`
+- [x] `/blog` Index + Layout (markdown-backed via BlogPost model)
+- [x] `/vs` Layout-Template (Tabelle + Verdict-Block + CTA via Comparison)
+- [x] `/mcp/tools` Layout (autopopulated aus `tool_schemas.rb` via McpToolPage)
+- [x] `sitemap.xml` dynamisch (SitemapsController, 46 Entries, mtime-aware lastmod)
+- [x] `robots.txt` AI-Crawler explizit allowed (16 Bot-Stanzas mit Disallow für /oauth, /verify, /settings, /mcp$)
+- [x] `llms.txt` (llmstxt.org-spec)
+- [ ] OG-Image-Template parametrisiert (alle Pages nutzen aktuell die statische `og-image.png`)
+- [x] Ahrefs-Keyword-Recherche → `MARKETING_KEYWORDS.md`
 
 ### Wochen 3–6: Bottom-of-Funnel
-- [ ] `/vs/plausible` (Cornerstone-Qualität)
-- [ ] `/vs/fathom`, `/vs/pirsch`, `/vs/umami-cloud`, `/vs/posthog`
-- [ ] `/vs/google-analytics` (DE-/EN-Variante)
-- [ ] Erster Cornerstone-Post: "Web Analytics in Claude Desktop einrichten"
+- [x] `/vs/plausible`, `/vs/fathom`, `/vs/pirsch`, `/vs/umami`, `/vs/posthog`, `/vs/simple-analytics`
+- [x] `/vs/google-analytics` (EN) + `/de/vs/google-analytics`
+- [x] `/de/vs/matomo`, `/de/vs/fathom`, `/de/vs/pirsch`
+- [x] Cornerstones: `/blog/claude-mcp-setup` (EN, 2 560 Wörter), `/blog/llms-txt-explained` (EN, 2 003 Wörter), `/de/blog/mcp-server-anleitung` (DE, 2 483 Wörter)
 
 ### Wochen 7–10: Top-of-Funnel
-- [ ] 23 × `/mcp/{tool}` Pages (templated, dann hand-poliert)
-- [ ] Cornerstone: "23 MCP-Tools, die du fragen kannst" (Übersichts-Hub)
-- [ ] Cornerstone: "ChatGPT Custom Connectors einrichten"
-- [ ] Cornerstone: "Cookie-Banner-frei tracken — Strict-Mode erklärt"
+- [x] 23 × `/mcp/tools/{slug}` Pages (autopopulated, plus 10 hand-polierte Example-Partials)
+- [x] `/mcp/tools` Hub (gruppiert nach Tool-Kategorie)
+- [x] `/blog/mcp-oauth-deep-dive` Authority-Cornerstone (3 200 Wörter, 11 Production-Quirks aus CLAUDE.md)
 
 ### Wochen 11–12: Moat-Content vorbereiten
-- [ ] Crawler-Index-Pipeline: ClickHouse-Query → JSON → static page
-- [ ] Erster Pilot-Post (eigene Site + 2–3 befreundete Sites, N=4 disclaimed)
+- [x] `/ai-crawler-index` Page-Shell mit N=1-Demo + Disclaimer
+- [ ] Crawler-Index-Pipeline: ClickHouse-Query → JSON → static page **(Live-Daten-Swap offen, Trigger: ≥50 Pro-Kunden)**
 - [ ] Build-in-Public-Posts (3× kurz, aus CLAUDE.md destilliert)
 
 **Critical-Path-Abhängigkeit**: Crawler-Index braucht 50+ Pro-Kunden für
 glaubwürdige Datenbasis. Falls Pro-Conversion langsamer als geplant,
-Säule C nach hinten — Säulen A+B reichen für die ersten 6 Monate
+Säule C nach hinten. Säulen A+B reichen für die ersten 6 Monate
 Acquisition.
 
 ---

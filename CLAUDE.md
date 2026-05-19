@@ -89,6 +89,40 @@ Clears all `reg:ip-h:*`, `reg:ip-d:*`, `reg:dom-d:*` buckets. The disposable-dom
 
 ## Architecture quirks
 
+### Content marketing surface (`/blog`, `/vs`, `/mcp/tools`, `/ai-crawler-index`)
+
+Markdown-backed content lives in `app/views/blog/posts/{en,de}/*.md` and
+`app/views/comparisons/{en,de}/*.md`. PORO models [blog_post.rb](app/models/blog_post.rb)
+and [comparison.rb](app/models/comparison.rb) parse YAML frontmatter + body,
+render via [kramdown](https://kramdown.gettalong.org) with the GFM parser. No
+ActiveRecord, no DB rows. The MCP tool catalog at `/mcp/tools/:slug` is generated
+on the fly by [mcp_tool_page.rb](app/models/mcp_tool_page.rb) from
+`Mcp::ToolSchemas::AUTHENTICATED`, so the page can't drift from what the actual
+server exposes.
+
+**Invariants worth knowing before touching this code:**
+
+- **Slug regex is `\A[a-z0-9][a-z0-9\-]*\z`** at every layer that accepts user-controllable
+  slug input (`BlogPost::SLUG_RE`, `Comparison.find`, route constraints in [routes.rb](config/routes.rb)).
+  Underscores are NOT allowed at the URL layer. The MCP tool layer maps URL dashes to schema
+  underscores (`tr("-", "_")`) so the URL `/mcp/tools/top-pages` resolves to the schema entry
+  `top_pages`. Don't loosen the regex without adding a redirect from underscore form to dash form.
+- **`body_html` is cached in `Rails.cache` keyed by file mtime.** Edit a `.md`, the next
+  request renders fresh; no manual cache bust. Caveat: docker/kamal builds reset mtime to
+  build time, so production cache keys = deploy timestamp.
+- **JSON-LD must go through `ApplicationHelper#json_ld`**, not `.to_json.html_safe` directly.
+  The helper adds a defensive `</` escape so frontmatter values containing `</script>` can't
+  break out of the script context.
+- **robots.txt named-bot stanzas REPLACE the wildcard block** per RFC 9309. Every named-UA
+  block in [public/robots.txt](public/robots.txt) repeats the full Disallow set. Don't add a new
+  bot block without copying the Disallow lines, or that bot is free to crawl `/oauth/*`.
+- **DE/EN hreflang must be reciprocal.** If a DE post declares `hreflang_alt: foo`, the EN post
+  at `foo.md` must declare `hreflang_alt: <de-counterpart-slug>` too. Google ignores one-way hreflang.
+
+If something breaks, smoke-test with the integration session pattern in
+[/tmp/v3b_smoke.rb](#) (history) — `ActionDispatch::Integration::Session.new(Rails.application)`
+under `RAILS_ENV=test` bypasses the host filter and lets you GET every content URL in one script.
+
 ### `/verify/:token` is dual-purpose (signup + OAuth-consent step)
 
 The same magic-link URL handles two paths in [verifications_controller.rb#confirm](app/controllers/verifications_controller.rb):
