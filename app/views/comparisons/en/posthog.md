@@ -15,7 +15,7 @@ table:
     us: "Free 100k hits/mo.\n€19/mo for 10M hits."
     them: "Free up to 1M product events, 5k recordings, 1M feature flag requests/mo.\nUsage-based after that."
   - feature: "MCP server"
-    us: "Yes — primary interface. 23 tools."
+    us: "Yes, primary interface. 23 tools."
     them: "Yes (announced 2024). Tools for cohorts, feature flags, etc."
   - feature: "Dashboard UI"
     us: "None."
@@ -34,7 +34,7 @@ table:
     them: "Yes."
   - feature: "Feature flags / experiments"
     us: "No."
-    them: "Yes — core part of the product."
+    them: "Yes, core part of the product."
   - feature: "AI crawler / bot taxonomy"
     us: "8 traffic classes incl. ai_user_action, ai_crawler."
     them: "Bots filtered as part of standard cleanup."
@@ -44,7 +44,7 @@ PostHog and mcp-analytics aren't really competitors in the strict sense. PostHog
 
 ## What PostHog actually is
 
-PostHog is a "all-in-one product analytics platform" — meaning:
+PostHog is an "all-in-one product analytics platform":
 
 - **Product analytics** (events, funnels, cohorts, retention)
 - **Web analytics** (the part that overlaps with us)
@@ -68,7 +68,7 @@ mcp-analytics does one of those things (web analytics) with one differentiation 
 
 **You're building an AI app and want LLM observability.** PostHog has shipped LLM observability features specifically for AI app developers. We have not.
 
-**You want one tool for everything.** PostHog's pitch is consolidation — fewer SaaS bills, fewer SSO logins, one schema for product events. If "I want one place for all this stuff" is your goal, PostHog wins by definition.
+**You want one tool for everything.** PostHog's pitch is consolidation. Fewer SaaS bills, fewer SSO logins, one schema for product events. If "I want one place for all this stuff" is your goal, PostHog wins by definition.
 
 **You want open source / self-host.** PostHog is MIT-licensed; you can self-host. We're proprietary.
 
@@ -76,7 +76,7 @@ mcp-analytics does one of those things (web analytics) with one differentiation 
 
 **You don't need product analytics.** This is the honest fork. If your site is content (a blog, a landing page, a newsletter, a docs site) or a tool with no user-funnel-conversion-flow worth modeling, PostHog is overkill. You'll log in, see ten tabs of features you don't use, set up funnels you don't need, and pay for storage on event data you're not querying. We're scoped to "how is my site doing?" and answer that question fast.
 
-**You want the chat interface.** PostHog shipped an MCP server in 2024 and it's improving. But PostHog's tool catalog is product-analytics-shaped (cohorts, feature flags, experiments), not web-analytics-shaped. Our 23 MCP tools are designed end-to-end for the web-analytics workflow — `top_pages`, `top_referrers`, `traffic_class_breakdown`, `compare_periods` — and the prompts that reach them work better. If your only question is "how did mysite.com do last week?", asking PostHog gives you a longer answer than asking us.
+**You want the chat interface.** PostHog shipped an MCP server in 2024 and it's improving. But PostHog's tool catalog is product-analytics-shaped (cohorts, feature flags, experiments), not web-analytics-shaped. Our 23 MCP tools are designed end-to-end for the web-analytics workflow (`top_pages`, `top_referrers`, `traffic_class_breakdown`, `compare_periods`) and the prompts that reach them work better. If your only question is "how did mysite.com do last week?", asking PostHog gives you a longer answer than asking us.
 
 **You want strict cookieless tracking with no persistent visitor ID.** Our strict mode hashes (daily-rotating salt + site salt + IP + UA + site ID) without any cookie or persistent identifier. Visitor IDs are literally zero. PostHog supports a cookieless mode but the default is cookies; opting in requires configuration and the cookieless mode still generates pseudonymous IDs in some configurations.
 
@@ -86,7 +86,7 @@ mcp-analytics does one of those things (web analytics) with one differentiation 
 
 ## On price
 
-Both have generous free tiers — but they're different shapes. PostHog free is 1M product events, 5k recordings, 1M flag requests, etc. — a bunch of buckets. Ours is 100k hits/month, unlimited sites.
+Both have generous free tiers, but they're different shapes. PostHog free is 1M product events, 5k recordings, 1M flag requests, etc. A bunch of buckets. Ours is 100k hits/month, unlimited sites.
 
 For a content site that doesn't generate product events or session recordings, PostHog free is structurally more than you need. Our free maps more directly to your actual usage. For a B2B SaaS that has 1M events but only 50k pageviews, PostHog free is the right shape.
 
@@ -94,7 +94,7 @@ At paid pricing, PostHog is usage-based across multiple meters. We're €19/mont
 
 ## A reasonable workflow: use both
 
-A real pattern many SaaS founders use: PostHog for product analytics (signup funnel, feature flag rollouts, experiments) + mcp-analytics for content/marketing-site analytics. Reason: the marketing site doesn't benefit from session replay or funnels, but does benefit from cheap headroom and a chat workflow. PostHog has incrementally less value-per-event on a marketing site; we have more.
+A real pattern many SaaS founders use: PostHog for product analytics (signup funnel, feature flag rollouts, experiments) plus mcp-analytics for content/marketing-site analytics. Reason: the marketing site doesn't benefit from session replay or funnels, but does benefit from cheap headroom and a chat workflow. PostHog has incrementally less value-per-event on a marketing site; we have more.
 
 If you only have one site to track and it's your product, just use PostHog. If you have a product *and* a marketing site, consider splitting.
 

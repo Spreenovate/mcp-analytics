@@ -1,7 +1,7 @@
 <%
   base_url = ENV.fetch("PUBLIC_BASE_URL", "https://mcp-analytics.com")
 %>
-<% content_for(:title, "AI Crawler Index — GPTBot, ClaudeBot, PerplexityBot hits | mcp-analytics") %>
+<% content_for(:title, "AI Crawler Index: GPTBot, ClaudeBot, PerplexityBot hits | mcp-analytics") %>
 <% content_for(:description, "Live tracking of AI crawler traffic across mcp-analytics-tracked sites. GPTBot, ClaudeBot, PerplexityBot, Bytespider, and more. Hits, week-over-week trends, robots.txt tokens.") %>
 <% content_for(:body_class, "home article") %>
 <% content_for(:head) do %>
@@ -68,7 +68,7 @@
   </div>
 
   <div class="disclaimer">
-    <strong>Heads up — this is a single-site demo (N=1) for now.</strong>
+    <strong>Heads up: this is a single-site demo (N=1) for now.</strong>
     The data on this page is mcp-analytics.com's own crawler traffic, May 2026.
     The page exists as a working preview of the format. Once ≥50 paying customers
     are on the Pro tier, the index switches to an anonymized aggregate across all
@@ -145,24 +145,24 @@
     </p>
     <p>
       <strong>Common Crawl flat.</strong> CCBot's volume is
-      structurally bound to its monthly bulk-crawl cadence — usually
+      structurally bound to its monthly bulk-crawl cadence. Usually
       it's a single multi-day spike, not steady traffic.
     </p>
 
     <h2>Method</h2>
     <p>
-      Hits classified via <a href="/mcp/tools/traffic-class-breakdown"><code>traffic_class_breakdown</code></a>
-      — eight Cloudflare-compatible buckets including
+      Hits classified via <a href="/mcp/tools/traffic-class-breakdown"><code>traffic_class_breakdown</code></a>.
+      Eight Cloudflare-compatible buckets including
       <code>ai_crawler</code> (this index),
       <code>ai_user_action</code> (Claude/ChatGPT fetching for a user, not shown here),
-      and <code>verified_search_bot</code> (Google, Bing — also not shown).
+      and <code>verified_search_bot</code> (Google, Bing, also not shown).
     </p>
     <p>
       User-agent matching uses
       <a href="https://github.com/Spreenovate/mcp-analytics">our open
       pattern list</a> plus FCrDNS verification for operators that publish
       verifiable IP ranges (Anthropic, OpenAI). UA spoofing is mitigated
-      by reverse-DNS + forward-DNS round-tripping; bots claiming to be
+      by reverse-DNS plus forward-DNS round-tripping. Bots claiming to be
       GPTBot but routing from cloud IPs without proper verification land
       in <code>unverified_bot</code>, not here.
     </p>
@@ -174,7 +174,7 @@
         Decide whether to <code>Allow:</code> or <code>Disallow:</code>
         each bot in your <code>robots.txt</code>. For an
         SEO/discoverability play, allow GPTBot, ClaudeBot, PerplexityBot,
-        OAI-SearchBot — the answer-grounding tokens. For an
+        OAI-SearchBot. Those are the answer-grounding tokens. For an
         opt-out-of-training play, disallow them.
       </li>
       <li>
@@ -183,8 +183,8 @@
         your hosting platform's rate-limiting.
       </li>
       <li>
-        Cross-reference with our <a href="/blog/llms-txt-explained">llms.txt explainer</a>
-        — robots allow + an <code>llms.txt</code> + standard SEO is the
+        Cross-reference with our <a href="/blog/llms-txt-explained">llms.txt explainer</a>.
+        Robots allow plus an <code>llms.txt</code> plus standard SEO is the
         complete AI-search stack.
       </li>
     </ul>
@@ -200,7 +200,7 @@
     <p>
       Free tier: 100,000 hits/month, unlimited sites, no card. Your
       contributions feed the aggregate index once we reach launch
-      threshold — no identifiable per-site data is published.
+      threshold. No identifiable per-site data is published.
     </p>
   </div>
 

@@ -1,7 +1,7 @@
 <p>Ask:</p>
 
 <pre><code>"Add example.com to my mcp-analytics account in strict privacy mode."
-"Set up tracking for newsite.com — balanced mode."
+"Set up tracking for newsite.com in balanced mode."
 "Add mysecondsite.com."</code></pre>
 
 <p>A typical response (after Claude requests your approval to call this
@@ -25,12 +25,12 @@ That's it. No further configuration needed.</code></pre>
 <p>Returns the new site object plus the tracking snippet. The
 <code>site_id</code> is permanent and public. The
 <code>privacy_mode</code> is set once at creation and cannot be changed
-later — choose carefully:</p>
+later. Choose carefully:</p>
 
 <ul>
-  <li><strong><code>strict</code> (recommended for EU sites)</strong> — no cookies, no persistent visitor ID, daily-rotating salt. No cookie banner required under typical EU interpretation.</li>
-  <li><strong><code>balanced</code></strong> — no cookies, same-day session/visitor dedup via salted hash. Most common middle ground.</li>
-  <li><strong><code>all</code></strong> — persistent cookie, cross-session tracking. You handle the consent banner.</li>
+  <li><strong><code>strict</code> (recommended for EU sites)</strong>: no cookies, no persistent visitor ID, daily-rotating salt. No cookie banner required under typical EU interpretation.</li>
+  <li><strong><code>balanced</code></strong>: no cookies, same-day session/visitor dedup via salted hash. Most common middle ground.</li>
+  <li><strong><code>all</code></strong>: persistent cookie, cross-session tracking. You handle the consent banner.</li>
 </ul>
 
 <p>This is one of two write tools you'll call regularly during
@@ -39,5 +39,5 @@ onboarding (the other being
 when you lose the snippet and need it again). Claude will prompt for
 your approval before invoking it on the first call.</p>
 
-<p>Free tier allows unlimited sites; the 100k hits/month cap is
+<p>Free tier allows unlimited sites. The 100k hits/month cap is
 account-wide across all sites combined.</p>

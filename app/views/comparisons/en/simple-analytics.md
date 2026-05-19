@@ -15,7 +15,7 @@ table:
     us: "10,000,000 / month"
     them: "Volume-priced; ~$19 = ~250k pageviews"
   - feature: "MCP server"
-    us: "Yes — 23 tools, primary interface."
+    us: "Yes, 23 tools, primary interface."
     them: "No."
   - feature: "Dashboard UI"
     us: "None."
@@ -60,11 +60,11 @@ Simple Analytics is the radically minimalist take on web analytics. No cookies, 
 
 **MCP primary interface.** You ask in chat, you get an answer. Simple Analytics has an API for programmatic access, but no chat interface.
 
-**Custom events as a first-class concept.** Simple Analytics's events story is limited — you can track them but the workflow is constrained compared to ours. Pro tier adds the server-side SDK so you can `record_event` from your backend (webhooks, cron, server-side conversions).
+**Custom events as a first-class concept.** Simple Analytics's events story is limited. You can track them but the workflow is constrained compared to ours. Pro tier adds the server-side SDK so you can `record_event` from your backend (webhooks, cron, server-side conversions).
 
 **AI crawler visibility.** Simple Analytics filters bots; we surface them across 8 classes.
 
-**Server-side SDK + deploy regression** (Pro). Ruby gem, npm package, GitHub Action with `record_deploy` / `regression_check` MCP tools. Simple Analytics doesn't have either.
+**Server-side SDK plus deploy regression** (Pro). Ruby gem, npm package, GitHub Action with `record_deploy` / `regression_check` MCP tools. Simple Analytics doesn't have either.
 
 ## When you should pick Simple Analytics
 
@@ -76,7 +76,7 @@ Simple Analytics is the radically minimalist take on web analytics. No cookies, 
 
 - You spend daily time in Claude/ChatGPT/Cursor.
 - You need custom events from your backend (webhooks, conversions, server-side).
-- You may spike or grow — 40x more hits per dollar.
+- You may spike or grow. 40x more hits per dollar.
 - You want bot/AI-crawler breakdown.
 
 ## What's not a real difference
@@ -86,4 +86,4 @@ Simple Analytics is the radically minimalist take on web analytics. No cookies, 
 
 ## Try it
 
-[Sign up free](/) — 100k hits/month, no card.
+[Sign up free](/), 100k hits/month, no card.

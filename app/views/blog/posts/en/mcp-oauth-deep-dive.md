@@ -1,35 +1,35 @@
 ---
 title: "MCP OAuth: Every Bug We Hit Shipping a Remote MCP Server to Claude and ChatGPT"
-description: "A six-month deep dive into building OAuth 2.1 for a remote MCP server. The 302 vs 303 bug. Lowercase bearer. Origin: null. CSP form-action. The /mcp suffix discovery quirk. Every quirk that made our connector silently die."
+description: "Six months of building OAuth 2.1 for a remote MCP server. The 302 vs 303 bug. Lowercase bearer. Origin: null. CSP form-action. The /mcp suffix discovery quirk. Every quirk that made our connector silently die."
 slug: mcp-oauth-deep-dive
 date: 2026-05-19
 ---
 
-This is the long-form companion to our [Claude MCP setup guide](/blog/claude-mcp-setup) for people who are building their own remote MCP server. It documents — in painful detail — every OAuth-related bug we hit shipping `mcp-analytics.com/mcp` to production, why each bug presented as "the connector silently fails," and how we fixed each.
+Long-form companion to our [Claude MCP setup guide](/blog/claude-mcp-setup), for people building their own remote MCP server. Documents, in painful detail, every OAuth-related bug we hit shipping `mcp-analytics.com/mcp` to production, why each one presented as "the connector silently fails", and how we fixed each.
 
-We've contributed several of these findings back to GitHub issues on the spec and client repos. The bugs that are still open as of May 2026 are noted as such.
+We've contributed several of these findings back to GitHub issues on the spec and client repos. Bugs still open as of May 2026 are noted as such.
 
-If you're a user trying to *use* an MCP server: read the [setup guide](/blog/claude-mcp-setup) instead — this article is for server implementers.
+If you're a user trying to *use* an MCP server: read the [setup guide](/blog/claude-mcp-setup) instead. This article is for server implementers.
 
 ## Why OAuth at all (when bearer tokens work)?
 
 Three reasons remote MCP servers in 2026 should support OAuth 2.1 as the primary auth path:
 
 1. **Anthropic's MCP directory requirements.** To be listed in Claude's official connector catalog, OAuth 2.1 with PKCE is mandatory. Bearer tokens are not accepted as the primary mechanism.
-2. **ChatGPT custom connectors require OAuth.** ChatGPT's MCP custom connector flow is OAuth-only — no Bearer token shortcut exists on that platform.
-3. **Revocation, scope separation, and audit logs.** Bearer tokens have none of these by default. A leaked token is valid forever unless you've built the rotation infrastructure yourself. OAuth gives you scope-bound access tokens with per-client revocation built into the spec.
+2. **ChatGPT custom connectors require OAuth.** ChatGPT's MCP custom connector flow is OAuth-only. No Bearer token shortcut exists on that platform.
+3. **Revocation, scope separation, audit logs.** Bearer tokens have none of these by default. A leaked token is valid forever unless you've built the rotation infrastructure yourself. OAuth gives you scope-bound access tokens with per-client revocation built into the spec.
 
-We support all three auth methods (OAuth Bearer, legacy Bearer, and legacy `?token=` query param), but OAuth is the path that gets you into both major clients.
+We support all three auth methods (OAuth Bearer, legacy Bearer, legacy `?token=` query param), but OAuth is the path that gets you into both major clients.
 
 ## Build the spec-compliant server first, then add the quirk patches
 
-A useful framing: the OAuth 2.1 + RFC 7591 (Dynamic Client Registration) + RFC 8707 (audience-binding) + RFC 9728 (Protected Resource Metadata) spec stack is well-defined. Implement it correctly and you have a *correct* server. You won't have a *working* one — because the client implementations have known deviations from the spec. Every patch below is a workaround for a client quirk, not for a spec ambiguity.
+A useful framing: the OAuth 2.1 plus RFC 7591 (Dynamic Client Registration) plus RFC 8707 (audience-binding) plus RFC 9728 (Protected Resource Metadata) spec stack is well-defined. Implement it correctly and you have a *correct* server. You won't have a *working* one, because the client implementations have known deviations from the spec. Every patch below is a workaround for a client quirk, not for a spec ambiguity.
 
 Reference implementations worth reading before you start:
 
-- **Cloudflare's `workers-oauth-provider`** — RFC-compliant, has every quirk pre-fixed. The closest thing to a canonical implementation.
-- **Sentry's MCP server** — open-source, has gone through the directory submission process.
-- **Linear's MCP server** — closed source but well-respected; their public statements describe the same quirks we're about to list.
+- **Cloudflare's `workers-oauth-provider`**: RFC-compliant, every quirk pre-fixed. The closest thing to a canonical implementation.
+- **Sentry's MCP server**: open-source, has gone through the directory submission process.
+- **Linear's MCP server**: closed source but well-respected. Their public statements describe the same quirks we're about to list.
 
 If your stack is Rails (like ours), Python+FastAPI, or Node+Express, you'll write the OAuth flow from scratch but the client behavior you're targeting is the same.
 
@@ -37,7 +37,7 @@ If your stack is Rails (like ours), Python+FastAPI, or Node+Express, you'll writ
 
 **Symptom**: OAuth flow seems to complete (the consent screen returns successfully) but the connector ends up with 0 tools and you can't tell why.
 
-**Cause**: Your consent endpoint's POST handler does `redirect_to(client_redirect_uri, status: :see_other)` (HTTP 303). claude.ai's MCP custom connector parser specifically handles 302 (HTTP "Found") differently from 303 ("See Other") in the post-consent redirect step. They're both spec-valid in RFC 6749 §4.1.2 — the spec uses "redirect" generically — but the parser treats only 302 correctly.
+**Cause**: Your consent endpoint's POST handler does `redirect_to(client_redirect_uri, status: :see_other)` (HTTP 303). claude.ai's MCP custom connector parser specifically handles 302 (HTTP "Found") differently from 303 ("See Other") in the post-consent redirect step. Both are spec-valid in RFC 6749 §4.1.2 (the spec uses "redirect" generically), but the parser treats only 302 correctly.
 
 **Fix**: explicitly return 302:
 
@@ -52,7 +52,7 @@ redirect_to(client_redirect_uri, status: :found)  # 302, NOT :see_other (303)
 
 **Symptom**: Token exchange completes (200 OK from `/oauth/token`), but subsequent `Authorization: Bearer …` calls on the MCP endpoint return 401 from the client side without ever reaching your server.
 
-**Cause**: Some strict clients reject `"token_type": "Bearer"` (capital B) and accept only `"token_type": "bearer"` (lowercase). RFC 6749 §5.1 says the type is case-insensitive *for the client to parse* but doesn't bind the server's casing — and in practice strict implementations have rejected capital.
+**Cause**: Some strict clients reject `"token_type": "Bearer"` (capital B) and accept only `"token_type": "bearer"` (lowercase). RFC 6749 §5.1 says the type is case-insensitive *for the client to parse* but doesn't bind the server's casing. In practice, strict implementations have rejected capital.
 
 **Fix**: emit lowercase:
 
@@ -71,9 +71,9 @@ This is also what Cloudflare's reference implementation does. The capital-B form
 
 **Symptom**: Browser-based clients silently fail to complete the OAuth flow. Server logs show the consent POST succeeded and a redirect was issued, but the client never calls `/oauth/token`.
 
-**Cause**: You followed RFC 9207 and added an `iss` parameter to the authorization-response redirect URL (e.g. `?code=…&state=…&iss=https://your-server.com`). claude.ai's frontend rejects the redirect when `iss` is present — likely because their post-redirect validation step fails, but the failure is silent and the flow just dies.
+**Cause**: You followed RFC 9207 and added an `iss` parameter to the authorization-response redirect URL (e.g. `?code=…&state=…&iss=https://your-server.com`). claude.ai's frontend rejects the redirect when `iss` is present. Likely because their post-redirect validation step fails, but the failure is silent and the flow just dies.
 
-**Fix**: drop the `iss` param. Cloudflare's reference implementation doesn't include it either. RFC 9207 is technically a SHOULD recommendation; for now, ignore it.
+**Fix**: drop the `iss` param. Cloudflare's reference implementation doesn't include it either. RFC 9207 is technically a SHOULD recommendation. For now, ignore it.
 
 ```ruby
 # Build the redirect URL WITHOUT iss:
@@ -104,9 +104,9 @@ render json: {
 
 ## Quirk 5: CORS preflights on EVERY OAuth endpoint
 
-**Symptom**: Browser-based clients (claude.ai, chatgpt.com) silently fail to complete *any* OAuth or MCP operation. Server logs show *no* request at all — not even an attempt.
+**Symptom**: Browser-based clients (claude.ai, chatgpt.com) silently fail to complete *any* OAuth or MCP operation. Server logs show *no* request at all. Not even an attempt.
 
-**Cause**: claude.ai's and ChatGPT's MCP custom-connector flows run from the browser using `fetch()`. Modern browsers send an OPTIONS preflight before any non-simple cross-origin POST. If your server returns 404 on OPTIONS (because you only declared POST routes), the browser silently aborts the real request — your server never sees it, you have no log line to debug from, and the connector status reads as a generic failure.
+**Cause**: claude.ai's and ChatGPT's MCP custom-connector flows run from the browser using `fetch()`. Modern browsers send an OPTIONS preflight before any non-simple cross-origin POST. If your server returns 404 on OPTIONS (because you only declared POST routes), the browser silently aborts the real request. Your server never sees it. You have no log line to debug from, and the connector status reads as a generic failure.
 
 **Fix**: declare OPTIONS responders on every cross-origin OAuth and MCP endpoint:
 
@@ -132,13 +132,13 @@ Access-Control-Allow-Headers: Authorization, Content-Type, MCP-Session-ID
 Access-Control-Max-Age: 86400
 ```
 
-Be specific about the allowed origin (a list of `https://claude.ai`, `https://chatgpt.com`, `https://cursor.com`, etc.) rather than `*`, especially for endpoints that may have `Authorization` headers — the spec forbids `Access-Control-Allow-Origin: *` with `Allow-Credentials: true`.
+Be specific about the allowed origin (a list of `https://claude.ai`, `https://chatgpt.com`, `https://cursor.com`, etc.) rather than `*`, especially for endpoints that may have `Authorization` headers. The spec forbids `Access-Control-Allow-Origin: *` with `Allow-Credentials: true`.
 
 ## Quirk 6: ChatGPT's `/.well-known/oauth-protected-resource/mcp` suffix
 
 **Symptom**: ChatGPT's MCP custom connector creation fails with "Failed to resolve OAuth client" immediately after URL entry.
 
-**Cause**: ChatGPT's flow tries the path-aware OAuth-protected-resource discovery (`/.well-known/oauth-protected-resource/mcp` — the resource path suffix per RFC 9728 §3.1) *first* and doesn't fall back to the root-level `/.well-known/oauth-protected-resource`. If only the root path responds, the connector aborts.
+**Cause**: ChatGPT's flow tries the path-aware OAuth-protected-resource discovery (`/.well-known/oauth-protected-resource/mcp`, the resource path suffix per RFC 9728 §3.1) *first* and doesn't fall back to the root-level `/.well-known/oauth-protected-resource`. If only the root path responds, the connector aborts.
 
 **Fix**: serve both:
 
@@ -148,7 +148,7 @@ get "/.well-known/oauth-protected-resource"     => "oauth/discovery#protected_re
 get "/.well-known/oauth-protected-resource/mcp" => "oauth/discovery#protected_resource"
 ```
 
-Both return the same JSON body — `{ resource: "https://your-server.com/mcp", authorization_servers: [...] }`. The duplicate route is cheap; the breakage cost is high.
+Both return the same JSON body: `{ resource: "https://your-server.com/mcp", authorization_servers: [...] }`. The duplicate route is cheap; the breakage cost is high.
 
 ## Quirk 7: `Referrer-Policy: no-referrer` breaks same-origin CSRF on the consent page
 
@@ -162,7 +162,7 @@ Set it in three places consistently:
 
 1. Response header in the controller: `response.set_header("Referrer-Policy", "same-origin")`
 2. `<meta name="referrer" content="same-origin">` in the page's `<head>`
-3. (And check `form-action` in CSP — see Quirk 8.)
+3. (And check `form-action` in CSP, see Quirk 8.)
 
 If you only fix one of the three layers, whatever the page-level meta tag or response header says wins for the next form POST, and you keep seeing Origin: null.
 
@@ -183,9 +183,9 @@ end
 
 The relaxation is scoped to the OAuth consent show/decide actions, not site-wide. You allow `https:` (any HTTPS origin) rather than naming claude.ai/chatgpt.com explicitly, since you don't always know the client in advance with Dynamic Client Registration.
 
-## Quirk 9: Audience-binding (RFC 8707) — get the syntax right
+## Quirk 9: Audience-binding (RFC 8707), get the syntax right
 
-**Symptom**: This one's more subtle. Audience-binding is *required* by the spec for MCP OAuth, but some clients send the `resource` parameter as a single string and others as a JSON array.
+**Symptom**: More subtle. Audience-binding is *required* by the spec for MCP OAuth, but some clients send the `resource` parameter as a single string and others as a JSON array.
 
 **Cause**: RFC 8707 says `resource` can repeat. claude.ai sends it as repeated query params (`?resource=https://...&resource=https://...`). Some custom clients send a single comma-separated value. Some send a JSON-stringified array.
 
@@ -234,13 +234,13 @@ And in your consent screen, present BOTH scopes as checkboxes (default both chec
 
 **Fix**: implement refresh-token rotation atomically. The old refresh token MUST remain valid until the new one is confirmed delivered. If your DB allows it, use a transaction wrapping "issue new, invalidate old" so both succeed or neither does.
 
-A simpler approach we recommend: emit a 7-day access token at first, with refresh-token rotation as a secondary loop. Most strict clients don't actually exercise refresh-token rotation aggressively; long access-tokens dramatically reduce the cross-section of bugs.
+A simpler approach we recommend: emit a 7-day access token at first, with refresh-token rotation as a secondary loop. Most strict clients don't actually exercise refresh-token rotation aggressively. Long access-tokens dramatically reduce the cross-section of bugs.
 
 ## What we won't cover (out of scope here)
 
 - **MCP protocol details** beyond OAuth. See the [Claude MCP setup guide](/blog/claude-mcp-setup) for the user-facing side and [modelcontextprotocol.io](https://modelcontextprotocol.io) for the spec.
 - **Specific framework migrations** (Rails to Sinatra, Express to Fastify). Patterns transfer; specifics don't.
-- **PKCE deep-dive**. PKCE is straightforward and largely problem-free. Implement it per RFC 7636 with S256, and move on.
+- **PKCE deep-dive**. PKCE is straightforward and largely problem-free. Implement it per RFC 7636 with S256, move on.
 
 ## Sanity-check curl commands
 
@@ -256,7 +256,7 @@ curl -s -X POST https://your-server.com/oauth/register \
   -H 'Content-Type: application/json' \
   -d '{"client_name":"test-client","redirect_uris":["https://claude.ai/api/mcp/auth_callback"]}'
 
-# 3. Token exchange (simulated — after you've got a real authorization code)
+# 3. Token exchange (simulated, assuming you've got a real authorization code)
 curl -s -X POST https://your-server.com/oauth/token \
   -d 'grant_type=authorization_code' \
   -d 'code=AUTH_CODE_FROM_REDIRECT' \
@@ -273,9 +273,9 @@ If all three return spec-compliant JSON, your server is *spec-correct*. Whether 
 
 1. **Match the Cloudflare reference implementation byte-for-byte** where you can. They've debugged every one of these. Diverging from them is taking on risk.
 2. **Test in actual Claude Desktop, ChatGPT, and Cursor before you ship.** Each client surfaces different bugs. Passing all three is a much stronger signal than passing RFC compliance.
-3. **Log everything during the connector setup flow**. The OAuth dance has many steps; when something fails silently in the client UI, your server logs are the only place to see *where* it died.
+3. **Log everything during the connector setup flow**. The OAuth dance has many steps. When something fails silently in the client UI, your server logs are the only place to see *where* it died.
 4. **Don't try to be elegant**. Add the suffix-discovery duplicate, drop the `iss` parameter, lowercase the bearer. The spec is permissive; the clients are not.
 
-We've shipped to production with these patches and the connector survives both Claude's and ChatGPT's directory acceptance tests. If you're building something similar and run into a bug we didn't cover here, [email us](mailto:hello@mcp-analytics.com) — we'll add it to this post.
+We've shipped to production with these patches and the connector survives both Claude's and ChatGPT's directory acceptance tests. If you're building something similar and run into a bug we didn't cover here, [email us](mailto:hello@mcp-analytics.com). We'll add it to this post.
 
-If you want to see the full source in context: our internal [CLAUDE.md](https://github.com/Spreenovate/mcp-analytics) tracks every one of these as it was discovered, with commit hashes and file references.
+Want to see the full source in context? Our internal [CLAUDE.md](https://github.com/Spreenovate/mcp-analytics) tracks every one of these as it was discovered, with commit hashes and file references.

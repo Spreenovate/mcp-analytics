@@ -1,7 +1,7 @@
 <p>Ask:</p>
 
 <pre><code>"Which UTM source brought the most visits to mysite.com last month?"
-"Top traffic sources by campaign — last 90 days."
+"Top traffic sources by campaign, last 90 days."
 "How did the spring_launch campaign actually perform?"</code></pre>
 
 <p>A typical response:</p>
@@ -9,21 +9,21 @@
 <pre><code>Top sources (last 30 days):
 
   newsletter    weekly       spring_launch    1,847 visits
-  twitter       social       —                  612 visits
+  twitter       social       (none)             612 visits
   google        cpc          search_brand       487 visits
-  reddit        social       —                  302 visits
+  reddit        social       (none)             302 visits
   google        cpc          search_generic     224 visits
   podcast       referral     dev_tools_pod      174 visits
-  hackernews    referral     —                  142 visits
+  hackernews    referral     (none)             142 visits
   newsletter    weekly       summer_promo       102 visits
-  (none)        organic      —                   89 visits</code></pre>
+  (none)        organic      (none)              89 visits</code></pre>
 
 <p>Returns groups of <code>{ utm_source, utm_medium, utm_campaign, visits }</code>.
 Useful for evaluating whether a specific UTM-tagged campaign actually
 delivered, or for spotting that your newsletter is your highest-quality
 referral source.</p>
 
-<p><strong>Attribution metric</strong> — direct browser visits only.
+<p><strong>Attribution metric</strong>: direct browser visits only.
 AI-mediated traffic loses original UTM tags entirely (an AI fetching a
 page doesn't preserve the user's original UTM-tagged click), so
 including it would add noise without signal. See

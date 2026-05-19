@@ -21,7 +21,7 @@ table:
     us: "Keine. MCP-only."
     them: "Volles Dashboard mit Heatmaps, Recordings, A/B-Tests, Forms-Analytics."
   - feature: "MCP-Server"
-    us: "Ja — primäres Interface. 23 Tools."
+    us: "Ja, primäres Interface. 23 Tools."
     them: "Nein."
   - feature: "EU-Hosting"
     us: "Hetzner Falkenstein."
@@ -43,7 +43,7 @@ table:
     them: "Bots werden gefiltert; AI-Referrer als Channel verfügbar."
 ---
 
-Matomo ist die DSGVO-Premium-Suite — open-source seit 2007, GPL-lizenziert, mit Heatmaps, Session-Recordings, A/B-Tests, Form-Analytics. In Frankreich gehostet, selbst-hostbar als On-Premise. Sie haben sich im EU-Markt einen Namen gemacht als die "Privacy-konforme GA-Alternative mit allen Features."
+Matomo ist die DSGVO-Premium-Suite. Open-source seit 2007, GPL-lizenziert, mit Heatmaps, Session-Recordings, A/B-Tests, Form-Analytics. In Frankreich gehostet, selbst-hostbar als On-Premise. Sie haben sich im EU-Markt einen Namen gemacht als die "Privacy-konforme GA-Alternative mit allen Features."
 
 mcp-analytics ist eine ganz andere Wette. Wir sind fokussiertes Web-Analytics mit MCP-Primärinterface. Wenn du auch nur ein paar von Matomos Premium-Features brauchst (Heatmaps, Recordings, A/B), sind wir nicht dein Tool. Wenn nicht, lies weiter.
 
@@ -57,7 +57,7 @@ mcp-analytics ist eine ganz andere Wette. Wir sind fokussiertes Web-Analytics mi
 - **Form-Analytics** (welche Formularfelder Nutzer abbrechen)
 - **Tag-Manager** (Matomo Tag Manager als Alternative zu Google Tag Manager)
 
-Wir bieten null davon. Wir werden es nicht bauen — das ist eine separate Produkt-Kategorie. Wenn du diese Features brauchst, ist Matomo die richtige Wahl, Punkt.
+Wir bieten null davon. Wir werden es nicht bauen. Das ist eine separate Produkt-Kategorie. Wenn du diese Features brauchst, ist Matomo die richtige Wahl, Punkt.
 
 **Open Source.** GPL-lizenziert, selbst-hostbar. Wenn deine Compliance-Anforderungen oder operative Präferenz "Code auf eigenen Servern" sind, geht das mit Matomo, nicht mit uns.
 
@@ -76,7 +76,7 @@ Wir bieten null davon. Wir werden es nicht bauen — das ist eine separate Produ
 **MCP-Primärinterface.** Das ganze Produkt. Du fragst "Wie lief letzte Woche?" in Claude oder ChatGPT, du bekommst einen Satz zurück. Matomo hat eine API, kein Chat-Interface.
 
 ```
-Du: "Top-Pages letzte 7 Tage auf mysite.com — was ist neu?"
+Du: "Top-Pages letzte 7 Tage auf mysite.com, was ist neu?"
 Claude: "Drei neue Top-Pages diese Woche: /blog/llms-txt-explained
         (847 Views, kam Donnerstag rein), /docs/setup (412), und
         /vs/google-analytics (289). Hauptreferrer für die llms-Page
@@ -87,7 +87,7 @@ Claude: "Drei neue Top-Pages diese Woche: /blog/llms-txt-explained
 
 **Server-Side-SDK** (Pro). Ruby-Gem, npm-Package, Pixel-Endpoint für Backend-Events. Matomo hat Tracking-API, aber kein dediziertes Server-Side-Event-Pattern wie unser `record_event`.
 
-**Schlankheit.** Matomo ist ein großes Produkt mit vielen Features, was Setup-Zeit und Onboarding-Aufwand bedeutet. Wir sind klein — du paste-ed einen Snippet, fragst in Claude, fertig.
+**Schlankheit.** Matomo ist ein großes Produkt mit vielen Features, was Setup-Zeit und Onboarding-Aufwand bedeutet. Wir sind klein. Snippet einbauen, in Claude fragen, fertig.
 
 ## Wann du Matomo nehmen solltest
 
@@ -100,7 +100,7 @@ Claude: "Drei neue Top-Pages diese Woche: /blog/llms-txt-explained
 
 - Du verbringst Stunden täglich in Claude/ChatGPT/Cursor.
 - Du willst Free, das du langfristig nutzen kannst, ohne Karte.
-- Dein Traffic könnte spiken — 200x mehr Headroom bei vergleichbarem Preis.
+- Dein Traffic könnte spiken. 200x mehr Headroom bei vergleichbarem Preis.
 - Du brauchst AI-Crawler-Aufschlüsselung, kein stilles Filtern.
 - Du brauchst Server-Side-Event-Tracking aus deinem Backend.
 
@@ -116,6 +116,6 @@ Beide lassen sich parallel betreiben. Unser Snippet kollidiert nicht mit Matomos
 
 ## Loslegen
 
-[Free anmelden](/) — 100k Hits/Mo, keine Karte.
+[Free anmelden](/), 100k Hits/Mo, keine Karte.
 
-Spezifisches Matomo-Feature, von dem du nicht weglassen willst? [Email uns](mailto:hello@mcp-analytics.com) — wir sagen direkt, ob wir's haben oder Matomo dein bleibendes Tool sein muss.
+Spezifisches Matomo-Feature, von dem du nicht weglassen willst? [Email uns](mailto:hello@mcp-analytics.com). Wir sagen direkt, ob wir's haben oder Matomo dein bleibendes Tool sein muss.

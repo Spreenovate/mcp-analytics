@@ -8,24 +8,24 @@
 
 <pre><code>Traffic class breakdown for mysite.com (last 30 days):
 
-  user                  62,148 hits   71.4%   ← real humans, direct
-  ai_user_action         8,402 hits    9.7%   ← Claude/ChatGPT fetching for a user
-  verified_search_bot    6,221 hits    7.2%   ← Googlebot, Bingbot etc. (FCrDNS-verified)
-  ai_crawler             5,847 hits    6.7%   ← GPTBot, ClaudeBot, PerplexityBot etc.
-  unverified_bot         2,841 hits    3.3%   ← claims search-bot UA, IP fails verify
-  cloud_egress             947 hits    1.1%   ← from cloud IPs (AWS, GCP, Hetzner)
-  headless_browser         412 hits    0.5%   ← chromium-headless, playwright
-  unknown                  186 hits    0.2%   ← couldn't classify</code></pre>
+  user                  62,148 hits   71.4%   real humans, direct
+  ai_user_action         8,402 hits    9.7%   Claude/ChatGPT fetching for a user
+  verified_search_bot    6,221 hits    7.2%   Googlebot, Bingbot etc. (FCrDNS-verified)
+  ai_crawler             5,847 hits    6.7%   GPTBot, ClaudeBot, PerplexityBot etc.
+  unverified_bot         2,841 hits    3.3%   claims search-bot UA, IP fails verify
+  cloud_egress             947 hits    1.1%   from cloud IPs (AWS, GCP, Hetzner)
+  headless_browser         412 hits    0.5%   chromium-headless, playwright
+  unknown                  186 hits    0.2%   couldn't classify</code></pre>
 
 <p>The eight classes are Cloudflare-compatible (their AI Crawl Control taxonomy), so cross-tool comparisons work. Returns a list of <code>{ traffic_class, hits, percentage }</code>.</p>
 
 <p>Why this matters:</p>
 
 <ul>
-  <li><strong><code>user</code></strong> + <strong><code>ai_user_action</code></strong> = your real human audience. Sum is what most other analytics tools call "pageviews" — they fold both buckets together. We keep them separate because AI-mediated browsing has different attribution characteristics.</li>
-  <li><strong><code>ai_crawler</code></strong> tells you how aggressively AI training and answer systems are indexing your content. If GPTBot/ClaudeBot/PerplexityBot are a meaningful share, your content is in their training pipelines and answer surfaces — relevant to AI-search visibility planning.</li>
-  <li><strong><code>verified_search_bot</code></strong> + <strong><code>unverified_bot</code></strong> split shows you which "Googlebot" hits are actually Google. We do FCrDNS verification (reverse-DNS + forward-DNS) plus IP-CIDR matching for known search bot ranges. Mis-claimed Googlebot is a real, common spoofing pattern.</li>
-  <li><strong><code>cloud_egress</code></strong> + <strong><code>headless_browser</code></strong> are usually scraping or monitoring tools. Worth knowing if either is unexpectedly high.</li>
+  <li><strong><code>user</code></strong> plus <strong><code>ai_user_action</code></strong> = your real human audience. Sum is what most other analytics tools call "pageviews": they fold both buckets together. We keep them separate because AI-mediated browsing has different attribution characteristics.</li>
+  <li><strong><code>ai_crawler</code></strong> tells you how aggressively AI training and answer systems are indexing your content. If GPTBot/ClaudeBot/PerplexityBot are a meaningful share, your content is in their training pipelines and answer surfaces. Relevant to AI-search visibility planning.</li>
+  <li><strong><code>verified_search_bot</code></strong> plus <strong><code>unverified_bot</code></strong> split shows you which "Googlebot" hits are actually Google. We do FCrDNS verification (reverse-DNS plus forward-DNS) plus IP-CIDR matching for known search bot ranges. Mis-claimed Googlebot is a real, common spoofing pattern.</li>
+  <li><strong><code>cloud_egress</code></strong> plus <strong><code>headless_browser</code></strong> are usually scraping or monitoring tools. Worth knowing if either is unexpectedly high.</li>
 </ul>
 
 <p>For digging into specific bot UAs, follow up with

@@ -19,7 +19,7 @@ table:
     us: "Keine. MCP-only."
     them: "Polished Dashboard mit AI-Referrer-Channel eingebaut."
   - feature: "MCP-Server"
-    us: "Ja — primäres Interface. 23 Tools."
+    us: "Ja, primäres Interface. 23 Tools."
     them: "Nein."
   - feature: "EU-Hosting"
     us: "Hetzner Falkenstein."
@@ -47,13 +47,13 @@ Pirsch und mcp-analytics sind keine direkten Substitute. Andere Interface-Wette.
 
 ## Wo Pirsch gewinnt
 
-**Preis-Floor.** Pirschs $6/Mo Standard ist das günstigste glaubwürdige EU-gehostete Analytics am Markt. Wenn du eine persönliche Site mit unter 10k Pageviews/Mo hast und das bezahlt willst (keine Karte-auf-Datei-Abhängigkeit wie bei uns auf Free), ist Pirsch günstiger. Wir sind free bis 100k, dann €19 — also für eine winzige Site gewinnt Pirsch im Dollar-Vergleich.
+**Preis-Floor.** Pirschs $6/Mo Standard ist das günstigste glaubwürdige EU-gehostete Analytics am Markt. Wenn du eine persönliche Site mit unter 10k Pageviews/Mo hast und das bezahlt willst (keine Karte-auf-Datei-Abhängigkeit wie bei uns auf Free), ist Pirsch günstiger. Wir sind free bis 100k, dann €19. Für eine winzige Site gewinnt Pirsch im Dollar-Vergleich.
 
-**AI-Referrer-Channel.** Pirsch hat in seinem Dashboard einen "AI"-Channel, der Referrer von ChatGPT, Perplexity, Claude.ai etc. zusammenfasst — also menschliche Besucher, die aus einem AI-Chat klicken. Das ist ein nützlicher vorgebauter Filter. Wir tracken dieselben Daten (in `top_referrers`), aber wir haben keine UI-Gruppierung dafür, weil wir keine UI haben; du würdest im Chat fragen "Wie viel des Traffic kam letzte Woche aus AI-Referrern?".
+**AI-Referrer-Channel.** Pirsch hat in seinem Dashboard einen "AI"-Channel, der Referrer von ChatGPT, Perplexity, Claude.ai etc. zusammenfasst. Also menschliche Besucher, die aus einem AI-Chat klicken. Nützlicher vorgebauter Filter. Wir tracken dieselben Daten (in `top_referrers`), aber wir haben keine UI-Gruppierung dafür, weil wir keine UI haben. Du würdest im Chat fragen "Wie viel des Traffic kam letzte Woche aus AI-Referrern?".
 
 **Polished Dashboard.** Pirschs Dashboard ist sauber, schnell, deutsch-engineered. Wenn du ein Dashboard willst, ist Pirschs gut. Wir haben keins.
 
-**Same-Country-Hosting.** Pirsch ist in Deutschland gehostet (Hannover). Wir sind in Deutschland gehostet (Falkenstein). Beide sind deutsche GmbHs. DSGVO-mäßig kein Differenzierer — aber wenn "100% deutsches Unternehmen, deutsche Daten, deutscher Support" für dich zählt, beide haben den Stempel.
+**Same-Country-Hosting.** Pirsch ist in Deutschland gehostet (Hannover). Wir sind in Deutschland gehostet (Falkenstein). Beide sind deutsche GmbHs. DSGVO-mäßig kein Differenzierer. Aber wenn "100% deutsches Unternehmen, deutsche Daten, deutscher Support" für dich zählt, beide haben den Stempel.
 
 **Reifes Produkt.** Pirsch läuft seit 2021, zahlende Kunden, durch DSGVO-Iterationen gegangen. Wir sind jünger.
 
@@ -66,18 +66,18 @@ Pirsch und mcp-analytics sind keine direkten Substitute. Andere Interface-Wette.
 **MCP-natives Interface.** Der Grund warum es uns gibt. Deine Stats leben in deiner existierenden Claude/ChatGPT/Cursor-Session.
 
 ```
-Du: "Pageviews letzte Woche vs Vorwoche — und was ist der größte
+Du: "Pageviews letzte Woche vs Vorwoche. Was ist der größte
      Veränderer?"
-Claude: "Pageviews 42.180 vs 31.420 — plus 34%. Großer Sprung auf
+Claude: "Pageviews 42.180 vs 31.420, plus 34%. Großer Sprung auf
         /pricing (8.2k vs 3.1k). Top neuer Referrer ist Reddit,
         Thread auf /r/selfhosted von Freitag."
 ```
 
-**Bot-Crawler-Sicht.** Pirsch trackt AI-Referrer (Mensch-aus-AI). Wir klassifizieren zusätzlich AI-Crawler selbst (GPTBot, ClaudeBot, PerplexityBot, ByteSpider, etc.) — du siehst, wie oft deine Site von AI-Trainings-/Antwort-Systemen indiziert wird. Pirsch filtert die still raus.
+**Bot-Crawler-Sicht.** Pirsch trackt AI-Referrer (Mensch-aus-AI). Wir klassifizieren zusätzlich AI-Crawler selbst (GPTBot, ClaudeBot, PerplexityBot, ByteSpider, etc.). Du siehst, wie oft deine Site von AI-Trainings-/Antwort-Systemen indiziert wird. Pirsch filtert die still raus.
 
 **Server-Side-SDK** (Pro). Ruby-Gem, npm-Package, Pixel-Endpoint, `record_event` MCP-Tool für Webhook-/Cron-/Server-Side-Conversion-Tracking. Pirsch ist JS-only.
 
-**Wirklich unbegrenzte Sites auf allen Tiers**, inklusive Free. Pirsch cappt Standard bei 50 Sites — großzügig, aber ein Cap.
+**Wirklich unbegrenzte Sites auf allen Tiers**, inklusive Free. Pirsch cappt Standard bei 50 Sites. Großzügig, aber ein Cap.
 
 ## Wann du Pirsch nehmen solltest
 
@@ -88,7 +88,7 @@ Claude: "Pageviews 42.180 vs 31.420 — plus 34%. Großer Sprung auf
 ## Wann du uns nehmen solltest
 
 - Du verbringst täglich Stunden in Claude oder ChatGPT.
-- Free-Runway zählt — keine Karte, keine Zeitfrist.
+- Free-Runway zählt. Keine Karte, keine Zeitfrist.
 - Du könntest spiken. 100x mehr Hits beim selben Preis wie Pirsch Plus.
 - Du willst explizite AI-Crawler-Sicht, kein stilles Filtern.
 - Du brauchst Server-Side-Event-Tracking.
@@ -105,6 +105,6 @@ Lass beide einen Monat parallel laufen. Unser Snippet kollidiert nicht mit Pirsc
 
 ## Loslegen
 
-[Free anmelden](/) — 100k Hits/Mo, keine Karte.
+[Free anmelden](/), 100k Hits/Mo, keine Karte.
 
 Spezifisches Pirsch-Feature, das du brauchst? [Email uns](mailto:hello@mcp-analytics.com).

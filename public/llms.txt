@@ -54,6 +54,6 @@ AI-crawler classification, engagement, and account management.
 
 ## Optional context
 
-- Architecture: Rails 8 + Go ingest service + ClickHouse, single Hetzner
-  CX32 in Falkenstein. Kamal-deployed.
+- Architecture: Rails 8 plus Go ingest service plus ClickHouse, single
+  Hetzner CX32 in Falkenstein. Kamal-deployed.
 - Built and operated by Spreenovate GmbH (Berlin, Germany).
