@@ -1,14 +1,80 @@
 # See https://www.robotstxt.org/robotstxt.html
+#
+# Policy: index all public content (landing, docs, blog, /vs, /mcp/tools).
+# Keep authenticated/transactional surfaces (/signup, /verify, /settings,
+# /oauth/*) and the JSON-RPC endpoint (/mcp) out of the index.
+#
+# AI crawlers are explicitly ALLOWED. We want to be discoverable in
+# Claude, ChatGPT, Perplexity, and other LLM-grounded search/answer
+# surfaces — that's a primary acquisition channel for an MCP-native
+# product. If we ever change our mind, switch each User-agent block
+# below to `Disallow: /`.
 
 User-agent: *
 Allow: /
 Disallow: /signup/
 Disallow: /signup
 Disallow: /verify/
-Disallow: /mcp
+Disallow: /settings
+Disallow: /oauth/
+Disallow: /mcp$
 Disallow: /up
 
-# Legal pages are noindex via meta tag — let crawlers reach them but
-# they won't be indexed. Listed here for transparency.
+# OpenAI's web crawler (training + ChatGPT browsing).
+User-agent: GPTBot
+Allow: /
+
+# OpenAI ChatGPT user-initiated browsing.
+User-agent: ChatGPT-User
+Allow: /
+
+# OpenAI plugin/search backend.
+User-agent: OAI-SearchBot
+Allow: /
+
+# Anthropic.
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+# Perplexity.
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+# Google's AI summaries (Gemini).
+User-agent: Google-Extended
+Allow: /
+
+# Common Crawl — feeds many LLMs.
+User-agent: CCBot
+Allow: /
+
+# Apple Intelligence.
+User-agent: Applebot-Extended
+Allow: /
+
+# Bytedance / Doubao.
+User-agent: Bytespider
+Allow: /
+
+# Meta AI.
+User-agent: FacebookBot
+Allow: /
+
+# DuckDuckGo AI assist.
+User-agent: DuckAssistBot
+Allow: /
+
+# Cohere.
+User-agent: cohere-ai
+Allow: /
 
 Sitemap: https://mcp-analytics.com/sitemap.xml

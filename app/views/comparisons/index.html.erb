@@ -1,0 +1,51 @@
+<%
+  is_de = @locale == "de"
+  base_url = ENV.fetch("PUBLIC_BASE_URL", "https://mcp-analytics.com")
+%>
+<% content_for(:title, is_de ? "Vergleiche | mcp-analytics" : "Compare | mcp-analytics") %>
+<% content_for(:description, is_de ?
+  "mcp-analytics im Vergleich zu Plausible, Fathom, Pirsch, Umami, PostHog, Google Analytics, Matomo." :
+  "mcp-analytics compared to Plausible, Fathom, Pirsch, Umami, PostHog, Google Analytics.") %>
+<% content_for(:lang, is_de ? "de" : "en") %>
+<% content_for(:body_class, "home") %>
+<% content_for(:head) do %>
+  <%= render "shared/article_styles" %>
+  <link rel="alternate" hreflang="en" href="<%= base_url %>/vs">
+  <link rel="alternate" hreflang="de" href="<%= base_url %>/de/vs">
+  <link rel="alternate" hreflang="x-default" href="<%= base_url %>/vs">
+<% end %>
+
+<div class="wrap">
+  <%= render "shared/topnav" %>
+
+  <h1><%= is_de ? "Vergleich" : "Compare" %></h1>
+  <p style="font-size: 16px; color: #444; max-width: 60ch;">
+    <% if is_de %>
+      Ehrliche Gegenüberstellungen zu anderen Web-Analytics-Tools.
+      Wo wir besser sind, schreiben wir das hin. Wo nicht, auch.
+      <a href="/vs" style="text-decoration: underline;">Switch to English</a>.
+    <% else %>
+      Honest side-by-sides versus other web analytics tools. We say
+      where we win and where we don't.
+      <a href="/de/vs" style="text-decoration: underline;">Auf Deutsch lesen</a>.
+    <% end %>
+  </p>
+
+  <% if @comparisons.empty? %>
+    <div class="panel" style="margin-top: 40px;">
+      <p><%= is_de ? "Vergleiche werden in Kürze veröffentlicht." : "Comparisons coming soon." %></p>
+    </div>
+  <% else %>
+    <div class="post-list">
+      <% @comparisons.each do |c| %>
+        <a href="<%= c.path %>" class="post-card">
+          <div class="date">mcp-analytics vs <%= c.competitor %></div>
+          <h3><%= c.title %></h3>
+          <p><%= c.description %></p>
+        </a>
+      <% end %>
+    </div>
+  <% end %>
+
+  <%= render "shared/article_footer", lang: (is_de ? "de" : "en") %>
+</div>

@@ -1,0 +1,74 @@
+<% content_for(:title, "MCP Tools — All 23 functions you can call via Claude | mcp-analytics") %>
+<% content_for(:description, "Browse every MCP tool exposed by mcp-analytics. Pageviews, top pages, referrers, UTM sources, custom events, traffic class — all callable from Claude, ChatGPT, Cursor, or any MCP client.") %>
+<% content_for(:body_class, "home") %>
+<% content_for(:head) do %>
+  <%= render "shared/article_styles" %>
+  <style>
+    body.home .tools-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;
+      margin: 32px 0;
+    }
+    body.home .tools-grid .tool-card {
+      border: var(--border) solid var(--fg); padding: 18px 22px;
+      background: #fff; text-decoration: none; color: var(--fg);
+      display: block;
+    }
+    body.home .tools-grid .tool-card:hover {
+      background: rgba(0, 255, 136, 0.12);
+    }
+    body.home .tools-grid .tool-card .name {
+      font-family: "JetBrains Mono", monospace; font-weight: 700;
+      font-size: 14px; background: #f5f5f5; padding: 2px 8px;
+      border: 1px solid #ddd; display: inline-block;
+      margin-bottom: 8px;
+    }
+    body.home .tools-grid .tool-card h3 {
+      font-family: "Space Grotesk", sans-serif; font-weight: 900;
+      font-size: 18px; margin: 4px 0 6px;
+      text-transform: none; letter-spacing: 0;
+    }
+    body.home .tools-grid .tool-card p { font-size: 13.5px; line-height: 1.5; margin: 0; color: #444; }
+    body.home .group-label {
+      display: inline-block; background: var(--fg); color: var(--accent);
+      padding: 4px 12px; font-family: "JetBrains Mono", monospace;
+      font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.16em;
+      margin: 40px 0 16px;
+    }
+    @media (max-width: 720px) {
+      body.home .tools-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+<% end %>
+
+<div class="wrap">
+  <%= render "shared/topnav" %>
+
+  <h1>MCP <span class="accent">Tools</span></h1>
+  <p style="font-size: 17px; max-width: 60ch;">
+    Every analytics question you can ask, exposed as an MCP tool. Call
+    them from Claude Desktop, ChatGPT custom connectors, Cursor,
+    Continue.dev, or any other MCP client. No dashboard required — the
+    answer comes back as a chat message.
+  </p>
+
+  <div class="panel" style="margin: 24px 0;">
+    <p><strong>How to use:</strong> Add <code>https://mcp-analytics.com/mcp</code> as a remote MCP server in your client (OAuth flow), then ask in natural language. Claude picks the right tool automatically.</p>
+  </div>
+
+  <% @grouped.each do |group, tools| %>
+    <% next if tools.empty? %>
+    <span class="group-label"><%= group %></span>
+    <div class="tools-grid">
+      <% tools.each do |tool| %>
+        <a href="<%= tool.path %>" class="tool-card">
+          <div class="name"><%= tool.name %></div>
+          <h3><%= tool.title %></h3>
+          <p><%= tool.summary %></p>
+        </a>
+      <% end %>
+    </div>
+  <% end %>
+
+  <%= render "shared/article_footer", lang: "en" %>
+</div>

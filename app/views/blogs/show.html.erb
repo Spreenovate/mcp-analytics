@@ -1,0 +1,68 @@
+<%
+  is_de = @post.locale == "de"
+  base_url = ENV.fetch("PUBLIC_BASE_URL", "https://mcp-analytics.com")
+%>
+<% content_for(:title, "#{@post.title} | mcp-analytics") %>
+<% content_for(:description, @post.description) %>
+<% content_for(:lang, @post.locale) %>
+<% content_for(:body_class, "home article") %>
+<% content_for(:canonical_url, "#{base_url}#{@post.path}") %>
+<% content_for(:head) do %>
+  <%= render "shared/article_styles" %>
+  <% if @post.hreflang_path %>
+    <link rel="alternate" hreflang="<%= is_de ? 'en' : 'de' %>" href="<%= base_url %><%= @post.hreflang_path %>">
+    <link rel="alternate" hreflang="<%= @post.locale %>" href="<%= base_url %><%= @post.path %>">
+    <link rel="alternate" hreflang="x-default" href="<%= base_url %><%= is_de ? @post.hreflang_path : @post.path %>">
+  <% end %>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "<%= j @post.title %>",
+    "description": "<%= j @post.description %>",
+    "datePublished": "<%= @post.date.iso8601 %>",
+    "inLanguage": "<%= is_de ? 'de-DE' : 'en-US' %>",
+    "mainEntityOfPage": "<%= base_url %><%= @post.path %>",
+    "author": {
+      "@type": "Organization",
+      "name": "Spreenovate GmbH"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "mcp-analytics",
+      "url": "<%= base_url %>"
+    }
+  }
+  </script>
+<% end %>
+
+<div class="wrap">
+  <%= render "shared/topnav" %>
+
+  <% if @post.hreflang_path %>
+    <div class="lang-switch">
+      <% if is_de %>
+        <a href="<%= @post.hreflang_path %>">Read in English →</a>
+      <% else %>
+        <a href="<%= @post.hreflang_path %>">Auf Deutsch lesen →</a>
+      <% end %>
+    </div>
+  <% end %>
+
+  <h1><%= @post.title %></h1>
+
+  <div class="article-meta">
+    <%= @post.date.strftime("%Y-%m-%d") %>
+    <span class="dot">·</span>
+    <a href="<%= is_de ? '/de/blog' : '/blog' %>"><%= is_de ? "Blog" : "Blog" %></a>
+    <span class="dot">·</span>
+    <%= @post.locale.upcase %>
+  </div>
+
+  <div class="article-body">
+    <%= @post.body_html %>
+  </div>
+
+  <%= render "shared/article_footer", lang: @post.locale %>
+</div>

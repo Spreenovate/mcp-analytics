@@ -1,0 +1,159 @@
+<%
+  is_de = @comparison.locale == "de"
+  base_url = ENV.fetch("PUBLIC_BASE_URL", "https://mcp-analytics.com")
+%>
+<% content_for(:title, "#{@comparison.title} | mcp-analytics") %>
+<% content_for(:description, @comparison.description) %>
+<% content_for(:lang, @comparison.locale) %>
+<% content_for(:body_class, "home article") %>
+<% content_for(:canonical_url, "#{base_url}#{@comparison.path}") %>
+<% content_for(:head) do %>
+  <%= render "shared/article_styles" %>
+  <% if @comparison.hreflang_path %>
+    <link rel="alternate" hreflang="<%= is_de ? 'en' : 'de' %>" href="<%= base_url %><%= @comparison.hreflang_path %>">
+    <link rel="alternate" hreflang="<%= @comparison.locale %>" href="<%= base_url %><%= @comparison.path %>">
+    <link rel="alternate" hreflang="x-default" href="<%= base_url %><%= is_de ? @comparison.hreflang_path : @comparison.path %>">
+  <% end %>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "<%= j @comparison.title %>",
+    "description": "<%= j @comparison.description %>",
+    "datePublished": "<%= @comparison.date.iso8601 %>",
+    "inLanguage": "<%= is_de ? 'de-DE' : 'en-US' %>",
+    "mainEntityOfPage": "<%= base_url %><%= @comparison.path %>",
+    "about": {
+      "@type": "SoftwareApplication",
+      "name": "<%= j @comparison.competitor %>",
+      "url": "<%= j @comparison.competitor_url.to_s %>"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "mcp-analytics",
+      "url": "<%= base_url %>"
+    }
+  }
+  </script>
+
+  <style>
+    body.home.article .vs-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+      border: var(--border) solid var(--fg);
+      margin: 32px 0 24px;
+    }
+    body.home.article .vs-grid .col {
+      padding: 24px;
+    }
+    body.home.article .vs-grid .col.us {
+      background: var(--accent); color: var(--fg);
+      border-right: var(--border) solid var(--fg);
+    }
+    body.home.article .vs-grid .col.them { background: #fafafa; }
+    body.home.article .vs-grid .col .label {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.16em;
+      margin-bottom: 8px;
+    }
+    body.home.article .vs-grid .col h3 {
+      font-family: "Space Grotesk", sans-serif; font-weight: 900;
+      font-size: 22px; line-height: 1.2; margin: 0 0 12px;
+      text-transform: none; letter-spacing: -0.01em;
+    }
+    body.home.article .vs-grid .col p { font-size: 15px; margin: 0; }
+
+    body.home.article table.vs-table {
+      width: 100%; border-collapse: collapse; margin: 16px 0 32px;
+      font-family: "JetBrains Mono", monospace; font-size: 13.5px;
+    }
+    body.home.article table.vs-table th,
+    body.home.article table.vs-table td {
+      border: 2px solid var(--fg); padding: 10px 14px;
+      vertical-align: top; text-align: left;
+    }
+    body.home.article table.vs-table th {
+      background: var(--fg); color: var(--bg);
+      font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em;
+    }
+    body.home.article table.vs-table .col-feature {
+      width: 25%; background: #fafafa; font-weight: 700;
+    }
+    body.home.article table.vs-table .col-us {
+      background: rgba(0, 255, 136, 0.18); width: 37.5%;
+    }
+    body.home.article table.vs-table .col-them { width: 37.5%; }
+
+    @media (max-width: 720px) {
+      body.home.article .vs-grid { grid-template-columns: 1fr; }
+      body.home.article .vs-grid .col.us {
+        border-right: 0; border-bottom: var(--border) solid var(--fg);
+      }
+    }
+  </style>
+<% end %>
+
+<div class="wrap">
+  <%= render "shared/topnav" %>
+
+  <% if @comparison.hreflang_path %>
+    <div class="lang-switch">
+      <% if is_de %>
+        <a href="<%= @comparison.hreflang_path %>">Read in English →</a>
+      <% else %>
+        <a href="<%= @comparison.hreflang_path %>">Auf Deutsch lesen →</a>
+      <% end %>
+    </div>
+  <% end %>
+
+  <h1><%= @comparison.title %></h1>
+
+  <div class="article-meta">
+    <%= is_de ? "Aktualisiert" : "Updated" %> <%= @comparison.date.strftime("%Y-%m-%d") %>
+    <span class="dot">·</span>
+    <a href="<%= is_de ? '/de/vs' : '/vs' %>"><%= is_de ? "Alle Vergleiche" : "All comparisons" %></a>
+  </div>
+
+  <% if @comparison.verdict_us.present? && @comparison.verdict_them.present? %>
+    <div class="vs-grid">
+      <div class="col us">
+        <div class="label"><%= is_de ? "Wann mcp-analytics" : "When mcp-analytics" %></div>
+        <h3>mcp-analytics</h3>
+        <p><%= @comparison.verdict_us %></p>
+      </div>
+      <div class="col them">
+        <div class="label"><%= is_de ? "Wann #{@comparison.competitor}" : "When #{@comparison.competitor}" %></div>
+        <h3><%= @comparison.competitor %></h3>
+        <p><%= @comparison.verdict_them %></p>
+      </div>
+    </div>
+  <% end %>
+
+  <% if @comparison.table.any? %>
+    <table class="vs-table">
+      <thead>
+        <tr>
+          <th class="col-feature"><%= is_de ? "Merkmal" : "Feature" %></th>
+          <th class="col-us">mcp-analytics</th>
+          <th class="col-them"><%= @comparison.competitor %></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @comparison.table.each do |row| %>
+          <tr>
+            <td class="col-feature"><%= row["feature"] %></td>
+            <td class="col-us"><%= raw row["us"].to_s.gsub("\n", "<br>") %></td>
+            <td class="col-them"><%= raw row["them"].to_s.gsub("\n", "<br>") %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+
+  <div class="article-body">
+    <%= @comparison.body_html %>
+  </div>
+
+  <%= render "shared/article_footer", lang: @comparison.locale %>
+</div>

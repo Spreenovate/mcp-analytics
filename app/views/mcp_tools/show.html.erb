@@ -1,0 +1,147 @@
+<%
+  base_url = ENV.fetch("PUBLIC_BASE_URL", "https://mcp-analytics.com")
+%>
+<% content_for(:title, "#{@tool.title} (#{@tool.name}) — MCP tool | mcp-analytics") %>
+<% content_for(:description, "#{@tool.title} — #{@tool.summary} Call it from Claude or any MCP client.") %>
+<% content_for(:body_class, "home article") %>
+<% content_for(:canonical_url, "#{base_url}#{@tool.path}") %>
+<% content_for(:head) do %>
+  <%= render "shared/article_styles" %>
+  <style>
+    body.home.article .tool-hero .name-tag {
+      display: inline-block;
+      font-family: "JetBrains Mono", monospace;
+      background: var(--fg); color: var(--accent);
+      padding: 6px 14px; font-size: 14px; font-weight: 700;
+      margin: 0 0 16px;
+    }
+    body.home.article .tool-hero h1 { margin-top: 0; }
+    body.home.article .tool-meta {
+      display: flex; gap: 12px; flex-wrap: wrap;
+      margin: 0 0 32px;
+      font-family: "JetBrains Mono", monospace; font-size: 12px;
+    }
+    body.home.article .tool-meta .tag {
+      padding: 4px 10px; border: 2px solid var(--fg);
+      text-transform: uppercase; letter-spacing: 0.12em;
+    }
+    body.home.article .tool-meta .tag.read { background: rgba(0, 255, 136, 0.18); }
+    body.home.article .tool-meta .tag.write { background: #fff5e1; }
+    body.home.article .tool-meta .tag.destructive { background: #ffe1e1; }
+
+    body.home.article table.args {
+      width: 100%; border-collapse: collapse; margin: 16px 0 32px;
+      font-family: "JetBrains Mono", monospace; font-size: 13px;
+    }
+    body.home.article table.args th,
+    body.home.article table.args td {
+      border: 2px solid var(--fg); padding: 8px 12px; text-align: left;
+      vertical-align: top;
+    }
+    body.home.article table.args th {
+      background: var(--fg); color: var(--bg);
+      font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em;
+    }
+    body.home.article table.args .required { color: #aa0000; font-weight: 700; }
+    body.home.article table.args .optional { color: #888; }
+  </style>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "<%= j @tool.title %> (<%= j @tool.name %>) — MCP tool",
+    "description": "<%= j @tool.summary %>",
+    "inLanguage": "en-US",
+    "mainEntityOfPage": "<%= base_url %><%= @tool.path %>",
+    "publisher": {
+      "@type": "Organization",
+      "name": "mcp-analytics",
+      "url": "<%= base_url %>"
+    }
+  }
+  </script>
+<% end %>
+
+<div class="wrap">
+  <%= render "shared/topnav" %>
+
+  <div class="tool-hero">
+    <span class="name-tag"><%= @tool.name %></span>
+    <h1><%= @tool.title %></h1>
+  </div>
+
+  <div class="tool-meta">
+    <% if @tool.read_only? %>
+      <span class="tag read">Read-only</span>
+    <% elsif @tool.destructive? %>
+      <span class="tag destructive">Destructive</span>
+    <% else %>
+      <span class="tag write">Additive</span>
+    <% end %>
+    <% if @tool.scope %>
+      <span class="tag">Scope: <%= @tool.scope %></span>
+    <% end %>
+    <span class="tag">JSON-RPC over MCP</span>
+  </div>
+
+  <div class="article-body">
+    <h2>What it does</h2>
+    <p><%= @tool.description %></p>
+
+    <h2>Example prompts</h2>
+    <% if @tool.example_partial %>
+      <%= render @tool.example_partial %>
+    <% else %>
+      <p>Ask Claude (or any MCP client connected to mcp-analytics) something like:</p>
+      <pre><code><%= example_prompt_for(@tool) %></code></pre>
+      <p>The client will pick <code><%= @tool.name %></code> automatically based on the prompt and your account's available sites.</p>
+    <% end %>
+
+    <% if @tool.args.any? %>
+      <h2>Arguments</h2>
+      <table class="args">
+        <thead>
+          <tr>
+            <th style="width: 22%;">Name</th>
+            <th style="width: 13%;">Type</th>
+            <th style="width: 13%;">Required</th>
+            <th>Description / Default</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @tool.args.each do |arg| %>
+            <tr>
+              <td><code><%= arg[:name] %></code></td>
+              <td><%= arg[:type] || "—" %><% if arg[:enum] %><br><span style="font-size: 11px; color: #555;">enum: <%= arg[:enum].join(", ") %></span><% end %></td>
+              <td><%= arg[:required] ? content_tag(:span, "required", class: "required") : content_tag(:span, "optional", class: "optional") %></td>
+              <td>
+                <%= arg[:description] || "—" %>
+                <% if arg[:default] %>
+                  <br><span style="font-size: 11px; color: #555;">default: <code><%= arg[:default] %></code></span>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% end %>
+
+    <h2>How to call it directly</h2>
+    <p>If you're integrating from your own code rather than a chat client, this is the JSON-RPC payload:</p>
+    <pre><code>curl -X POST https://mcp-analytics.com/mcp \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '<%= raw raw_jsonrpc_example(@tool) %>'</code></pre>
+    <p>Token comes from <a href="/settings">/settings</a> after you sign up. Replace any required arguments above.</p>
+
+    <h2>Related tools</h2>
+    <ul>
+      <% McpToolPage.all.reject { |t| t.name == @tool.name }.sample(5).each do |t| %>
+        <li><a href="<%= t.path %>"><code><%= t.name %></code></a> — <%= t.summary %></li>
+      <% end %>
+    </ul>
+  </div>
+
+  <%= render "shared/article_footer", lang: "en" %>
+</div>

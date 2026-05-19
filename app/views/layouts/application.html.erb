@@ -1,13 +1,15 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<%= content_for?(:lang) ? content_for(:lang) : 'en' %>">
   <head>
     <%
       page_title       = content_for?(:title) ? content_for(:title) : "mcp-analytics | web analytics. no dashboard. just answers."
       page_description = content_for?(:description) ? content_for(:description) :
         "Web analytics you query through Claude or any MCP client. No tabs, no dashboards, no cookie banners. EU-hosted."
+      page_lang        = content_for?(:lang) ? content_for(:lang) : "en"
+      og_locale        = page_lang == "de" ? "de_DE" : "en_US"
       base_url         = ENV.fetch("PUBLIC_BASE_URL", "https://mcp-analytics.com")
-      canonical_url    = base_url + request.path
-      og_image_url     = base_url + "/og-image.png"
+      canonical_url    = content_for?(:canonical_url) ? content_for(:canonical_url) : (base_url + request.path)
+      og_image_url     = content_for?(:og_image_url) ? content_for(:og_image_url) : (base_url + "/og-image.png")
     %>
 
     <title><%= page_title %></title>
@@ -34,7 +36,10 @@
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta property="og:image:alt" content="mcp-analytics. No dashboard. No charts. Just answers.">
-    <meta property="og:locale" content="en_US">
+    <meta property="og:locale" content="<%= og_locale %>">
+    <% if content_for?(:hreflang) %>
+      <%= raw(content_for(:hreflang)) %>
+    <% end %>
 
     <%# Twitter / X cards %>
     <meta name="twitter:card" content="summary_large_image">

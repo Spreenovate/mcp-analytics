@@ -59,6 +59,37 @@ Rails.application.routes.draw do
   # Docs (for humans — agents just need the MCP URL).
   get "/docs" => "pages#docs", as: :docs
 
+  # Content marketing surfaces (CONTENT_MARKETING.md). All public, all
+  # indexable, sitemap-listed. Blog + comparisons are markdown-backed
+  # (see BlogPost / Comparison models); /mcp/tools/* is generated from
+  # the same schema list the MCP server itself uses.
+  #
+  # English lives at the bare path (/blog, /vs); German is /de-prefixed.
+  # No Rails I18n setup — locale is a controller param, not a session
+  # state. hreflang tags are emitted by the views so each post points to
+  # its translated counterpart if one exists.
+  slug_constraint = { slug: /[a-z0-9][a-z0-9\-]*/ }
+
+  get "/blog"           => "blogs#index", as: :blog,          defaults: { locale: "en" }
+  get "/blog/:slug"     => "blogs#show",  as: :blog_post,     defaults: { locale: "en" }, constraints: slug_constraint
+  get "/de/blog"        => "blogs#index", as: :de_blog,       defaults: { locale: "de" }
+  get "/de/blog/:slug"  => "blogs#show",  as: :de_blog_post,  defaults: { locale: "de" }, constraints: slug_constraint
+
+  get "/vs"             => "comparisons#index", as: :comparisons,    defaults: { locale: "en" }
+  get "/vs/:slug"       => "comparisons#show",  as: :comparison,     defaults: { locale: "en" }, constraints: slug_constraint
+  get "/de/vs"          => "comparisons#index", as: :de_comparisons, defaults: { locale: "de" }
+  get "/de/vs/:slug"    => "comparisons#show",  as: :de_comparison,  defaults: { locale: "de" }, constraints: slug_constraint
+
+  # /mcp/tools/:slug — NOT to be confused with /mcp (JSON-RPC). The
+  # routing is unambiguous because /mcp is exact-match on the RPC
+  # controller while /mcp/tools/* is a different prefix.
+  get "/mcp/tools"        => "mcp_tools#index", as: :mcp_tools
+  get "/mcp/tools/:slug"  => "mcp_tools#show",  as: :mcp_tool, constraints: { slug: /[a-z0-9][a-z0-9\-_]*/ }
+
+  # Dynamic sitemap — replaces the static public/sitemap.xml so blog
+  # posts and comparison pages get picked up automatically.
+  get "/sitemap.xml" => "sitemaps#show", as: :sitemap
+
   # Legal pages.
   get "/terms"   => "pages#terms",   as: :terms
   get "/privacy" => "pages#privacy", as: :privacy

@@ -1,0 +1,60 @@
+# mcp-analytics
+
+> Web analytics you query through Claude or any MCP client. No dashboard,
+> no charts — just answers. Free up to 100,000 hits/month, EU-hosted in
+> Falkenstein/Germany, cookie-banner-free in strict privacy mode.
+
+mcp-analytics is a privacy-first web analytics platform whose primary
+interface is the Model Context Protocol (MCP). Instead of opening a
+dashboard, users connect their account to Claude Desktop, ChatGPT
+custom connectors, Cursor, or any MCP client and ask questions like
+"top pages last 7 days" in natural language. The MCP server exposes
+23 read/write tools covering overview metrics, top pages/referrers/
+UTM sources, custom events, AI-crawler classification, engagement, and
+account management.
+
+## Product surface
+
+- [Landing page](https://mcp-analytics.com/): product positioning,
+  pricing tiers, signup form.
+- [Docs](https://mcp-analytics.com/docs): human-readable setup guide.
+  Connect via OAuth from any MCP client and start asking questions.
+- [Pricing](https://mcp-analytics.com/#pricing): Free (100k hits/mo,
+  unlimited sites), Pro (€19/mo, 10M hits, all features, 3-year
+  retention), Enterprise (from €299/mo, dedicated server, SLA).
+
+## MCP tool catalog
+
+- [All MCP tools](https://mcp-analytics.com/mcp/tools): index of every
+  callable function with arguments and example prompts.
+- Individual tool pages live at `/mcp/tools/{tool-name}` — e.g.
+  `/mcp/tools/get-overview`, `/mcp/tools/top-pages`,
+  `/mcp/tools/top-referrers`, `/mcp/tools/traffic-class-breakdown`.
+
+## Content
+
+- [Blog](https://mcp-analytics.com/blog): tutorials and essays on MCP,
+  AI workflows, and privacy-first analytics. German blog at
+  [/de/blog](https://mcp-analytics.com/de/blog).
+- [Comparisons](https://mcp-analytics.com/vs): honest side-by-sides
+  versus Plausible, Fathom, Pirsch, Umami, PostHog, Google Analytics.
+  German at [/de/vs](https://mcp-analytics.com/de/vs).
+
+## Technical reference
+
+- MCP endpoint: `https://mcp-analytics.com/mcp` (JSON-RPC 2.0 over HTTP).
+- OAuth 2.1 with PKCE, RFC 8707 audience-binding, two scopes
+  (analytics:read, analytics:manage). Discovery at
+  `/.well-known/oauth-authorization-server`.
+- Tracking script: `https://t.mcp-analytics.com/script.js` (~130 lines,
+  no cookies in strict mode).
+- Three privacy modes: strict (no cookies, no visitor ID, daily salt
+  rotation), balanced (no cookies, same-day session/visitor dedup
+  via salted hash), all (persistent cookie — you handle the consent
+  banner).
+
+## Optional context
+
+- Architecture: Rails 8 + Go ingest service + ClickHouse, single Hetzner
+  CX32 in Falkenstein. Kamal-deployed.
+- Built and operated by Spreenovate GmbH (Berlin, Germany).

@@ -1,0 +1,58 @@
+<%
+  is_de = @locale == "de"
+  page_title = is_de ? "Blog | mcp-analytics" : "Blog | mcp-analytics"
+  page_description = is_de ?
+    "Artikel über MCP, AI-Workflows und Privacy-first Web Analytics." :
+    "Articles on MCP, AI workflows, and privacy-first web analytics."
+%>
+<% content_for(:title, page_title) %>
+<% content_for(:description, page_description) %>
+<% content_for(:lang, is_de ? "de" : "en") %>
+<% content_for(:body_class, "home") %>
+<% content_for(:head) do %>
+  <%= render "shared/article_styles" %>
+  <link rel="alternate" hreflang="en" href="<%= ENV.fetch('PUBLIC_BASE_URL', 'https://mcp-analytics.com') %>/blog">
+  <link rel="alternate" hreflang="de" href="<%= ENV.fetch('PUBLIC_BASE_URL', 'https://mcp-analytics.com') %>/de/blog">
+  <link rel="alternate" hreflang="x-default" href="<%= ENV.fetch('PUBLIC_BASE_URL', 'https://mcp-analytics.com') %>/blog">
+<% end %>
+
+<div class="wrap">
+  <%= render "shared/topnav" %>
+
+  <h1><%= is_de ? "Blog" : "Blog" %></h1>
+  <p style="font-size: 16px; color: #444; max-width: 60ch;">
+    <% if is_de %>
+      Kurze und lange Beiträge zu MCP, Claude/ChatGPT als Analytics-Interface,
+      und wie wir mcp-analytics als Single-Founder bauen. Auf
+      <a href="/blog" style="text-decoration: underline;">Englisch wechseln</a>.
+    <% else %>
+      Short and long pieces on MCP, using Claude/ChatGPT as an analytics
+      interface, and how we're building mcp-analytics as a single founder.
+      <a href="/de/blog" style="text-decoration: underline;">Switch to German</a>.
+    <% end %>
+  </p>
+
+  <% if @posts.empty? %>
+    <div class="panel" style="margin-top: 40px;">
+      <p>
+        <% if is_de %>
+          Noch keine Beiträge auf Deutsch. <a href="/blog">Englische Version öffnen</a>.
+        <% else %>
+          No posts yet. <a href="/">Sign up</a> to get notified when the first one drops.
+        <% end %>
+      </p>
+    </div>
+  <% else %>
+    <div class="post-list">
+      <% @posts.each do |post| %>
+        <a href="<%= post.path %>" class="post-card">
+          <div class="date"><%= post.date.strftime("%Y-%m-%d") %></div>
+          <h3><%= post.title %></h3>
+          <p><%= post.description %></p>
+        </a>
+      <% end %>
+    </div>
+  <% end %>
+
+  <%= render "shared/article_footer", lang: (is_de ? "de" : "en") %>
+</div>

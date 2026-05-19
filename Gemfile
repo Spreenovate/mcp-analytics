@@ -42,6 +42,11 @@ gem "thruster", require: false
 # credentials under :postmark, :api_token.
 gem "postmark-rails"
 
+# Markdown renderer for /blog and /vs content. kramdown is pure-Ruby
+# (no native deps), GFM parser adds fenced code blocks + tables.
+gem "kramdown"
+gem "kramdown-parser-gfm"
+
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
   gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"
